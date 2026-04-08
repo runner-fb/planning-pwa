@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123d38">
+  <title>Planning bénévoles</title>
+
+  <link rel="manifest" href="./manifest.webmanifest">
+</head>
+<body>
+  <main style="padding:20px;font-family:system-ui,sans-serif;">
+    <h1>Planning bénévoles</h1>
+    <p id="status">PWA en préparation...</p>
+  </main>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
+        try {
+          await navigator.serviceWorker.register("./sw.js");
+          document.getElementById("status").textContent = "Service Worker installé.";
+        } catch (e) {
+          document.getElementById("status").textContent = "Erreur Service Worker.";
+          console.error(e);
+        }
+      });
+    } else {
+      document.getElementById("status").textContent = "Service Worker non supporté.";
+    }
+  </script>
+</body>
+</html>
