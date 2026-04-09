@@ -4144,6 +4144,15 @@ async function boot() {
  * EVENTS
  *********************************/
 document.addEventListener("DOMContentLoaded", function() {
+  window.setForcedNow = function(value) {
+    localStorage.setItem("forced_now", value);
+    location.reload();
+  };
+
+  window.clearForcedNow = function() {
+    localStorage.removeItem("forced_now");
+    location.reload();
+  };
   const pwd = document.getElementById("pwd");
   if (pwd) {
     pwd.addEventListener("keydown", function(e) {
