@@ -4496,37 +4496,53 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
 
   if (!allShifts.length) return;
 
-  let html = `<h1>Planning complet</h1>`;
-
-  let currentDay = "";
+  const byDay = {};
+  const daysOrder = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
 
   allShifts.forEach(shift => {
     const day = shift.jour || "";
-    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(shift);
+  });
 
-    if (day !== currentDay) {
-      currentDay = day;
-      html += `<div class="print-day">${escapeHtml(day)}</div>`;
-    }
+  let html = `<h1>Planning complet</h1>`;
 
-    html += `
-      <div class="print-card">
-        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
-        <div class="print-meta">
-          ${
-            people.length
-              ? people.map(person => {
-                  const info = getRoleInfo(person.vehicule);
-const label = person.label || person.benevole || "";
-const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
+  daysOrder.forEach(day => {
+    const shifts = byDay[day] || [];
+    if (!shifts.length) return;
 
-return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
-                }).join("<br>")
-              : "Personne sur ce créneau"
-          }
+    html += `<div class="print-day">${escapeHtml(day)}</div>`;
+    html += `<div class="print-day-grid">`;
+
+    shifts.forEach(shift => {
+      const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+
+      html += `
+        <div class="print-card print-card-column">
+          <div class="print-line">${escapeHtml((shift.debut || "") + " – " + (shift.fin || ""))}</div>
+          <div class="print-meta">
+            ${
+              people.length
+                ? people.map(person => {
+                    const info = getRoleInfo(person.vehicule);
+                    const label = person.label || person.benevole || "";
+                    const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
+
+                    return `
+                      <div class="print-person-row">
+                        <span class="print-person-name">${escapeHtml(label)}</span>
+                        <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
+                      </div>
+                    `;
+                  }).join("")
+                : `<div class="print-empty">Personne sur ce créneau</div>`
+            }
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    });
+
+    html += `</div>`;
   });
 
   openPrintWindow("Planning complet", html);
@@ -4602,72 +4618,124 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
       <title>${escapeHtml(title)}</title>
 
       <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 30px;
-          color: #111;
-        }
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
 
-        h1 {
-          text-align: center;
-          margin-bottom: 5px;
-        }
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    color: #111;
+    font-size: 11px;
+  }
 
-        .print-subtitle {
-          text-align: center;
-          margin-bottom: 25px;
-          font-size: 16px;
-          color: #555;
-        }
+  h1 {
+    text-align: center;
+    margin: 0 0 12px 0;
+    font-size: 22px;
+  }
 
-        .print-day {
-          margin-top: 30px;
-          font-size: 20px;
-          font-weight: bold;
-          border-bottom: 2px solid #000;
-          padding-bottom: 5px;
-        }
+  .print-subtitle {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #555;
+  }
 
-        .print-card {
-          border: 1px solid #ccc;
-          border-radius: 8px;
-          padding: 10px;
-          margin: 10px 0;
-          page-break-inside: avoid;
-        }
+  .print-day {
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4px;
+    page-break-after: avoid;
+  }
 
-        .print-line {
-          font-size: 15px;
-          font-weight: bold;
-          margin-bottom: 5px;
-        }
+  .print-day-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
 
-        .print-role {
-          font-size: 14px;
-          color: #444;
-        }
+  .print-card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    background: #fff;
+  }
 
-        .print-meta {
-          font-size: 13px;
-          line-height: 1.5;
-        }
+  .print-card-column {
+    min-height: 100%;
+  }
 
-        .driver {
-          color: #0f5a4f;
-          font-weight: bold;
-        }
+  .print-line {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+  }
 
-        .loader {
-          color: #a16207;
-          font-weight: bold;
-        }
+  .print-meta {
+    font-size: 11px;
+    line-height: 1.35;
+  }
 
-        @media print {
-          body {
-            margin: 15mm;
-          }
-        }
-      </style>
+  .print-person-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 2px 0;
+    border-bottom: 1px dotted #eee;
+  }
+
+  .print-person-row:last-child {
+    border-bottom: none;
+  }
+
+  .print-person-name {
+    flex: 1;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .print-person-role {
+    flex-shrink: 0;
+    text-align: right;
+    white-space: nowrap;
+    font-weight: bold;
+  }
+
+  .driver {
+    color: #0f5a4f;
+  }
+
+  .loader {
+    color: #a16207;
+  }
+
+  .print-role {
+    font-size: 13px;
+    color: #444;
+  }
+
+  .print-empty {
+    color: #666;
+    font-style: italic;
+  }
+
+  @media print {
+    body {
+      margin: 0;
+    }
+  }
+</style>
     </head>
 
     <body>
