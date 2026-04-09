@@ -4469,11 +4469,16 @@ function loadPersonDetail() {
               ? people.map(person => {
                   const info = getRoleInfo(person.vehicule);
                   const label = person.label || person.benevole || "";
-                 const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
+                  const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
 
-return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
-                }).join("<br>")
-              : "Personne sur ce créneau"
+                  return `
+                    <div class="print-person-row">
+                      <span class="print-person-name">${escapeHtml(label)}</span>
+                      <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
+                    </div>
+                  `;
+                }).join("")
+              : `<div class="print-empty">Personne sur ce créneau</div>`
           }
         </div>
       </div>
