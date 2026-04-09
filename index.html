@@ -1932,7 +1932,6 @@ let mesCreneauxState = {
 const CACHE_VERSION = "v1";
 let APP_DATA = null;
   let autoRefreshTimer = null;
-let appRefreshTimer = null;
 let uiMinuteTimer = null;
 let syncHideTimer = null;
 let internalNavLock = false;
@@ -1985,13 +1984,22 @@ function loadCache() {
 }
 
 function loadCacheTime() {
-  const raw = localStorage.getItem(getCacheTimeKey());
-  return raw ? Number(raw) : null;
+  try {
+    const raw = localStorage.getItem("planning_cache");
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.savedAt) return null;
+
+    return Number(parsed.savedAt);
+  } catch (e) {
+    console.error("Erreur loadCacheTime", e);
+    return null;
+  }
 }
 
 function clearCache() {
-  localStorage.removeItem(getCacheKey());
-  localStorage.removeItem(getCacheTimeKey());
+  localStorage.removeItem("planning_cache");
 }
 
 function shouldResetCache(cache) {
@@ -2080,9 +2088,9 @@ function startAutoRefresh() {
 }
 
 function stopAutoRefresh() {
-  if (appRefreshTimer) {
-    clearInterval(appRefreshTimer);
-    appRefreshTimer = null;
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
   }
 }
 
@@ -2693,7 +2701,7 @@ async function loadAppData(forceRefresh = false) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
-showSyncStatus("offline", cache?.meta?.lastUpdate || cache?.savedAt || null);
+showSyncStatus("offline", cache?.meta?.lastUpdate || loadCacheTime() || null);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
@@ -4129,7 +4137,7 @@ async function boot() {
         if (navigator.onLine) {
           loadAppData(false);
         } else {
-          showSyncStatus("offline", cache?.meta?.lastUpdate || cache?.savedAt || null);
+          showSyncStatus("offline", cache?.meta?.lastUpdate || loadCacheTime() || null);
         }
         return;
       } catch (e) {
@@ -4190,7 +4198,7 @@ async function boot() {
 
         startAutoRefresh();
         startUiMinuteRefresh();
-        showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || null);
+showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || loadCacheTime() || null);
       } catch (e) {
         console.error("Erreur fallback boot", e);
         showView("login", { push: false });
