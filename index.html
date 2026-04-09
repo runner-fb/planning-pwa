@@ -1016,6 +1016,21 @@
   font-weight: 850;
 }
 
+.planning-print-actions {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 12px 0;
+}
+
+.planning-print-btn {
+  flex: 1;
+  margin-top: 0;
+}
+
+.planning-print-btn-full {
+  width: 100%;
+}
+    
 @media (max-width: 380px) {
   .home-countdown-value{
     font-size: 1.65rem;
@@ -1754,8 +1769,14 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       </section>
 
       <section id="view-mes-creneaux" class="page">
-        <div id="mesCreneauxContent"></div>
-      </section>
+  <div id="mesPrintActions" class="planning-print-actions hidden">
+    <button type="button" class="btn-light planning-print-btn planning-print-btn-full" onclick="printMyPlanning()">
+      🖨️ Imprimer mon planning
+    </button>
+  </div>
+
+  <div id="mesCreneauxContent"></div>
+</section>
 
       <section id="view-direct" class="page">
         <div id="directContent"></div>
@@ -1770,9 +1791,18 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       </section>
 
       <section id="view-planning" class="page">
-        <div id="planningTabs" class="planning-tabs"></div>
-        <div id="planningContent"></div>
-      </section>
+  <div id="planningPrintActions" class="planning-print-actions hidden">
+    <button type="button" class="btn-light planning-print-btn" onclick="printPlanningDay()">
+      🖨️ Imprimer le jour
+    </button>
+    <button type="button" class="btn-light planning-print-btn" onclick="printPlanningFull()">
+      🖨️ Imprimer le complet
+    </button>
+  </div>
+
+  <div id="planningTabs" class="planning-tabs"></div>
+  <div id="planningContent"></div>
+</section>
 
       <section id="view-contacts" class="page">
         <div id="contactsContent"></div>
@@ -2855,6 +2885,8 @@ function applyAppData(data) {
 function updateShellForView(name) {
   const bottomNav = document.getElementById("shellBottomNav");
   const titleEl = document.getElementById("miniPageTitle");
+  const planningPrintActions = document.getElementById("planningPrintActions");
+  const mesPrintActions = document.getElementById("mesPrintActions");
   const inAppViews = ["home", "direct", "mes-creneaux", "planning", "contacts", "shift-detail", "person-detail"];
 
   if (inAppViews.includes(name)) {
@@ -2874,7 +2906,13 @@ function updateShellForView(name) {
     titleEl.classList.remove("home-title");
     titleEl.textContent = "";
   }
+if (planningPrintActions) {
+    planningPrintActions.classList.toggle("hidden", name !== "planning");
+  }
 
+  if (mesPrintActions) {
+    mesPrintActions.classList.toggle("hidden", name !== "mes-creneaux");
+  }
   document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
 
   let activeName = name;
