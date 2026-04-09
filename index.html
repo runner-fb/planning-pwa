@@ -1924,6 +1924,32 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       </button>
     </nav>
   </div>
+    <div id="printModal" class="print-modal-backdrop hidden" onclick="closePrintModal()">
+  <div class="print-modal" onclick="event.stopPropagation()">
+    <div class="print-modal-title">Imprimer</div>
+    <div class="print-modal-subtitle">
+      Choisis ce que tu veux sortir proprement.
+    </div>
+
+    <div class="print-modal-actions">
+      <button type="button" class="print-option-btn primary" onclick="printMyPlanningDetailed()">
+        <span class="print-option-title">Mes créneaux</span>
+        <span class="print-option-sub">Version claire et lisible par jour</span>
+      </button>
+
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningDay()">
+        <span class="print-option-title">Planning du jour affiché</span>
+        <span class="print-option-sub">Le jour actuellement ouvert dans l’onglet planning</span>
+      </button>
+    </div>
+
+    <div class="print-modal-close-row">
+      <button type="button" class="print-option-btn light" onclick="closePrintModal()">
+        Fermer
+      </button>
+    </div>
+  </div>
+</div>
 <script>
 const WEBAPP_BASE_URL = "https://script.google.com/macros/s/AKfycbyDloUlkihvDTIlRYCiPrp0jy9vo4FRoZL2Bu7GT1eMTiKFM5dzH1NlsOnoqHoXMcqO/exec";
 
@@ -3391,7 +3417,7 @@ function renderUserHeader(options = {}) {
               ? `
                 <button
                   type="button"
-                  onclick="printMyPlanning()"
+                  onclick="openPrintModal()"
                   title="Imprimer"
                   aria-label="Imprimer"
                   style="
@@ -4387,60 +4413,164 @@ function loadPersonDetail() {
     </div>
   `;
 }
-function closePrintModal() {
-  const existing = document.getElementById("printModalBackdrop");
-  if (existing) {
-    existing.remove();
-  }
-}
 
-function openPrintModal() {
+  function printMyPlanningDetailed() {
   closePrintModal();
 
-  const modal = document.createElement("div");
-  modal.id = "printModalBackdrop";
-  modal.className = "print-modal-backdrop";
+  if (!APP_DATA || !APP_DATA.mesCreneaux || !Array.isArray(APP_DATA.mesCreneaux.creneaux)) {
+    return;
+  }
 
-  modal.innerHTML = `
-    <div class="print-modal" onclick="event.stopPropagation()">
-      <div class="print-modal-title">Impression</div>
-      <div class="print-modal-subtitle">
-        Choisis ce que tu veux imprimer.
-      </div>
+  const list = APP_DATA.mesCreneaux.creneaux
+    .slice()
+    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
 
-      <div class="print-modal-actions">
-        <button type="button" class="print-option-btn primary" onclick="printMyOwnPlanning()">
-          <span class="print-option-title">Ton planning</span>
-        </button>
+  if (!list.length) return;
 
-        <button type="button" class="print-option-btn secondary" onclick="printFullPlanning()">
-          <span class="print-option-title">Le planning complet</span>
-        </button>
-      </div>
-
-      <div class="print-modal-close-row">
-        <button type="button" class="print-option-btn light" onclick="closePrintModal()">Fermer</button>
-      </div>
+  let html = `
+    <h1>Mes créneaux</h1>
+    <div class="print-subtitle">
+      ${escapeHtml(state.userLabel || "")}
     </div>
   `;
 
-  modal.addEventListener("click", closePrintModal);
-  document.body.appendChild(modal);
+  let currentDay = "";
+
+  list.forEach(entry => {
+    const day = entry.jour || "";
+    const role = getRoleInfo(entry.vehicule || "");
+
+    if (day !== currentDay) {
+      currentDay = day;
+      html += `<div class="print-day">${escapeHtml(day)}</div>`;
+    }
+
+    html += `
+      <div class="print-card">
+        <div class="print-line">${escapeHtml((entry.debut || "") + " – " + (entry.fin || ""))}</div>
+        <div class="print-role">${escapeHtml(role.label)}</div>
+      </div>
+    `;
+  });
+
+  openPrintWindow("Mes créneaux", html);
 }
 
-function printMyPlanning() {
-  openPrintModal();
-}
-
-function printMyOwnPlanning() {
+  function printPlanningDay() {
   closePrintModal();
-  alert("Impression de mon planning à brancher");
+
+  const day = planningState.selectedDay;
+  const shifts = (planningState.byDay && planningState.byDay[day]) ? planningState.byDay[day] : [];
+
+  if (!day || !shifts.length) return;
+
+  let html = `
+    <h1>Planning du jour</h1>
+    <div class="print-subtitle">
+      ${escapeHtml(day)}
+    </div>
+  `;
+
+  shifts.forEach(shift => {
+    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+
+    html += `
+      <div class="print-card">
+        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
+        <div class="print-meta">
+          ${people.map(person => {
+            const info = getRoleInfo(person.vehicule);
+            const label = person.label || person.benevole || "";
+            return escapeHtml(label + " — " + info.label);
+          }).join("<br>")}
+        </div>
+      </div>
+    `;
+  });
+
+  openPrintWindow("Planning " + day, html);
 }
 
-function printFullPlanning() {
-  closePrintModal();
-  alert("Impression du planning complet à brancher");
+  function openPrintWindow(title, bodyHtml) {
+  const win = window.open("", "_blank");
+  if (!win) return;
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <title>${escapeHtml(title)}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 24px;
+          color: #222;
+        }
+
+        h1 {
+          font-size: 22px;
+          margin-bottom: 6px;
+        }
+
+        .print-subtitle {
+          font-size: 14px;
+          color: #555;
+          margin-bottom: 20px;
+        }
+
+        .print-day {
+          margin-top: 24px;
+          margin-bottom: 8px;
+          font-size: 18px;
+          font-weight: bold;
+          border-bottom: 2px solid #ccc;
+          padding-bottom: 4px;
+        }
+
+        .print-card {
+          border: 1px solid #ccc;
+          border-radius: 10px;
+          padding: 12px;
+          margin-bottom: 10px;
+          page-break-inside: avoid;
+        }
+
+        .print-line {
+          font-size: 16px;
+          font-weight: bold;
+          margin-bottom: 6px;
+        }
+
+        .print-role {
+          font-size: 14px;
+          color: #444;
+        }
+
+        .print-meta {
+          font-size: 13px;
+          color: #666;
+          margin-top: 4px;
+        }
+
+        @media print {
+          body {
+            margin: 12mm;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      ${bodyHtml}
+    </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.focus();
+  win.print();
 }
+  
 /*********************************
  * BOOT
  *********************************/
@@ -4618,7 +4748,18 @@ function clearForcedNow() {
   localStorage.removeItem("forced_now");
   location.reload();
 }
+function openPrintModal() {
+  const modal = document.getElementById("printModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+}
 
+function closePrintModal() {
+  const modal = document.getElementById("printModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
 </script>
+
 </body>
 </html>
