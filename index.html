@@ -2110,13 +2110,13 @@ function buildPlanningByDay(shifts) {
   return grouped;
 }
 
-function getCurrentNowDate() {
-  const isTest = APP_DATA?.debugMode === "test";
-  const bundleNow = APP_DATA?.direct?.now || APP_DATA?.planning?.now || "";
+ffunction getCurrentNowDate() {
 
-  if (isTest) {
-    const parsed = parseDirectDateLabel(bundleNow);
-    return parsed || new Date();
+  const forced = localStorage.getItem("forced_now");
+
+  if (forced) {
+    const parsed = parseDirectDateLabel(forced);
+    if (parsed) return parsed;
   }
 
   return new Date();
