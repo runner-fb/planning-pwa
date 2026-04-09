@@ -1939,17 +1939,22 @@ let internalNavLock = false;
 /*********************************
  * CACHE HELPERS
  *********************************/
+function getCacheKey() {
+  if (!state.userId) return null;
+  return "planning_cache_" + state.userId;
+}
+
 function saveCache(data) {
   try {
-    if (!state.userId) return;
+    const cacheKey = getCacheKey();
+    if (!cacheKey) return;
 
     const payload = {
-      userId: state.userId,
       savedAt: Date.now(),
       data: data
     };
 
-    localStorage.setItem("planning_cache", JSON.stringify(payload));
+    localStorage.setItem(cacheKey, JSON.stringify(payload));
   } catch (e) {
     console.error("Erreur saveCache", e);
   }
@@ -1957,16 +1962,14 @@ function saveCache(data) {
 
 function loadCache() {
   try {
-    const raw = localStorage.getItem("planning_cache");
+    const cacheKey = getCacheKey();
+    if (!cacheKey) return null;
+
+    const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
-
-    if (!parsed || !parsed.userId || !parsed.data) return null;
-
-    if (parsed.userId !== state.userId) {
-      return null;
-    }
+    if (!parsed || !parsed.data) return null;
 
     return parsed.data;
   } catch (e) {
@@ -1977,7 +1980,10 @@ function loadCache() {
 
 function loadCacheTime() {
   try {
-    const raw = localStorage.getItem("planning_cache");
+    const cacheKey = getCacheKey();
+    if (!cacheKey) return null;
+
+    const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
@@ -1991,7 +1997,9 @@ function loadCacheTime() {
 }
 
 function clearCache() {
-  localStorage.removeItem("planning_cache");
+  const cacheKey = getCacheKey();
+  if (!cacheKey) return;
+  localStorage.removeItem(cacheKey);
 }
 
 function shouldResetCache(cache) {
@@ -2682,13 +2690,18 @@ async function loadAppData(forceRefresh = false) {
     cache = null;
   }
 
-  if (cache) {
+if (cache) {
   try {
     APP_DATA = cache;
     applyAppData(cache);
 
-    const offlineLastUpdate = cache?.meta?.lastUpdate || loadCacheTime() || null;
-    showSyncStatus("offline", offlineLastUpdate);
+    const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+
+    if (!navigator.onLine) {
+      showSyncStatus("offline", cacheLastUpdate);
+    } else {
+      showSyncStatus("ok", cacheLastUpdate);
+    }
 
   } catch (e) {
     console.error("Erreur apply cache", e);
@@ -2730,8 +2743,8 @@ async function loadAppData(forceRefresh = false) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
-const offlineLastUpdate = cache?.meta?.lastUpdate || loadCacheTime() || null;
-showSyncStatus("offline", offlineLastUpdate);
+const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+        showSyncStatus("offline", offlineLastUpdate);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
