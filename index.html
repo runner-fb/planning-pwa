@@ -2044,8 +2044,8 @@ function formatLastUpdateLabel(isoString) {
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "";
 
-  const now = new Date();
-
+const now = getNow();
+  
   const sameDay =
     d.getDate() === now.getDate() &&
     d.getMonth() === now.getMonth() &&
@@ -2715,11 +2715,6 @@ function injectDefaultTimeForEdgeDays(shift) {
 }
 
 function getCurrentShiftForPerson(personId) {
-  const shifts = getPersonShifts(personId);
-  return shifts.find(s => getShiftStatusInfo(s).badgeClass === "current") || null;
-}
-
-function getUpcomingShiftForPerson(personId) {
   const now = getCurrentNowDate();
   const shifts = getPersonShifts(personId);
 
@@ -2727,12 +2722,34 @@ function getUpcomingShiftForPerson(personId) {
     const parsed = getShiftDates(shift);
     if (!parsed) continue;
 
-    if (parsed.startDate > now) {
+    if (now >= parsed.startDate && now < parsed.endDate) {
       return shift;
     }
   }
 
   return null;
+}
+
+function getUpcomingShiftForPerson(personId) {
+  const now = getCurrentNowDate();
+  const shifts = getPersonShifts(personId);
+
+  let nextShift = null;
+  let nextStart = null;
+
+  for (const shift of shifts) {
+    const parsed = getShiftDates(shift);
+    if (!parsed) continue;
+
+    if (parsed.startDate > now) {
+      if (!nextStart || parsed.startDate < nextStart) {
+        nextShift = shift;
+        nextStart = parsed.startDate;
+      }
+    }
+  }
+
+  return nextShift;
 }
 
 function personHasMondayShift(personId) {
