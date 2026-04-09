@@ -1998,8 +1998,13 @@ function shouldResetCache(cache) {
   if (!cache || !cache.meta) return false;
   if (cache.meta.version !== CACHE_VERSION) return true;
 
-  const limit = new Date("2026-07-10T23:59:59").getTime();
-  if (Date.now() > limit) return true;
+  const resetAfter =
+    cache.meta.cacheResetAfter ||
+    cache.meta.festivalEnd ||
+    "2026-07-10T23:59:59";
+
+  const limit = new Date(resetAfter).getTime();
+  if (!isNaN(limit) && Date.now() > limit) return true;
 
   return false;
 }
@@ -2079,12 +2084,13 @@ function showSyncStatus(mode, lastUpdate) {
   }
 
   if (mode === "offline") {
-    el.classList.add("offline");
-    el.textContent = "Mode hors ligne";
-    const time = formatLastUpdateLabel(lastUpdate);
-    if (time) el.textContent += " • dernière mise à jour : " + time;
-    return;
-  }
+  el.classList.add("offline");
+  const time = formatLastUpdateLabel(lastUpdate);
+  el.textContent = time
+    ? "Mode hors ligne • dernière mise à jour : " + time
+    : "Mode hors ligne";
+  return;
+}
 
   el.classList.add("hidden");
 }
@@ -2094,19 +2100,10 @@ function startAutoRefresh() {
     clearInterval(autoRefreshTimer);
   }
 
-  let lastRefreshTime = 0;
-
   autoRefreshTimer = setInterval(() => {
-    const now = Date.now();
-
-    // minimum 30 secondes entre deux appels
-    if (now - lastRefreshTime < 30000) return;
-
     if (!navigator.onLine) return;
-
-    lastRefreshTime = now;
     loadAppData(false);
-  }, 10000); // check toutes les 10 secondes
+  }, 30000);
 }
 
 function stopAutoRefresh() {
@@ -2686,16 +2683,20 @@ async function loadAppData(forceRefresh = false) {
   }
 
   if (cache) {
-    try {
-      APP_DATA = cache;
-      applyAppData(cache);
-    } catch (e) {
-      console.error("Erreur apply cache", e);
-      clearCache();
-      cache = null;
-      APP_DATA = null;
-    }
+  try {
+    APP_DATA = cache;
+    applyAppData(cache);
+
+    const offlineLastUpdate = cache?.meta?.lastUpdate || loadCacheTime() || null;
+    showSyncStatus("offline", offlineLastUpdate);
+
+  } catch (e) {
+    console.error("Erreur apply cache", e);
+    clearCache();
+    cache = null;
+    APP_DATA = null;
   }
+}
 
   let shouldRefresh = forceRefresh;
 
@@ -2729,7 +2730,8 @@ async function loadAppData(forceRefresh = false) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
-showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || loadCacheTime() || null);
+const offlineLastUpdate = cache?.meta?.lastUpdate || loadCacheTime() || null;
+showSyncStatus("offline", offlineLastUpdate);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
