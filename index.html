@@ -1919,9 +1919,9 @@ let personDetailState = {
 let planningState = {
   allShifts: [],
   byDay: {},
-  selectedDay: "Mardi",
+  selectedDay: "",
   openShiftId: null
-};
+};;
 
 let contactsState = {
   query: localStorage.getItem("planning_contacts_query") || ""
@@ -2519,6 +2519,30 @@ function getMiniPageTitle(viewName) {
   return map[viewName] || "";
 }
 
+function getDefaultPlanningDay() {
+  const now = getCurrentNowDate();
+
+  const start = new Date("2026-07-01T00:00:00");
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date("2026-07-06T23:59:59");
+
+  if (now < start) return "Mardi";
+  if (now > end) return "Lundi";
+
+  const dayMap = {
+    0: "Dimanche",
+    1: "Lundi",
+    2: "Mardi",
+    3: "Mercredi",
+    4: "Jeudi",
+    5: "Vendredi",
+    6: "Samedi"
+  };
+
+  return dayMap[now.getDay()] || "Mardi";
+}
+  
 /*********************************
  * NAVIGATION STATE / HISTORY
  *********************************/
@@ -3705,7 +3729,11 @@ function loadPlanning() {
   }
 
   planningState.allShifts = getPlanningShiftsFromAppData(APP_DATA);
-  planningState.byDay = buildPlanningByDay(planningState.allShifts);
+planningState.byDay = buildPlanningByDay(planningState.allShifts);
+
+if (!planningState.selectedDay || !planningState.byDay[planningState.selectedDay]) {
+  planningState.selectedDay = getDefaultPlanningDay();
+}
 
   renderPlanningTabs();
   renderPlanning();
