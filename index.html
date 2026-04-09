@@ -2152,6 +2152,32 @@ function renderSafeError(targetId, message) {
   `;
 }
 
+  function renderOfflineEmptyState() {
+  const targets = [
+    "homeContent",
+    "mesCreneauxContent",
+    "directContent",
+    "planningContent",
+    "contactsContent",
+    "shiftDetailContent",
+    "personDetailContent"
+  ];
+
+  targets.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    el.innerHTML = `
+      <div class="card empty-state-card">
+        <div class="empty-state-title">Mode hors ligne</div>
+        <div class="empty-state-subtitle">
+          Aucune donnée en cache n’est disponible pour cette personne sur cet appareil.
+        </div>
+      </div>
+    `;
+  });
+}
+
 function scrollMainToTop() {
   const main = document.getElementById("mainContent");
 
@@ -2643,8 +2669,13 @@ async function loadAppData(forceRefresh = false) {
         showSyncStatus("offline", cache?.meta?.lastUpdate || null);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
+        APP_DATA = null;
+        renderOfflineEmptyState();
+        showSyncStatus("offline", null);
       }
     } else {
+      APP_DATA = null;
+      renderOfflineEmptyState();
       showSyncStatus("offline", null);
     }
   }
