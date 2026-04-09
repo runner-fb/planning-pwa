@@ -3375,12 +3375,16 @@ function renderHome() {
 
     <div class="home-stack">
       <div class="card user-card home-card-raise">
-        <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
-          <div class="user-info">
-            <span class="user-label">Hello John, tu es connecté en tant que</span>
-            <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
-          </div>
-        </div>
+       <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent; display:flex; align-items:center; justify-content:space-between;">
+  <div class="user-info">
+    <span class="user-label">Hello John, tu es connecté en tant que</span>
+    <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
+  </div>
+
+  <button onclick="printMyPlanning()" style="border:none; background:transparent; font-size:20px; cursor:pointer;">
+    🖨️
+  </button>
+</div>
       </div>
 
       <div style="margin-top:10px; display:flex; gap:8px;">
