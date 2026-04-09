@@ -2434,7 +2434,41 @@ function getShiftStatusInfo(shift) {
     timerText: "Se termine dans " + formatDuration(diff)
   };
 }
+function computeDirectDefaultIndexFromNow(allShifts) {
+  if (!Array.isArray(allShifts) || !allShifts.length) {
+    return {
+      defaultIndex: -1,
+      liveState: "next"
+    };
+  }
 
+  const now = getCurrentNowDate();
+  let currentIndex = -1;
+  let nextIndex = -1;
+
+  for (let i = 0; i < allShifts.length; i++) {
+    const entry = allShifts[i];
+    const shift = entry && entry.shift ? entry.shift : null;
+    const parsed = getShiftDates(shift);
+
+    if (!parsed) continue;
+
+    if (now >= parsed.startDate && now < parsed.endDate) {
+      currentIndex = i;
+      break;
+    }
+
+    if (nextIndex === -1 && parsed.startDate > now) {
+      nextIndex = i;
+    }
+  }
+
+  return {
+    defaultIndex: currentIndex !== -1 ? currentIndex : nextIndex,
+    liveState: currentIndex !== -1 ? "current" : "next"
+  };
+}
+  
 function formatDuration(ms) {
   if (!ms || ms <= 0) return "";
 
@@ -3509,7 +3543,11 @@ function applyDirectData(data) {
   }
 
   directState.allShifts = data.allShifts;
-  directState.defaultIndex = typeof data.defaultIndex === "number" ? data.defaultIndex : -1;
+
+  const computedDirect = computeDirectDefaultIndexFromNow(directState.allShifts);
+
+  directState.defaultIndex = computedDirect.defaultIndex;
+  directState.liveState = computedDirect.liveState;
 
   if (!directState.isManual) {
     if (
