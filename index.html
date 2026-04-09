@@ -1939,14 +1939,6 @@ let internalNavLock = false;
 /*********************************
  * CACHE HELPERS
  *********************************/
-function getCacheKey() {
-  return "festival_cache_" + (state.userId || "unknown");
-}
-
-function getCacheTimeKey() {
-  return "festival_cache_time_" + (state.userId || "unknown");
-}
-
 function saveCache(data) {
   try {
     if (!state.userId) return;
@@ -2027,9 +2019,39 @@ function isValidAppDataShape(data) {
 
 function formatLastUpdateLabel(isoString) {
   if (!isoString) return "";
+
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+  const now = new Date();
+
+  const sameDay =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+
+  const isYesterday =
+    d.getDate() === yesterday.getDate() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getFullYear() === yesterday.getFullYear();
+
+  const time = d.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  if (sameDay) return "Aujourd’hui à " + time;
+  if (isYesterday) return "Hier à " + time;
+
+  const date = d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit"
+  });
+
+  return date + " à " + time;
 }
 
 function showSyncStatus(mode, lastUpdate) {
@@ -2707,7 +2729,7 @@ async function loadAppData(forceRefresh = false) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
-showSyncStatus("offline", cache?.meta?.lastUpdate || loadCacheTime() || null);
+showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || loadCacheTime() || null);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
@@ -4143,7 +4165,7 @@ async function boot() {
         if (navigator.onLine) {
           loadAppData(false);
         } else {
-          showSyncStatus("offline", cache?.meta?.lastUpdate || loadCacheTime() || null);
+showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null));
         }
         return;
       } catch (e) {
@@ -4204,7 +4226,7 @@ async function boot() {
 
         startAutoRefresh();
         startUiMinuteRefresh();
-showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || loadCacheTime() || null);
+showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null));
       } catch (e) {
         console.error("Erreur fallback boot", e);
         showView("login", { push: false });
