@@ -3768,8 +3768,8 @@ function renderPlanningTabs() {
 function selectPlanningDay(day) {
   planningState.selectedDay = day;
   planningState.openShiftId = null;
-  Tabs();
-  ();
+  renderPlanningTabs();
+  renderPlanning();
 }
 
 function togglePlanningShift(shiftId) {
@@ -3779,7 +3779,7 @@ function togglePlanningShift(shiftId) {
     planningState.openShiftId = shiftId;
   }
 
-  ();
+  renderPlanning();
 }
 
 function renderPlanning() {
@@ -3799,18 +3799,18 @@ function renderPlanning() {
   }
 
   const countLabel = `${shifts.length} créneau${shifts.length > 1 ? "x" : ""}`;
- `
-   let html = `
-  <div class="card user-card home-card-raise" style="margin-bottom:12px;">
-    <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
-      <div class="user-info">
-        <span class="user-label">Hello John, tu es connecté en tant que</span>
-        <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
+
+  let html = `
+    <div class="card user-card home-card-raise" style="margin-bottom:12px;">
+      <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
+        <div class="user-info">
+          <span class="user-label">Hello John, tu es connecté en tant que</span>
+          <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="planning-day-header">
+    <div class="planning-day-header">
       <div>
         <div class="planning-day-subtitle">Planning du jour</div>
         <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
