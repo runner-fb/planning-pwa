@@ -4469,7 +4469,7 @@ function loadPersonDetail() {
               ? people.map(person => {
                   const info = getRoleInfo(person.vehicule);
                   const label = person.label || person.benevole || "";
-                  const roleClass = info.type === "driver" ? "print-role-driver" : "print-role-loader";
+                 const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
 
 return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
                 }).join("<br>")
@@ -4518,7 +4518,7 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
               ? people.map(person => {
                   const info = getRoleInfo(person.vehicule);
                   const label = person.label || person.benevole || "";
-                  const roleClass = info.type === "driver" ? "print-role-driver" : "print-role-loader";
+                  fo.group === "chauffeurs" ? "driver" : "loader";
 
 return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
                 }).join("<br>")
@@ -4529,7 +4529,7 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
     `;
   });
 
-  ("Planning complet", html);
+  openPrintWindow("Planning complet", html);
 }
 
   function printMyPlanningDetailed() {
@@ -4571,83 +4571,85 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
     `;
   });
 
-  ("Mes créneaux", html);
+ openPrintWindow("Mes créneaux", html);
 }
 
   function openPrintWindow(title, bodyHtml) {
   const win = window.open("", "_blank");
   if (!win) return;
 
+  win.document.open();
   win.document.write(`
     <!DOCTYPE html>
     <html lang="fr">
     <head>
       <meta charset="UTF-8">
       <title>${escapeHtml(title)}</title>
+
       <style>
         body {
-  font-family: Arial, sans-serif;
-  padding: 20px;
-  color: #111;
-}
+          font-family: Arial, sans-serif;
+          margin: 30px;
+          color: #111;
+        }
 
-h1 {
-  text-align: center;
-  margin-bottom: 10px;
-}
+        h1 {
+          text-align: center;
+          margin-bottom: 5px;
+        }
 
-.print-subtitle {
-  text-align: center;
-  margin-bottom: 20px;
-  font-size: 18px;
-}
+        .print-subtitle {
+          text-align: center;
+          margin-bottom: 25px;
+          font-size: 16px;
+          color: #555;
+        }
 
-.print-day {
-  margin-top: 30px;
-  font-size: 22px;
-  font-weight: bold;
-  border-bottom: 2px solid #000;
-  padding-bottom: 5px;
-}
+        .print-day {
+          margin-top: 30px;
+          font-size: 20px;
+          font-weight: bold;
+          border-bottom: 2px solid #000;
+          padding-bottom: 5px;
+        }
 
-.print-card {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px;
-  margin: 10px 0;
-}
+        .print-card {
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          padding: 10px;
+          margin: 10px 0;
+          page-break-inside: avoid;
+        }
 
-.print-line {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
+        .print-line {
+          font-size: 15px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
 
-.print-meta {
-  font-size: 14px;
-  line-height: 1.4;
-}
+        .print-meta {
+          font-size: 13px;
+          line-height: 1.5;
+        }
 
-.print-role-driver {
-  color: #0f5a4f;
-  font-weight: bold;
-}
+        .driver {
+          color: #0f5a4f;
+          font-weight: bold;
+        }
 
-.print-role-loader {
-  color: #a16207;
-  font-weight: bold;
-}
+        .loader {
+          color: #a16207;
+          font-weight: bold;
+        }
 
-@media print {
-  body {
-    padding: 10px;
-  }
-
-  .print-card {
-    page-break-inside: avoid;
-  }
-}
+        @media print {
+          body {
+            margin: 15mm;
+          }
+        }
       </style>
     </head>
+
     <body>
       ${bodyHtml}
     </body>
@@ -4655,8 +4657,12 @@ h1 {
   `);
 
   win.document.close();
-  win.focus();
-  win.print();
+
+  // 🔑 IMPORTANT (sinon bug aléatoire)
+  setTimeout(() => {
+    win.focus();
+    win.print();
+  }, 300);
 }
   
 /*********************************
