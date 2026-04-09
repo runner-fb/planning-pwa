@@ -1931,20 +1931,49 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       Choisis ce que tu veux sortir proprement.
     </div>
 
-    <div class="print-modal-actions">
-      <button type="button" class="print-option-btn primary" onclick="printMyPlanningDetailed()">
-        <span class="print-option-title">Mes créneaux</span>
-        <span class="print-option-sub">Version claire et lisible par jour</span>
-      </button>
+   <div class="print-modal-actions">
+  <button type="button" class="print-option-btn primary" onclick="printMyPlanningDetailed()">
+    <span class="print-option-title">Mes créneaux</span>
+    <span class="print-option-sub">Version claire et lisible par jour</span>
+  </button>
 
-      <button type="button" class="print-option-btn secondary" onclick="printPlanningDay()">
-        <span class="print-option-title">Planning du jour affiché</span>
-        <span class="print-option-sub">Le jour actuellement ouvert dans l’onglet planning</span>
-      </button>
-    </div>
+  <button type="button" class="print-option-btn secondary" onclick="openPrintDayPicker()">
+    <span class="print-option-title">Un jour</span>
+    <span class="print-option-sub">Choisir le jour à imprimer</span>
+  </button>
+
+  <button type="button" class="print-option-btn secondary" onclick="printFullPlanningDetailed()">
+    <span class="print-option-title">Planning complet</span>
+    <span class="print-option-sub">Tous les jours et tous les créneaux</span>
+  </button>
+</div>
 
     <div class="print-modal-close-row">
       <button type="button" class="print-option-btn light" onclick="closePrintModal()">
+        Fermer
+      </button>
+    </div>
+  </div>
+</div>
+  <div id="printDayModal" class="print-modal-backdrop hidden" onclick="closePrintDayPicker()">
+  <div class="print-modal" onclick="event.stopPropagation()">
+    <div class="print-modal-title">Choisir un jour</div>
+    <div class="print-modal-subtitle">
+      Sélectionne le jour que tu veux imprimer.
+    </div>
+
+    <div class="print-modal-actions">
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Mardi')">Mardi</button>
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Mercredi')">Mercredi</button>
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Jeudi')">Jeudi</button>
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Vendredi')">Vendredi</button>
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Samedi')">Samedi</button>
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Dimanche')">Dimanche</button>
+      <button type="button" class="print-option-btn secondary" onclick="printPlanningForDay('Lundi')">Lundi</button>
+    </div>
+
+    <div class="print-modal-close-row">
+      <button type="button" class="print-option-btn light" onclick="closePrintDayPicker()">
         Fermer
       </button>
     </div>
@@ -4414,6 +4443,91 @@ function loadPersonDetail() {
   `;
 }
 
+  function printPlanningForDay(day) {
+  closePrintDayPicker();
+
+  if (!APP_DATA || !APP_DATA.planning) return;
+
+  const shifts = (planningState.byDay && planningState.byDay[day]) ? planningState.byDay[day] : [];
+
+  if (!shifts.length) return;
+
+  let html = `
+    <h1>Planning du jour</h1>
+    <div class="print-subtitle">${escapeHtml(day)}</div>
+  `;
+
+  shifts.forEach(shift => {
+    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+
+    html += `
+      <div class="print-card">
+        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
+        <div class="print-meta">
+          ${
+            people.length
+              ? people.map(person => {
+                  const info = getRoleInfo(person.vehicule);
+                  const label = person.label || person.benevole || "";
+                  return escapeHtml(label + " — " + info.label);
+                }).join("<br>")
+              : "Personne sur ce créneau"
+          }
+        </div>
+      </div>
+    `;
+  });
+
+  openPrintWindow("Planning " + day, html);
+}
+
+  function printFullPlanningDetailed() {
+  closePrintModal();
+
+  if (!APP_DATA || !APP_DATA.planning || !Array.isArray(APP_DATA.planning.allShifts)) {
+    return;
+  }
+
+  const allShifts = APP_DATA.planning.allShifts
+    .slice()
+    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
+
+  if (!allShifts.length) return;
+
+  let html = `<h1>Planning complet</h1>`;
+
+  let currentDay = "";
+
+  allShifts.forEach(shift => {
+    const day = shift.jour || "";
+    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+
+    if (day !== currentDay) {
+      currentDay = day;
+      html += `<div class="print-day">${escapeHtml(day)}</div>`;
+    }
+
+    html += `
+      <div class="print-card">
+        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
+        <div class="print-meta">
+          ${
+            people.length
+              ? people.map(person => {
+                  const info = getRoleInfo(person.vehicule);
+                  const label = person.label || person.benevole || "";
+                  return escapeHtml(label + " — " + info.label);
+                }).join("<br>")
+              : "Personne sur ce créneau"
+          }
+        </div>
+      </div>
+    `;
+  });
+
+  openPrintWindow("Planning complet", html);
+}
+
   function printMyPlanningDetailed() {
   closePrintModal();
 
@@ -4454,41 +4568,6 @@ function loadPersonDetail() {
   });
 
   openPrintWindow("Mes créneaux", html);
-}
-
-  function printPlanningDay() {
-  closePrintModal();
-
-  const day = planningState.selectedDay;
-  const shifts = (planningState.byDay && planningState.byDay[day]) ? planningState.byDay[day] : [];
-
-  if (!day || !shifts.length) return;
-
-  let html = `
-    <h1>Planning du jour</h1>
-    <div class="print-subtitle">
-      ${escapeHtml(day)}
-    </div>
-  `;
-
-  shifts.forEach(shift => {
-    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
-
-    html += `
-      <div class="print-card">
-        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
-        <div class="print-meta">
-          ${people.map(person => {
-            const info = getRoleInfo(person.vehicule);
-            const label = person.label || person.benevole || "";
-            return escapeHtml(label + " — " + info.label);
-          }).join("<br>")}
-        </div>
-      </div>
-    `;
-  });
-
-  openPrintWindow("Planning " + day, html);
 }
 
   function openPrintWindow(title, bodyHtml) {
@@ -4756,6 +4835,18 @@ function openPrintModal() {
 
 function closePrintModal() {
   const modal = document.getElementById("printModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+  function openPrintDayPicker() {
+  closePrintModal();
+  const modal = document.getElementById("printDayModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+}
+
+function closePrintDayPicker() {
+  const modal = document.getElementById("printDayModal");
   if (!modal) return;
   modal.classList.add("hidden");
 }
