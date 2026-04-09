@@ -4469,7 +4469,9 @@ function loadPersonDetail() {
               ? people.map(person => {
                   const info = getRoleInfo(person.vehicule);
                   const label = person.label || person.benevole || "";
-                  return escapeHtml(label + " — " + info.label);
+                  const roleClass = info.type === "driver" ? "print-role-driver" : "print-role-loader";
+
+return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
                 }).join("<br>")
               : "Personne sur ce créneau"
           }
@@ -4516,7 +4518,9 @@ function loadPersonDetail() {
               ? people.map(person => {
                   const info = getRoleInfo(person.vehicule);
                   const label = person.label || person.benevole || "";
-                  return escapeHtml(label + " — " + info.label);
+                  const roleClass = info.type === "driver" ? "print-role-driver" : "print-role-loader";
+
+return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
                 }).join("<br>")
               : "Personne sur ce créneau"
           }
@@ -4525,7 +4529,7 @@ function loadPersonDetail() {
     `;
   });
 
-  openPrintWindow("Planning complet", html);
+  ("Planning complet", html);
 }
 
   function printMyPlanningDetailed() {
@@ -4567,7 +4571,7 @@ function loadPersonDetail() {
     `;
   });
 
-  openPrintWindow("Mes créneaux", html);
+  ("Mes créneaux", html);
 }
 
   function openPrintWindow(title, bodyHtml) {
@@ -4582,61 +4586,66 @@ function loadPersonDetail() {
       <title>${escapeHtml(title)}</title>
       <style>
         body {
-          font-family: Arial, sans-serif;
-          margin: 24px;
-          color: #222;
-        }
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  color: #111;
+}
 
-        h1 {
-          font-size: 22px;
-          margin-bottom: 6px;
-        }
+h1 {
+  text-align: center;
+  margin-bottom: 10px;
+}
 
-        .print-subtitle {
-          font-size: 14px;
-          color: #555;
-          margin-bottom: 20px;
-        }
+.print-subtitle {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
 
-        .print-day {
-          margin-top: 24px;
-          margin-bottom: 8px;
-          font-size: 18px;
-          font-weight: bold;
-          border-bottom: 2px solid #ccc;
-          padding-bottom: 4px;
-        }
+.print-day {
+  margin-top: 30px;
+  font-size: 22px;
+  font-weight: bold;
+  border-bottom: 2px solid #000;
+  padding-bottom: 5px;
+}
 
-        .print-card {
-          border: 1px solid #ccc;
-          border-radius: 10px;
-          padding: 12px;
-          margin-bottom: 10px;
-          page-break-inside: avoid;
-        }
+.print-card {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  margin: 10px 0;
+}
 
-        .print-line {
-          font-size: 16px;
-          font-weight: bold;
-          margin-bottom: 6px;
-        }
+.print-line {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
 
-        .print-role {
-          font-size: 14px;
-          color: #444;
-        }
+.print-meta {
+  font-size: 14px;
+  line-height: 1.4;
+}
 
-        .print-meta {
-          font-size: 13px;
-          color: #666;
-          margin-top: 4px;
-        }
+.print-role-driver {
+  color: #0f5a4f;
+  font-weight: bold;
+}
 
-        @media print {
-          body {
-            margin: 12mm;
-          }
-        }
+.print-role-loader {
+  color: #a16207;
+  font-weight: bold;
+}
+
+@media print {
+  body {
+    padding: 10px;
+  }
+
+  .print-card {
+    page-break-inside: avoid;
+  }
+}
       </style>
     </head>
     <body>
