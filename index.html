@@ -1705,15 +1705,19 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
   }
 }
 
-    .print-modal-backdrop {
+/* ================================
+   PRINT MODAL
+================================ */
+
+.print-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(24, 68, 61, 0.38);
-  backdrop-filter: blur(3px);
+  background: rgba(24, 68, 61, 0.4);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 200;
+  z-index: 999;
   padding: 16px;
 }
 
@@ -1721,16 +1725,17 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
   width: 100%;
   max-width: 520px;
   background: linear-gradient(180deg, #FFFDF7 0%, #FFF8EF 100%);
-  border: 1px solid rgba(222,212,194,0.9);
   border-radius: 24px;
-  box-shadow: var(--shadow-strong);
+  border: 1px solid rgba(222,212,194,0.9);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
   padding: 18px;
-  animation: printModalUp 0.18s ease-out;
+  animation: printModalSlideUp 0.2s ease-out;
 }
 
-@keyframes printModalUp {
+/* animation entrée */
+@keyframes printModalSlideUp {
   from {
-    transform: translateY(18px);
+    transform: translateY(20px);
     opacity: 0;
   }
   to {
@@ -1739,20 +1744,21 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
   }
 }
 
+/* titres */
 .print-modal-title {
-  font-size: 1.08rem;
-  font-weight: 1000;
+  font-size: 1.1rem;
+  font-weight: 800;
   color: var(--primary-dark);
   margin-bottom: 6px;
 }
 
 .print-modal-subtitle {
-  font-size: 0.94rem;
+  font-size: 0.92rem;
   color: var(--muted);
-  line-height: 1.4;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
+/* boutons */
 .print-modal-actions {
   display: flex;
   flex-direction: column;
@@ -1761,58 +1767,60 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
 
 .print-option-btn {
   width: 100%;
-  border: none;
   border-radius: 16px;
   padding: 14px;
-  font-size: 0.98rem;
-  font-weight: 1000;
+  border: none;
+  font-weight: 700;
   cursor: pointer;
   text-align: left;
-  transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.14s ease;
+  transition: all 0.15s ease;
 }
 
+/* effet tactile */
 .print-option-btn:active {
   transform: scale(0.98);
   opacity: 0.9;
 }
 
+/* variantes */
 .print-option-btn.primary {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--primary);
   color: white;
-  box-shadow: 0 8px 18px rgba(15,90,79,0.18);
 }
 
 .print-option-btn.secondary {
-  background: linear-gradient(135deg, #F7F1E7 0%, #FBF7EF 100%);
-  color: var(--primary-dark);
+  background: #F7F1E7;
   border: 1px solid #E4D7C4;
+  color: var(--primary-dark);
 }
 
 .print-option-btn.light {
-  background: #FFFDF8;
-  color: var(--primary-dark);
+  background: #FFF;
   border: 1px solid var(--line);
+  color: var(--primary-dark);
 }
 
+/* texte interne */
 .print-option-title {
   display: block;
-  font-size: 0.98rem;
-  font-weight: 1000;
-  margin-bottom: 4px;
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .print-option-sub {
   display: block;
-  font-size: 0.86rem;
-  line-height: 1.35;
-  opacity: 0.85;
+  font-size: 0.82rem;
+  opacity: 0.8;
+  margin-top: 2px;
 }
 
+/* bouton fermer */
 .print-modal-close-row {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
 }
+    
 </style>
 </head>
 
