@@ -2044,7 +2044,7 @@ function formatLastUpdateLabel(isoString) {
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "";
 
-const now = getNow();
+const now = getCurrentNowDate();
   
   const sameDay =
     d.getDate() === now.getDate() &&
