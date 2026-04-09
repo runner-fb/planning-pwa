@@ -3474,19 +3474,15 @@ function renderUserHeader(options = {}) {
 
   return `
     <div class="planning-tabs">
-      ${days.map(day => {
-        const count = (planningState.byDay[day] || []).length;
-
-        return `
-          <button
-            type="button"
-            class="planning-tab ${planningState.selectedDay === day ? "active" : ""}"
-            onclick="selectPlanningDay('${day}')"
-          >
-            ${day}${count ? ` (${count})` : ""}
-          </button>
-        `;
-      }).join("")}
+      ${days.map(day => `
+        <button
+          type="button"
+          class="planning-tab ${planningState.selectedDay === day ? "active" : ""}"
+          onclick="selectPlanningDay('${day}')"
+        >
+          ${day}
+        </button>
+      `).join("")}
     </div>
   `;
 }
@@ -3869,8 +3865,8 @@ function renderDirectRestScreen(nextEntry) {
   container.innerHTML = `
     <div class="card direct-rest-card">
       ${isTestMode() ? `<div class="meta-line">Heure actuelle : ${escapeHtml(getCurrentNowLabel())}</div>` : ""}
-      <div class="direct-rest-title">Aucun créneau actif</div>
-      <div class="direct-rest-subtitle">Profite du calme avant la suite.</div>
+      <div class="direct-rest-title">Aucun créneau en cours</div>
+      <div class="direct-rest-subtitle">Profite du calme, ça ne va pas durer.</div>
       ${timer ? `<div class="timer-line">${escapeHtml(timer)}</div>` : ""}
     </div>
 
@@ -4024,19 +4020,16 @@ function renderPlanning() {
     return;
   }
 
-  const countLabel = `${shifts.length} créneau${shifts.length > 1 ? "x" : ""}`;
-
   let html = `
     ${renderUserHeader()}
     ${renderPlanningTabsBlock()}
 
     <div class="planning-day-header">
-      <div>
-        <div class="planning-day-subtitle">Planning du jour</div>
-        <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
-      </div>
-      <div class="planning-count-badge">${escapeHtml(countLabel)}</div>
-    </div>
+  <div>
+    <div class="planning-day-subtitle">Planning du jour</div>
+    <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
+  </div>
+</div>
   `;
 
   shifts.forEach(shift => {
