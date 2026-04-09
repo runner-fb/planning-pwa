@@ -1016,20 +1016,6 @@
   font-weight: 850;
 }
 
-.planning-print-actions {
-  display: flex;
-  gap: 10px;
-  margin: 0 0 12px 0;
-}
-
-.planning-print-btn {
-  flex: 1;
-  margin-top: 0;
-}
-
-.planning-print-btn-full {
-  width: 100%;
-}
     
 @media (max-width: 380px) {
   .home-countdown-value{
@@ -1769,11 +1755,6 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       </section>
 
       <section id="view-mes-creneaux" class="page">
-  <div id="mesPrintActions" class="planning-print-actions hidden">
-    <button type="button" class="btn-light planning-print-btn planning-print-btn-full" onclick="printMyPlanning()">
-      🖨️ Imprimer mon planning
-    </button>
-  </div>
 
   <div id="mesCreneauxContent"></div>
 </section>
@@ -1791,14 +1772,6 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       </section>
 
       <section id="view-planning" class="page">
-  <div id="planningPrintActions" class="planning-print-actions hidden">
-    <button type="button" class="btn-light planning-print-btn" onclick="printPlanningDay()">
-      🖨️ Imprimer le jour
-    </button>
-    <button type="button" class="btn-light planning-print-btn" onclick="printPlanningFull()">
-      🖨️ Imprimer le complet
-    </button>
-  </div>
 
   <div id="planningTabs" class="planning-tabs"></div>
   <div id="planningContent"></div>
@@ -2885,8 +2858,6 @@ function applyAppData(data) {
 function updateShellForView(name) {
   const bottomNav = document.getElementById("shellBottomNav");
   const titleEl = document.getElementById("miniPageTitle");
-  const planningPrintActions = document.getElementById("planningPrintActions");
-  const mesPrintActions = document.getElementById("mesPrintActions");
   const inAppViews = ["home", "direct", "mes-creneaux", "planning", "contacts", "shift-detail", "person-detail"];
 
   if (inAppViews.includes(name)) {
@@ -2906,13 +2877,7 @@ function updateShellForView(name) {
     titleEl.classList.remove("home-title");
     titleEl.textContent = "";
   }
-if (planningPrintActions) {
-    planningPrintActions.classList.toggle("hidden", name !== "planning");
-  }
-
-  if (mesPrintActions) {
-    mesPrintActions.classList.toggle("hidden", name !== "mes-creneaux");
-  }
+  
   document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
 
   let activeName = name;
@@ -3836,7 +3801,17 @@ function renderPlanning() {
   const countLabel = `${shifts.length} créneau${shifts.length > 1 ? "x" : ""}`;
 
   let html = `
-    <div class="planning-day-header">
+   let html = `
+  <div class="card user-card home-card-raise" style="margin-bottom:12px;">
+    <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
+      <div class="user-info">
+        <span class="user-label">Hello John, tu es connecté en tant que</span>
+        <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="planning-day-header">
       <div>
         <div class="planning-day-subtitle">Planning du jour</div>
         <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
