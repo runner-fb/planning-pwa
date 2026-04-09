@@ -4228,7 +4228,7 @@ showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date
 
         startAutoRefresh();
         startUiMinuteRefresh();
-showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null));
+showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null));
       } catch (e) {
         console.error("Erreur fallback boot", e);
         showView("login", { push: false });
