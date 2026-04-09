@@ -3173,6 +3173,11 @@ function renderHome() {
         </div>
       </div>
 
+      <div style="margin-top:10px; display:flex; gap:8px;">
+  <button onclick="setTestNowPrompt()">🧪 Test</button>
+  <button onclick="clearForcedNow()">🕒 Réel</button>
+</div>
+
       ${mainCard}
       ${artistBlock}
 
@@ -4144,15 +4149,7 @@ async function boot() {
  * EVENTS
  *********************************/
 document.addEventListener("DOMContentLoaded", function() {
-  window.setForcedNow = function(value) {
-    localStorage.setItem("forced_now", value);
-    location.reload();
-  };
 
-  window.clearForcedNow = function() {
-    localStorage.removeItem("forced_now");
-    location.reload();
-  };
   const pwd = document.getElementById("pwd");
   if (pwd) {
     pwd.addEventListener("keydown", function(e) {
@@ -4195,6 +4192,18 @@ window.addEventListener("online", function() {
     loadAppData(true);
   }
 });
+  function setTestNowPrompt() {
+  const value = prompt("Entrer une date au format JJ/MM HH:MM", "02/07 17:01");
+  if (!value) return;
+
+  localStorage.setItem("forced_now", value);
+  location.reload();
+}
+
+function clearForcedNow() {
+  localStorage.removeItem("forced_now");
+  location.reload();
+}
 </script>
 </body>
 </html>
