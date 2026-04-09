@@ -1954,6 +1954,7 @@ function saveCache(data) {
 
     const payload = {
       userId: state.userId,
+      savedAt: Date.now(),
       data: data
     };
 
@@ -2037,9 +2038,9 @@ function showSyncStatus(mode, lastUpdate) {
 
   if (mode === "ok") {
     el.classList.add("ok");
-    el.textContent = "À jour";
+    el.textContent = "En ligne";
     const time = formatLastUpdateLabel(lastUpdate);
-    if (time) el.textContent += " • Maj : " + time;
+    if (time) el.textContent += " • dernière mise à jour : " + time;
 
     syncHideTimer = setTimeout(() => {
       el.classList.add("hidden");
@@ -2051,7 +2052,7 @@ function showSyncStatus(mode, lastUpdate) {
     el.classList.add("offline");
     el.textContent = "Mode hors ligne";
     const time = formatLastUpdateLabel(lastUpdate);
-    if (time) el.textContent += " • Maj : " + time;
+    if (time) el.textContent += " • dernière mise à jour : " + time;
     return;
   }
 
@@ -2692,7 +2693,7 @@ async function loadAppData(forceRefresh = false) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
-        showSyncStatus("offline", cache?.meta?.lastUpdate || null);
+showSyncStatus("offline", cache?.meta?.lastUpdate || cache?.savedAt || null);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
@@ -4128,7 +4129,7 @@ async function boot() {
         if (navigator.onLine) {
           loadAppData(false);
         } else {
-          showSyncStatus("offline", cache?.meta?.lastUpdate || null);
+          showSyncStatus("offline", cache?.meta?.lastUpdate || cache?.savedAt || null);
         }
         return;
       } catch (e) {
