@@ -4443,7 +4443,7 @@ function loadPersonDetail() {
   `;
 }
 
-  function printPlanningForDay(day) {
+ function printPlanningForDay(day) {
   closePrintDayPicker();
 
   if (!APP_DATA || !APP_DATA.planning) return;
@@ -4457,11 +4457,14 @@ function loadPersonDetail() {
     <div class="print-subtitle">${escapeHtml(day)}</div>
   `;
 
+  // 👇 LA DIFF : grille 3 colonnes
+  html += `<div class="print-day-grid">`;
+
   shifts.forEach(shift => {
     const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
 
     html += `
-      <div class="print-card">
+      <div class="print-card print-card-column">
         <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
         <div class="print-meta">
           ${
@@ -4484,6 +4487,8 @@ function loadPersonDetail() {
       </div>
     `;
   });
+
+  html += `</div>`;
 
   openPrintWindow("Planning " + day, html);
 }
