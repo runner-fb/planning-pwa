@@ -1949,8 +1949,14 @@ function getCacheTimeKey() {
 
 function saveCache(data) {
   try {
-    localStorage.setItem(getCacheKey(), JSON.stringify(data));
-    localStorage.setItem(getCacheTimeKey(), String(Date.now()));
+    if (!state.userId) return;
+
+    const payload = {
+      userId: state.userId,
+      data: data
+    };
+
+    localStorage.setItem("planning_cache", JSON.stringify(payload));
   } catch (e) {
     console.error("Erreur saveCache", e);
   }
@@ -1958,10 +1964,18 @@ function saveCache(data) {
 
 function loadCache() {
   try {
-    const raw = localStorage.getItem(getCacheKey());
+    const raw = localStorage.getItem("planning_cache");
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
+
+    if (!parsed || !parsed.userId || !parsed.data) return null;
+
+    if (parsed.userId !== state.userId) {
+      return null;
+    }
+
+    return parsed.data;
   } catch (e) {
     console.error("Erreur loadCache", e);
     return null;
@@ -2044,12 +2058,23 @@ function showSyncStatus(mode, lastUpdate) {
 }
 
 function startAutoRefresh() {
-  stopAutoRefresh();
-  appRefreshTimer = setInterval(() => {
-    if (state.password && state.userId) {
-      loadAppData(false);
-    }
-  }, 30 * 60 * 1000);
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+  }
+
+  let lastRefreshTime = 0;
+
+  autoRefreshTimer = setInterval(() => {
+    const now = Date.now();
+
+    // minimum 30 secondes entre deux appels
+    if (now - lastRefreshTime < 30000) return;
+
+    if (!navigator.onLine) return;
+
+    lastRefreshTime = now;
+    loadAppData(false);
+  }, 10000); // check toutes les 10 secondes
 }
 
 function stopAutoRefresh() {
@@ -4213,16 +4238,21 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 document.addEventListener("visibilitychange", function() {
-  if (!document.hidden && state.password && state.userId) {
-    loadAppData(false);
+  if (document.visibilityState === "visible") {
+    if (navigator.onLine && state.password && state.userId) {
+      loadAppData(false);
+    }
   }
 });
 
-window.addEventListener("online", function() {
-  if (state.password && state.userId) {
+window.addEventListener("online", () => {
+  console.log("Retour en ligne → refresh");
+
+  setTimeout(() => {
     loadAppData(true);
-  }
+  }, 1500);
 });
+  
   function setTestNowPrompt() {
   const value = prompt("Entrer une date au format JJ/MM HH:MM", "02/07 17:01");
   if (!value) return;
