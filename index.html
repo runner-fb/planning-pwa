@@ -4517,8 +4517,8 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
             people.length
               ? people.map(person => {
                   const info = getRoleInfo(person.vehicule);
-                  const label = person.label || person.benevole || "";
-                  fo.group === "chauffeurs" ? "driver" : "loader";
+const label = person.label || person.benevole || "";
+const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
 
 return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escapeHtml(info.label)}</span>`;
                 }).join("<br>")
@@ -4575,11 +4575,26 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
 }
 
   function openPrintWindow(title, bodyHtml) {
-  const win = window.open("", "_blank");
-  if (!win) return;
+  const oldFrame = document.getElementById("printFrame");
+  if (oldFrame) oldFrame.remove();
 
-  win.document.open();
-  win.document.write(`
+  const iframe = document.createElement("iframe");
+  iframe.id = "printFrame";
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+
+  doc.open();
+  doc.write(`
     <!DOCTYPE html>
     <html lang="fr">
     <head>
@@ -4627,6 +4642,11 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
           margin-bottom: 5px;
         }
 
+        .print-role {
+          font-size: 14px;
+          color: #444;
+        }
+
         .print-meta {
           font-size: 13px;
           line-height: 1.5;
@@ -4655,13 +4675,11 @@ return `<span>${escapeHtml(label)}</span> — <span class="${roleClass}">${escap
     </body>
     </html>
   `);
+  doc.close();
 
-  win.document.close();
-
-  // 🔑 IMPORTANT (sinon bug aléatoire)
   setTimeout(() => {
-    win.focus();
-    win.print();
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
   }, 300);
 }
   
