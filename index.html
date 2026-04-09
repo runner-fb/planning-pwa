@@ -2810,7 +2810,7 @@ if (cache) {
         APP_DATA = cache;
         applyAppData(cache);
 const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
-        showSyncStatus("offline", offlineLastUpdate);
+showSyncStatus("offline", cacheLastUpdate);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
@@ -3768,8 +3768,8 @@ function renderPlanningTabs() {
 function selectPlanningDay(day) {
   planningState.selectedDay = day;
   planningState.openShiftId = null;
-  renderPlanningTabs();
-  renderPlanning();
+  Tabs();
+  ();
 }
 
 function togglePlanningShift(shiftId) {
@@ -3779,7 +3779,7 @@ function togglePlanningShift(shiftId) {
     planningState.openShiftId = shiftId;
   }
 
-  renderPlanning();
+  ();
 }
 
 function renderPlanning() {
@@ -3799,8 +3799,7 @@ function renderPlanning() {
   }
 
   const countLabel = `${shifts.length} créneau${shifts.length > 1 ? "x" : ""}`;
-
-  let html = `
+ `
    let html = `
   <div class="card user-card home-card-raise" style="margin-bottom:12px;">
     <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
