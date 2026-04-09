@@ -1772,8 +1772,6 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
       </section>
 
       <section id="view-planning" class="page">
-
-  <div id="planningTabs" class="planning-tabs"></div>
   <div id="planningContent"></div>
 </section>
 
@@ -3228,7 +3226,64 @@ function getFestivalMessageForHome(personId) {
 
   return null;
 }
+function renderUserHeader(options = {}) {
+  const {
+    showPrint = true,
+    extraClass = ""
+  } = options;
 
+  return `
+    <div class="card user-card home-card-raise ${extraClass}">
+      <div
+        class="user-bar"
+        style="box-shadow:none; margin-bottom:0; background:transparent; display:flex; align-items:center; justify-content:space-between;"
+      >
+        <div class="user-info">
+          <span class="user-label">Hello John, tu es connecté en tant que</span>
+          <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
+        </div>
+
+        ${
+          showPrint
+            ? `
+              <button
+                type="button"
+                onclick="printMyPlanning()"
+                style="border:none; background:transparent; font-size:20px; cursor:pointer;"
+                aria-label="Imprimer"
+                title="Imprimer"
+              >
+                🖨️
+              </button>
+            `
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+  function renderPlanningTabsBlock() {
+  const days = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
+
+  return `
+    <div class="planning-tabs">
+      ${days.map(day => {
+        const count = (planningState.byDay[day] || []).length;
+
+        return `
+          <button
+            type="button"
+            class="planning-tab ${planningState.selectedDay === day ? "active" : ""}"
+            onclick="selectPlanningDay('${day}')"
+          >
+            ${day}${count ? ` (${count})` : ""}
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+  
 /*********************************
  * HOME
  *********************************/
@@ -3356,18 +3411,7 @@ function renderHome() {
     </div>
 
     <div class="home-stack">
-      <div class="card user-card home-card-raise">
-       <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent; display:flex; align-items:center; justify-content:space-between;">
-  <div class="user-info">
-    <span class="user-label">Hello John, tu es connecté en tant que</span>
-    <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
-  </div>
-
-  <button onclick="printMyPlanning()" style="border:none; background:transparent; font-size:20px; cursor:pointer;">
-    🖨️
-  </button>
-</div>
-      </div>
+      ${renderUserHeader()}
 
       <div style="margin-top:10px; display:flex; gap:8px;">
   <button onclick="setTestNowPrompt()">🧪 Test</button>
@@ -3418,15 +3462,8 @@ function renderMesCreneaux(data) {
   const sorted = list.slice().sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
 
   let html = `
-    <div class="card user-card mes-user-card">
-      <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
-        <div class="user-info">
-          <span class="user-label">Hello John, tu es connecté en tant que</span>
-          <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
-        </div>
-      </div>
-    </div>
-  `;
+  ${renderUserHeader()}
+`;
 
   let currentDay = "";
 
@@ -3753,39 +3790,18 @@ function loadPlanning() {
   }
 
   planningState.allShifts = getPlanningShiftsFromAppData(APP_DATA);
-planningState.byDay = buildPlanningByDay(planningState.allShifts);
+  planningState.byDay = buildPlanningByDay(planningState.allShifts);
 
-if (!planningState.selectedDay || !planningState.byDay[planningState.selectedDay]) {
-  planningState.selectedDay = getDefaultPlanningDay();
-}
+  if (!planningState.selectedDay || !planningState.byDay[planningState.selectedDay]) {
+    planningState.selectedDay = getDefaultPlanningDay();
+  }
 
-  renderPlanningTabs();
   renderPlanning();
-}
-
-function renderPlanningTabs() {
-  const days = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
-  const container = document.getElementById("planningTabs");
-  if (!container) return;
-
-  container.innerHTML = days.map(day => {
-    const count = (planningState.byDay[day] || []).length;
-    return `
-      <button
-        type="button"
-        class="planning-tab ${planningState.selectedDay === day ? "active" : ""}"
-        onclick="selectPlanningDay('${day}')"
-      >
-        ${day}${count ? ` (${count})` : ""}
-      </button>
-    `;
-  }).join("");
 }
 
 function selectPlanningDay(day) {
   planningState.selectedDay = day;
   planningState.openShiftId = null;
-  renderPlanningTabs();
   renderPlanning();
 }
 
@@ -3807,6 +3823,9 @@ function renderPlanning() {
 
   if (!shifts.length) {
     container.innerHTML = `
+      ${renderUserHeader()}
+      ${renderPlanningTabsBlock()}
+
       <div class="card planning-empty">
         <div class="empty-state-title">Aucun créneau</div>
         <div class="empty-state-subtitle">Rien à afficher pour ce jour.</div>
@@ -3818,14 +3837,8 @@ function renderPlanning() {
   const countLabel = `${shifts.length} créneau${shifts.length > 1 ? "x" : ""}`;
 
   let html = `
-    <div class="card user-card home-card-raise" style="margin-bottom:12px;">
-      <div class="user-bar" style="box-shadow:none; margin-bottom:0; background:transparent;">
-        <div class="user-info">
-          <span class="user-label">Hello John, tu es connecté en tant que</span>
-          <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
-        </div>
-      </div>
-    </div>
+    ${renderUserHeader()}
+    ${renderPlanningTabsBlock()}
 
     <div class="planning-day-header">
       <div>
