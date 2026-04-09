@@ -2110,7 +2110,7 @@ function buildPlanningByDay(shifts) {
   return grouped;
 }
 
-ffunction getCurrentNowDate() {
+function getCurrentNowDate() {
 
   const forced = localStorage.getItem("forced_now");
 
@@ -2132,7 +2132,7 @@ function getCurrentNowLabel() {
 }
 
 function isTestMode() {
-  return APP_DATA?.debugMode === "test" || state.password === "test26";
+  return !!localStorage.getItem("forced_now");
 }
 
 function getPlanningShiftsFromAppData(data) {
