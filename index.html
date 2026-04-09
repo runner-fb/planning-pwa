@@ -3554,20 +3554,15 @@ function applyDirectData(data) {
   directState.defaultIndex = computedDirect.defaultIndex;
   directState.liveState = computedDirect.liveState;
 
-  if (!directState.isManual) {
-    if (
-      directState.currentIndex < 0 ||
-      directState.currentIndex >= directState.allShifts.length
-    ) {
-      directState.currentIndex = directState.defaultIndex;
-    }
-  } else if (
-    directState.currentIndex < 0 ||
-    directState.currentIndex >= directState.allShifts.length
-  ) {
-    directState.currentIndex = directState.defaultIndex;
-    directState.isManual = false;
-  }
+ if (!directState.isManual) {
+  directState.currentIndex = directState.defaultIndex;
+} else if (
+  directState.currentIndex < 0 ||
+  directState.currentIndex >= directState.allShifts.length
+) {
+  directState.currentIndex = directState.defaultIndex;
+  directState.isManual = false;
+}
 
   const entryAtDefault =
     directState.defaultIndex >= 0
