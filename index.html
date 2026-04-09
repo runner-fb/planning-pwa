@@ -3236,28 +3236,69 @@ function renderUserHeader(options = {}) {
     <div class="card user-card home-card-raise ${extraClass}">
       <div
         class="user-bar"
-        style="box-shadow:none; margin-bottom:0; background:transparent; display:flex; align-items:center; justify-content:space-between;"
+        style="
+          box-shadow:none;
+          margin-bottom:0;
+          background:transparent;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+        "
       >
         <div class="user-info">
           <span class="user-label">Hello John, tu es connecté en tant que</span>
           <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
         </div>
 
-        ${
-          showPrint
-            ? `
-              <button
-                type="button"
-                onclick="printMyPlanning()"
-                style="border:none; background:transparent; font-size:20px; cursor:pointer;"
-                aria-label="Imprimer"
-                title="Imprimer"
-              >
-                🖨️
-              </button>
-            `
-            : ""
-        }
+        <div style="display:flex; align-items:center; gap:8px;">
+
+          <button
+            type="button"
+            onclick="changeUser()"
+            title="Changer de personne"
+            aria-label="Changer de personne"
+            style="
+              width:44px;
+              height:44px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.9);
+              border:1px solid rgba(0,0,0,0.08);
+              font-size:18px;
+              cursor:pointer;
+            "
+          >
+            👤
+          </button>
+
+          ${
+            showPrint
+              ? `
+                <button
+                  type="button"
+                  onclick="printMyPlanning()"
+                  title="Imprimer"
+                  aria-label="Imprimer"
+                  style="
+                    width:44px;
+                    height:44px;
+                    border-radius:999px;
+                    background:rgba(255,255,255,0.9);
+                    border:1px solid rgba(0,0,0,0.08);
+                    font-size:18px;
+                    cursor:pointer;
+                  "
+                >
+                  🖨️
+                </button>
+              `
+              : ""
+          }
+
+        </div>
+      </div>
+    </div>
+  `;
+}}
       </div>
     </div>
   `;
@@ -3389,24 +3430,7 @@ function renderHome() {
           <div class="home-hero-brand-date">1+2.3.4.5 juillet 2026</div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <button
-            type="button"
-            class="home-profile-btn"
-            onclick="changeUser()"
-            title="Changer de personne"
-            aria-label="Changer de personne"
-          >👤</button>
 
-          <button
-            type="button"
-            class="action-icon-btn"
-            onclick="logout()"
-            title="Déconnexion"
-            aria-label="Déconnexion"
-            style="width:52px; height:52px; border-radius:999px; background:rgba(255,255,255,0.94); border:2px solid rgba(255,255,255,0.84); font-size:1.1rem;"
-          >⏻</button>
-        </div>
       </div>
     </div>
 
