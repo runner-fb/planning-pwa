@@ -4,99 +4,99 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    /* =========================================================
+       CSS COMPLET (Design Festival Beau Regard)
+       ========================================================= */
+    :root {
+      --bg: #F6F2E9; --bg-soft: #EFE8DB; --card: #FFFDF7;
+      --text: #18443D; --text-strong: #0F5A4F; --muted: #6F7364;
+      --primary: #0F5A4F; --primary-dark: #18443D; --accent: #B86B24;
+      --accent-dark: #96561D; --shadow: 0 12px 28px rgba(78, 57, 31, 0.10);
+      --bottomnav-h: 88px;
+    }
 
-<style>
-/* =========================================================
-   FESTIVAL APP — CSS CONFIGURATION
-   ========================================================= */
-:root {
-  --bg: #F6F2E9; --bg-soft: #EFE8DB; --card: #FFFDF7;
-  --text: #18443D; --text-strong: #0F5A4F; --muted: #6F7364;
-  --primary: #0F5A4F; --primary-dark: #18443D; --accent: #B86B24;
-  --accent-dark: #96561D; --success: #1F7A5C; --shadow: 0 12px 28px rgba(78, 57, 31, 0.10);
-  --bottomnav-h: 88px;
-}
+    html, body {
+      margin: 0; padding: 0; width: 100%; min-height: 100%;
+      background: linear-gradient(180deg, #F8F4EC 0%, #F3EEE4 48%, #EFE8DB 100%);
+      font-family: -apple-system, system-ui, sans-serif; color: var(--text);
+    }
 
-html, body {
-  margin: 0; padding: 0; width: 100%; min-height: 100%;
-  background: linear-gradient(180deg, #F8F4EC 0%, #F3EEE4 48%, #EFE8DB 100%);
-  font-family: -apple-system, system-ui, sans-serif; color: var(--text);
-}
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
 
-.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.hidden { display: none !important; }
+    .main-content {
+      flex: 1; overflow-y: auto; padding: 12px;
+      padding-bottom: calc(var(--bottomnav-h) + 18px);
+    }
 
-.main-content {
-  flex: 1; overflow-y: auto; padding: 12px;
-  padding-bottom: calc(var(--bottomnav-h) + 18px);
-}
+    .mini-page-title {
+      font-size: 0.84rem; font-weight: 1000; color: var(--primary-dark);
+      text-transform: uppercase; text-align: center; padding: 4px 4px 12px;
+    }
 
-.mini-page-title {
-  font-size: 0.84rem; font-weight: 1000; color: var(--primary-dark);
-  text-transform: uppercase; text-align: center; padding: 4px 4px 12px;
-}
+    .page { display: none; }
+    .page.active { display: block; }
 
-.page { display: none; }
-.page.active { display: block; }
+    .card {
+      background: var(--card); border-radius: 16px; padding: 12px;
+      box-shadow: var(--shadow); margin-bottom: 10px;
+      border: 1px solid rgba(222, 212, 194, 0.78);
+    }
 
-/* Cards & UI */
-.card {
-  background: var(--card); border-radius: 16px; padding: 12px;
-  box-shadow: var(--shadow); margin-bottom: 10px;
-  border: 1px solid rgba(222, 212, 194, 0.78);
-}
+    .card.home-main-card { border-left: 7px solid var(--accent); position: relative; overflow: hidden; }
 
-.card.home-main-card { border-left: 7px solid var(--accent); }
+    .input {
+      width: 100%; border-radius: 14px; border: 1px solid #d6e3db;
+      padding: 10px 14px; margin-bottom: 10px; font-size: 16px;
+    }
 
-/* Buttons & Inputs */
-.input {
-  width: 100%; border-radius: 14px; border: 1px solid #d6e3db;
-  padding: 10px 14px; margin-bottom: 10px;
-}
+    .btn-dark {
+      width: 100%; padding: 13px; border-radius: 14px; border: none;
+      background: var(--primary); color: white; font-weight: 900; cursor: pointer;
+    }
 
-.btn-dark {
-  width: 100%; padding: 13px; border-radius: 14px; border: none;
-  background: var(--primary); color: white; font-weight: 900;
-}
+    .btn-light {
+      width: 100%; padding: 13px; border-radius: 14px; border: 1px solid #ccc;
+      background: white; margin-top: 10px; cursor: pointer;
+    }
 
-.btn-light {
-  width: 100%; padding: 13px; border-radius: 14px; border: 1px solid #ccc;
-  background: white; margin-top: 10px;
-}
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: var(--bottomnav-h);
+      background: #123d38; display: flex; justify-content: space-around;
+      padding: 8px 8px calc(env(safe-area-inset-bottom) + 10px); z-index: 60;
+    }
 
-/* Nav & Badges */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; height: var(--bottomnav-h);
-  background: #123d38; display: flex; justify-content: space-around;
-  padding: 8px; z-index: 60;
-}
+    .nav-item {
+      color: rgba(255,255,255,0.7); display: flex; flex-direction: column;
+      align-items: center; font-size: 0.8rem; border: none; background: none; flex: 1;
+    }
 
-.nav-item {
-  color: rgba(255,255,255,0.7); display: flex; flex-direction: column;
-  align-items: center; font-size: 0.8rem; border: none; background: none;
-}
+    .nav-item.active { color: white; border-top: 3px solid var(--accent); }
+    .nav-icon { font-size: 1.4rem; margin-bottom: 4px; }
 
-.nav-item.active { color: white; border-top: 3px solid var(--accent); }
+    .badge { padding: 5px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; color: white; }
+    .badge.current { background: #1F7A5C; }
+    .badge.next { background: #B86B24; }
+    .badge.previous { background: #9A8B7B; }
 
-.badge {
-  padding: 5px 12px; border-radius: 999px; font-size: 0.75rem;
-  font-weight: 800; color: white;
-}
-.badge.current { background: #1F7A5C; }
-.badge.next { background: #B86B24; }
+    .user-row { width: 100%; text-align: left; padding: 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 5px; background: #fff; font-weight: bold; }
+    
+    /* Styles pour la liste des contacts et bénévoles */
+    .team-member { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #eee; width: 100%; background: none; border-left: none; border-right: none; text-align: left; cursor: pointer; }
+    .role-icon { background: #f0f0f0; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .member-name { font-weight: bold; color: var(--primary-dark); }
+    .member-role { font-size: 0.85rem; color: var(--muted); }
 
-/* Modals */
-.print-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 999;
-}
-.print-modal {
-  width: 100%; max-width: 500px; background: white;
-  padding: 20px; border-radius: 24px 24px 0 0;
-}
-</style>
+    .sync-bar { font-size: 12px; padding: 6px; text-align: center; border-bottom: 1px solid #ddd; }
+    .sync-bar.ok { background: #e6f4ea; color: #1e8e3e; }
+
+    /* Modals */
+    .print-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 1000; }
+    .print-modal { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 24px 24px 0 0; }
+  </style>
 </head>
 
 <body>
@@ -107,21 +107,22 @@ html, body {
       <div id="miniPageTitle" class="mini-page-title hidden"></div>
 
       <section id="view-login" class="page active">
-        <div class="auth-wrap">
+        <div class="auth-wrap" style="padding-top: 50px;">
           <div class="card">
-            <h2 class="auth-title">Accès planning</h2>
+            <h2 style="margin-top:0">Accès planning</h2>
+            <p>Entre le mot de passe pour accéder au planning.</p>
             <input id="pwd" class="input" type="password" placeholder="Mot de passe">
             <button class="btn-dark" onclick="login()">Valider</button>
-            <div id="loginError" class="error"></div>
+            <div id="loginError" class="error" style="color:red; margin-top:10px;"></div>
           </div>
         </div>
       </section>
 
       <section id="view-select-user" class="page">
         <div class="card">
-          <h2>Choisir ton profil</h2>
+          <h2 style="margin-top:0">Choisir ton profil</h2>
           <input id="searchUser" class="input" type="text" placeholder="Rechercher..." oninput="filterUsers()">
-          <div id="userList" class="user-list"></div>
+          <div id="userList" style="max-height: 400px; overflow-y: auto;"></div>
           <button class="btn-light" onclick="backToLogin()">Retour</button>
         </div>
       </section>
@@ -131,176 +132,4 @@ html, body {
       <section id="view-direct" class="page"><div id="directContent"></div></section>
       <section id="view-planning" class="page"><div id="planningContent"></div></section>
       <section id="view-contacts" class="page"><div id="contactsContent"></div></section>
-      <section id="view-person-detail" class="page"><div id="personDetailContent"></div></section>
-    </main>
-
-    <nav id="shellBottomNav" class="bottom-nav hidden">
-      <button class="nav-item" data-nav="home" onclick="showView('home')">🏠<span>Accueil</span></button>
-      <button class="nav-item" data-nav="direct" onclick="showView('direct')">⚡<span>Direct</span></button>
-      <button class="nav-item" data-nav="mes-creneaux" onclick="showView('mes-creneaux')">🗓️<span>Mes créneaux</span></button>
-      <button class="nav-item" data-nav="planning" onclick="showView('planning')">📋<span>Planning</span></button>
-      <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">📞<span>Contacts</span></button>
-    </nav>
-  </div>
-
-  <div id="printModal" class="print-modal-backdrop hidden" onclick="closePrintModal()">
-    <div class="print-modal" onclick="event.stopPropagation()">
-      <div class="print-modal-title">Imprimer</div>
-      <button class="btn-dark" style="margin-top:10px" onclick="printMyPlanningDetailed()">Mon planning</button>
-      <button class="btn-light" onclick="closePrintModal()">Fermer</button>
-    </div>
-  </div>
-
-<script>
-const WEBAPP_BASE_URL = "https://script.google.com/macros/s/AKfycbyDloUlkihvDTIlRYCiPrp0jy9vo4FRoZL2Bu7GT1eMTiKFM5dzH1NlsOnoqHoXMcqO/exec";
-
-/** ETATS GLOBAUX **/
-let state = {
-  currentView: "login",
-  password: localStorage.getItem("planning_pwd") || "",
-  userId: localStorage.getItem("planning_user_id") || "",
-  userLabel: localStorage.getItem("planning_user_label") || "",
-  allUsers: [], filteredUsers: []
-};
-
-let directState = { allShifts: [], currentIndex: -1, defaultIndex: -1 };
-let planningState = { allShifts: [], selectedDay: "Mardi" };
-let APP_DATA = null;
-
-/** API **/
-async function apiGet_(params) {
-  const url = new URL(WEBAPP_BASE_URL);
-  Object.keys(params).forEach(key => url.searchParams.set(key, params[key]));
-  const response = await fetch(url.toString());
-  return await response.json();
-}
-
-/** AUTHENTIFICATION **/
-async function login() {
-  const pwd = document.getElementById("pwd").value;
-  try {
-    const res = await apiGet_({ api: "checkPassword", pwd: pwd });
-    if (res.valid) {
-      state.password = pwd;
-      localStorage.setItem("planning_pwd", pwd);
-      if (state.userId) { await boot(); } else { await loadUsers(); }
-    } else { alert("Mot de passe incorrect"); }
-  } catch(e) { alert("Erreur de connexion"); }
-}
-
-async function loadUsers() {
-  const res = await apiGet_({ api: "users", pwd: state.password });
-  state.allUsers = res.data;
-  state.filteredUsers = res.data;
-  renderUserList(res.data);
-  showView("select-user");
-}
-
-function renderUserList(list) {
-  const container = document.getElementById("userList");
-  container.innerHTML = list.map(u => 
-    `<button class="user-row" style="width:100%; padding:10px; margin:5px 0" onclick="selectUser('${u.id}','${u.label}')">${u.label}</button>`
-  ).join("");
-}
-
-function selectUser(id, label) {
-  state.userId = id;
-  state.userLabel = label;
-  localStorage.setItem("planning_user_id", id);
-  localStorage.setItem("planning_user_label", label);
-  boot();
-}
-
-/** LOGIQUE DIRECT (FIXED) **/
-function computeDirectDefaultIndexFromNow(allShifts) {
-  if (!allShifts || !allShifts.length) return { defaultIndex: -1 };
-  const now = getCurrentNowDate();
-  let currentIdx = -1; let nextIdx = -1;
-
-  for (let i = 0; i < allShifts.length; i++) {
-    const shift = allShifts[i].shift;
-    const parsed = getShiftDates(shift);
-    if (!parsed) continue;
-
-    if (now >= parsed.startDate && now < parsed.endDate) {
-      currentIdx = i; break;
-    }
-    if (nextIdx === -1 && parsed.startDate > now) nextIdx = i;
-  }
-  return { defaultIndex: currentIdx !== -1 ? currentIdx : nextIdx };
-}
-
-/** RENDUS **/
-function showView(name) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById("view-" + name).classList.add("active");
-  state.currentView = name;
-  
-  if (name !== 'login' && name !== 'select-user') {
-    document.getElementById("shellBottomNav").classList.remove("hidden");
-  }
-  refreshView();
-}
-
-function refreshView() {
-  if (state.currentView === "home") renderHome();
-  if (state.currentView === "mes-creneaux") renderMesCreneaux();
-  if (state.currentView === "direct") renderDirect();
-  if (state.currentView === "planning") renderPlanning();
-}
-
-async function boot() {
-  const res = await apiGet_({ api: "bundle", pwd: state.password, userId: state.userId });
-  APP_DATA = res.data;
-  applyAppData(res.data);
-  showView("home");
-}
-
-function applyAppData(data) {
-  directState.allShifts = data.direct.allShifts;
-  const comp = computeDirectDefaultIndexFromNow(data.direct.allShifts);
-  directState.currentIndex = comp.defaultIndex;
-}
-
-function renderHome() {
-  const el = document.getElementById("homeContent");
-  el.innerHTML = `
-    <div class="card home-main-card">
-      <div class="home-main-title">Bonjour ${state.userLabel.split(' ')[0]}</div>
-      <p>Bienvenue sur l'application Beau Regard.</p>
-      <button class="btn-dark" onclick="openPrintModal()">🖨️ Imprimer mon planning</button>
-    </div>
-  `;
-}
-
-/** HELPERS DATES **/
-function getCurrentNowDate() {
-  return new Date();
-}
-
-function parseDirectDateLabel(label) {
-  if (!label) return null;
-  const match = String(label).match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
-  if (!match) return null;
-  return new Date(2026, parseInt(match[2], 10) - 1, parseInt(match[1], 10), parseInt(match[3], 10), parseInt(match[4], 10));
-}
-
-function getShiftDates(shift) {
-  if (!shift || !shift.startLabel) return null;
-  return {
-    startDate: parseDirectDateLabel(shift.startLabel),
-    endDate: parseDirectDateLabel(shift.endLabel)
-  };
-}
-
-function injectDefaultTimeForEdgeDays(shift) { return shift; }
-function backToLogin() { showView("login"); }
-function closePrintModal() { document.getElementById("printModal").classList.add("hidden"); }
-function openPrintModal() { document.getElementById("printModal").classList.remove("hidden"); }
-
-window.onload = () => {
-  if (state.password && state.userId) boot();
-};
-</script>
-</body>
-</html>
+      <section id="view-person-detail" class
