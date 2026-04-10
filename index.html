@@ -2362,6 +2362,53 @@ function getCurrentNowDate() {
   return new Date();
 }
 
+function parseConcertDateLabel(label) {
+  if (!label) return null;
+
+  const match = String(label).match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (!match) return null;
+
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10) - 1;
+  const hour = parseInt(match[3], 10);
+  const minute = parseInt(match[4], 10);
+
+  return new Date(2026, month, day, hour, minute, 0, 0);
+}
+
+function getConcertTimelineState() {
+  const concerts = Array.isArray(APP_DATA?.timeline?.all) ? APP_DATA.timeline.all : [];
+  const now = getCurrentNowDate();
+
+  let currentIndex = -1;
+  let nextIndex = -1;
+
+  for (let i = 0; i < concerts.length; i++) {
+    const c = concerts[i];
+    const start = parseConcertDateLabel(c.startLabel);
+    const end = parseConcertDateLabel(c.endLabel);
+
+    if (!start || !end) continue;
+
+    if (now >= start && now < end) {
+      currentIndex = i;
+      nextIndex = i + 1 < concerts.length ? i + 1 : -1;
+      break;
+    }
+
+    if (nextIndex === -1 && start > now) {
+      nextIndex = i;
+      break;
+    }
+  }
+
+  return {
+    concerts,
+    currentIndex,
+    nextIndex
+  };
+}
+  
 function getCurrentNowLabel() {
   const d = getCurrentNowDate();
   const day = String(d.getDate()).padStart(2, "0");
@@ -3490,7 +3537,49 @@ function renderUserHeader(options = {}) {
 /*********************************
  * HOME
  *********************************/
-function renderHome() {
+function renderConcertTimelineCard() {
+  const state = getConcertTimelineState();
+  const concerts = state.concerts || [];
+
+  if (!concerts.length) return "";
+
+  const now = getCurrentNowDate();
+  let html = `<div class="card"><div class="section-title">Concerts</div>`;
+
+  concerts.slice(0, 6).forEach((c) => {
+    const start = parseConcertDateLabel(c.startLabel);
+    const end = parseConcertDateLabel(c.endLabel);
+
+    let badge = "À venir";
+    let badgeClass = "next";
+
+    if (start && end) {
+      if (now >= start && now < end) {
+        badge = "En cours";
+        badgeClass = "current";
+      } else if (now >= end) {
+        badge = "Terminé";
+        badgeClass = "previous";
+      }
+    }
+
+    html += `
+      <div class="card compact" style="margin-bottom:8px;">
+        <div class="shift-header">
+          <div style="min-width:0;">
+            <div class="shift-line">${escapeHtml(c.artiste || "")}</div>
+            <div class="subtle-text">${escapeHtml(c.scene || "")} • ${escapeHtml(c.debut || "")} – ${escapeHtml(c.fin || "")}</div>
+          </div>
+          <span class="badge ${badgeClass}">${badge}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  return html;
+}
+  function renderHome() {
   const el = document.getElementById("homeContent");
   if (!el) return;
 
@@ -3571,18 +3660,6 @@ function renderHome() {
     `;
   }
 
-  let artistBlock = "";
-  const timeline = APP_DATA?.timeline;
-  if (timeline && (timeline.current || timeline.next)) {
-    artistBlock = `
-      <div class="card">
-        <div class="section-title">Scène</div>
-        ${timeline.current ? `<div class="helper-text">En scène : ${escapeHtml(timeline.current)}</div>` : ""}
-        ${timeline.next ? `<div class="subtle-text">À venir : ${escapeHtml(timeline.next)}</div>` : ""}
-      </div>
-    `;
-  }
-
   el.innerHTML = `
     <div class="home-hero">
       <div class="home-hero-content">
@@ -3605,8 +3682,7 @@ function renderHome() {
 </div>
 
       ${mainCard}
-      ${artistBlock}
-
+${renderConcertTimelineCard()}
       <div class="card compact home-meta-card">
         <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
       </div>
