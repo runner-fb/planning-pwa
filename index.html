@@ -2218,10 +2218,10 @@ body {
 
 .current-slot-card {
   position: relative;
-  background: linear-gradient(180deg, #EDF8F3 0%, #E6F4EE 100%) !important;
-  border: 1px solid rgba(15,90,79,0.18) !important;
+  background: linear-gradient(180deg, #E4F3EC 0%, #DCEEE6 100%) !important;
+  border: 1px solid rgba(15,90,79,0.22) !important;
   border-left: 7px solid #1F7A5C !important;
-  box-shadow: 0 10px 22px rgba(15,90,79,0.12) !important;
+  box-shadow: 0 10px 24px rgba(15,90,79,0.14) !important;
   transform: none !important;
   z-index: 2;
 }
@@ -2342,52 +2342,57 @@ body {
    ================================ */
 
 .concerts-card {
-  background: linear-gradient(180deg, #FCFBF7 0%, #F8F5EE 100%) !important;
-  border: 1px solid rgba(24,68,61,0.06) !important;
-  box-shadow: 0 6px 14px rgba(78,57,31,0.05) !important;
+  background: linear-gradient(180deg, #FBFAF6 0%, #F6F2EA 100%) !important;
+  border: 1px solid rgba(24,68,61,0.05) !important;
+  box-shadow: 0 4px 10px rgba(78,57,31,0.035) !important;
 }
 
 .concerts-card .section-title {
-  font-size: 0.98rem !important;
-  color: #24564F !important;
+  font-size: 0.94rem !important;
+  color: #2F5A53 !important;
   margin-bottom: 8px !important;
 }
 
-.concerts-card .card {
-  background: #FFFEFA !important;
-  border: 1px solid rgba(24,68,61,0.07) !important;
+.concerts-card .card,
+.concerts-card .compact {
+  background: #FCFBF8 !important;
+  border: 1px solid rgba(24,68,61,0.05) !important;
   box-shadow: none !important;
-  border-radius: 18px !important;
-  padding: 10px 12px !important;
+  border-radius: 16px !important;
+  padding: 9px 11px !important;
 }
 
-.concerts-card .concert-row-kicker,
-.concerts-card .home-main-title {
-  font-size: 0.76rem !important;
+.concerts-card .home-main-title,
+.concerts-card .concert-row-kicker {
+  font-size: 0.72rem !important;
   color: #9A6B3A !important;
   margin-bottom: 4px !important;
+  letter-spacing: 0.04em !important;
 }
 
-.concerts-card .concert-row-title,
-.concerts-card .home-main-line {
-  font-size: 0.92rem !important;
+.concerts-card .home-main-line,
+.concerts-card .concert-row-title {
+  font-size: 0.84rem !important;
   font-weight: 900 !important;
-  color: #1F4F49 !important;
+  color: #234E48 !important;
   margin-bottom: 2px !important;
+  line-height: 1.05 !important;
 }
 
-.concerts-card .concert-row-meta,
 .concerts-card .home-subline,
+.concerts-card .concert-row-meta,
 .concerts-card .subtle-text,
 .concerts-card .mini-note {
-  font-size: 0.82rem !important;
-  color: #6E746B !important;
+  font-size: 0.76rem !important;
+  color: #747A72 !important;
+  line-height: 1.05 !important;
 }
 
 .concerts-card .badge,
 .concerts-card .status-badge {
-  transform: scale(0.88);
+  transform: scale(0.78) !important;
   box-shadow: none !important;
+  opacity: 0.9 !important;
 }
 </style>
 </head>
@@ -4354,7 +4359,7 @@ onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
 <div class="home-main-title" style="font-weight:900; font-size:18px;">
-  🔥 Mon créneau en cours
+  Mon créneau en cours
 </div>          <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
           <div class="mini-note">${escapeHtml(getShiftStatusInfo(currentPersonalShift).timerText || "")}</div>
