@@ -3735,6 +3735,15 @@ function personHasMondayShift(personId) {
   if (!full) return "Aucun";
   return full.split(/\s+/)[0] || full;
 }
+  function getSelectedUserDisplayName() {
+  const selectedId = localStorage.getItem("planning_user_id");
+  const people = Array.isArray(APP_DATA?.people) ? APP_DATA.people : [];
+
+  const user = people.find(p => String(p.id) === String(selectedId));
+  if (!user) return getSelectedUserFirstName() || "";
+
+  return [user.prenom, user.nom].filter(Boolean).join(" ");
+}
 function getSelectedUserFullName() {
   try {
     const firstName = getSelectedUserFirstName();
@@ -3799,7 +3808,7 @@ function renderHomeHeroUserPill() {
             Hello John, connecté en tant que
           </div>
           <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-${escapeHtml(getSelectedUserFullName())}
+${escapeHtml(getSelectedUserDisplayName())}
 </div>
         </div>
 
@@ -4483,9 +4492,9 @@ function renderConcertTimelineCard() {
     `;
   }
 
-  if (nextConcert) {
-    html += renderCompactConcertRow(nextConcert, "Suivant", "next");
-  }
+if (nextConcert && new Date() >= new Date("2026-07-01T00:00:00")) {
+  html += renderCompactConcertRow(nextConcert, "Suivant", "next");
+}
 
 if (remainingConcerts.length && new Date() >= new Date("2026-07-01T00:00:00")) {
   html += `
