@@ -2394,6 +2394,146 @@ body {
   box-shadow: none !important;
   opacity: 0.9 !important;
 }
+  /* ================================
+   BOX CONCERTS COMPACTE
+   ================================ */
+
+.concerts-panel {
+  background: linear-gradient(180deg, #FBFAF6 0%, #F6F2EA 100%) !important;
+  border: 1px solid rgba(24,68,61,0.06) !important;
+  box-shadow: 0 4px 10px rgba(78,57,31,0.035) !important;
+  border-radius: 22px !important;
+  padding: 12px 14px !important;
+}
+
+.concerts-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.concerts-panel-title {
+  font-size: 0.98rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #2F5A53;
+}
+
+.concerts-panel-subtitle {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #8A857B;
+}
+
+.concert-compact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(24,68,61,0.06);
+}
+
+.concert-compact-row:first-of-type {
+  border-top: none;
+}
+
+.concert-compact-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.concert-compact-topline {
+  margin-bottom: 3px;
+}
+
+.concert-compact-label {
+  font-size: 0.72rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9A6B3A;
+}
+
+.concert-compact-name {
+  font-size: 1rem;
+  font-weight: 1000;
+  color: #1E4B45;
+  line-height: 1.08;
+  margin-bottom: 2px;
+}
+
+.concert-compact-meta {
+  font-size: 0.82rem;
+  color: #71766E;
+  line-height: 1.08;
+}
+
+.concert-compact-badge {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 1000;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.concert-compact-badge.current {
+  background: #1F7A5C;
+  color: #fff;
+}
+
+.concert-compact-badge.next {
+  background: #C7772F;
+  color: #fff;
+}
+
+.concerts-more-btn {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid rgba(24,68,61,0.08);
+  background: rgba(255,255,255,0.7);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #234E48;
+  cursor: pointer;
+}
+
+.concerts-more-panel {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(24,68,61,0.06);
+}
+
+.concert-more-row {
+  padding: 8px 0;
+  border-top: 1px solid rgba(24,68,61,0.05);
+}
+
+.concert-more-row:first-child {
+  border-top: none;
+}
+
+.concert-more-name {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #234E48;
+  margin-bottom: 2px;
+}
+
+.concert-more-meta {
+  font-size: 0.78rem;
+  color: #777A73;
+}
 </style>
 </head>
 
@@ -4269,66 +4409,82 @@ function renderConcertTimelineCard() {
   }
 
   let html = `
-<div class="card concerts-card" style="margin-bottom:8px;">
-<div class="section-title" style="margin-bottom:10px;">Concerts</div>
+    <div class="card concerts-panel" style="margin-bottom:8px;">
+      <div class="concerts-panel-head">
+        <div class="concerts-panel-title">Concerts</div>
+        <div class="concerts-panel-subtitle">Info festival</div>
+      </div>
   `;
 
   if (currentConcert) {
-    html += renderSingleConcertCard(currentConcert, "Concert en cours", "current", "En cours");
+    html += renderCompactConcertRow(currentConcert, "En cours", "current");
   } else {
     html += `
-      <div class="card compact" style="margin-bottom:8px;">
-        <div style="font-size:0.76rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
-          Concert en cours
+      <div class="concert-compact-row">
+        <div class="concert-compact-main">
+          <div class="concert-compact-topline">
+            <span class="concert-compact-label">En cours</span>
+          </div>
+          <div class="concert-compact-name">Aucun concert</div>
+          <div class="concert-compact-meta">Aucun concert en cours</div>
         </div>
-        <div class="subtle-text">Aucun concert en cours</div>
       </div>
     `;
   }
 
   if (nextConcert) {
-    html += renderSingleConcertCard(nextConcert, "Concert suivant", "next", "À venir");
+    html += renderCompactConcertRow(nextConcert, "Suivant", "next");
   }
 
   if (remainingConcerts.length) {
     html += `
-      <div
-        class="card clickable-card"
-        onclick="toggleHomeConcertsMore()"
-        style="margin-bottom:${homeConcertsState.openMore ? "8px" : "0"};"
-      >
-        <div class="shift-header" style="margin-bottom:0;">
-          <div style="font-size:0.95rem; font-weight:1000; color:var(--primary-dark);">
-            ${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}
-          </div>
-          <span class="planning-chevron ${homeConcertsState.openMore ? "open" : ""}">▼</span>
-        </div>
-      </div>
+      <button class="concerts-more-btn" onclick="toggleHomeConcertsMore()">
+        <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
+        <span class="planning-chevron ${homeConcertsState.openMore ? "open" : ""}">▼</span>
+      </button>
     `;
 
     if (homeConcertsState.openMore) {
+      html += `<div class="concerts-more-panel">`;
+
       remainingConcerts.forEach(concert => {
         html += `
-          <div class="card compact" style="margin-bottom:8px;">
-            <div class="shift-header" style="margin-bottom:0;">
-              <div style="min-width:0;">
-                <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
-                  ${escapeHtml(concert.artiste || "")}
-                </div>
-                <div class="subtle-text">
-                  ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
-                </div>
-              </div>
-              <span class="badge next">À venir</span>
+          <div class="concert-more-row">
+            <div class="concert-more-name">${escapeHtml(concert.artiste || "")}</div>
+            <div class="concert-more-meta">
+              ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
             </div>
           </div>
         `;
       });
+
+      html += `</div>`;
     }
   }
 
   html += `</div>`;
   return html;
+}
+  function renderCompactConcertRow(concert, label, statusType) {
+  if (!concert) return "";
+
+  const badgeText = statusType === "current" ? "En cours" : "À venir";
+  const badgeClass = statusType === "current" ? "current" : "next";
+
+  return `
+    <div class="concert-compact-row">
+      <div class="concert-compact-main">
+        <div class="concert-compact-topline">
+          <span class="concert-compact-label">${escapeHtml(label)}</span>
+        </div>
+        <div class="concert-compact-name">${escapeHtml(concert.artiste || "")}</div>
+        <div class="concert-compact-meta">
+          ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
+        </div>
+      </div>
+      <div class="concert-compact-badge ${badgeClass}">${badgeText}</div>
+    </div>
+  `;
 }
   function renderHome() {
   const el = document.getElementById("homeContent");
