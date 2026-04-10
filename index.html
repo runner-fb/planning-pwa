@@ -2171,7 +2171,90 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
     font-size: 0.9rem !important;
   }
 }
+/* ================================
+   HOME - BADGES / TIMING / HEADER
+   ================================ */
 
+.status-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+
+.status-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 16px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.status-badge.current{
+  background:#0F7B63;
+  color:#FFFFFF;
+  box-shadow:0 4px 10px rgba(15,123,99,0.18);
+}
+
+.status-badge.next{
+  background:#C97A2B;
+  color:#FFFFFF;
+  box-shadow:0 4px 10px rgba(201,122,43,0.18);
+}
+
+.status-badge.done{
+  background:#A0A0A0;
+  color:#FFFFFF;
+}
+
+.status-time{
+  font-size:15px;
+  font-weight:700;
+  color:#6F7364;
+}
+
+.slot-role{
+  font-size:18px;
+  font-weight:800;
+  color:#18443D;
+  margin-top:4px;
+}
+
+.slot-time-line{
+  font-size:20px;
+  font-weight:900;
+  color:#18443D;
+  line-height:1.15;
+  margin-top:2px;
+}
+
+.current-slot-card{
+  box-shadow:0 10px 24px rgba(0,0,0,0.08);
+  border:2px solid rgba(201,122,43,0.22);
+}
+
+.user-pill-clean{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  min-height:56px;
+  padding:10px 18px;
+  border-radius:999px;
+  background:#F8F3EA;
+  color:#18443D;
+  font-weight:800;
+  font-size:16px;
+  line-height:1.2;
+}
+
+.user-pill-clean strong{
+  font-size:18
 </style>
 </head>
 
