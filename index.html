@@ -777,7 +777,7 @@
   }
 
   .mini-note {
-    font-size: 0.8rem;
+    font-size: 0.92rem;
     color: var(--muted);
     margin-top: 10px;
     line-height: 1.4;
@@ -927,7 +927,7 @@
   }
 
     .home-hero.compact-home-hero {
-  height: 120px;
+  height: 150px;
 }
 
 .home-hero.compact-home-hero::after {
@@ -944,12 +944,12 @@
 }
 
 .home-main-line {
-  font-size: 1.05rem;
-  margin-bottom: 4px;
+  font-size: 1.18rem;
+  margin-bottom: 8px;
 }
 
 .home-subline {
-  font-size: 0.88rem;
+  font-size: 0.96rem;
 }
 
 @media (max-width: 380px) {
@@ -1860,317 +1860,7 @@ transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;  }
   justify-content: flex-end;
   margin-top: 12px;
 }
-    /* 🔥 Compression globale */
-.card {
-  padding: 10px 12px !important;
-}
-
-.card.compact {
-  padding: 8px 10px !important;
-}
-
-/* 🔥 Réduction espace entre lignes */
-.home-main-line {
-  line-height: 1.1 !important;
-  margin-bottom: 2px !important;
-}
-
-.home-subline {
-  line-height: 1.15 !important;
-  margin-bottom: 2px !important;
-}
-
-.mini-note {
-  line-height: 1.1 !important;
-  margin-top: 2px !important;
-}
-
-/* 🔥 Titres */
-.home-main-title {
-  margin-bottom: 4px !important;
-  line-height: 1.1 !important;
-}
-
-/* 🔥 Concerts */
-.shift-line {
-  line-height: 1.1 !important;
-  margin-bottom: 2px !important;
-}
-
-.subtle-text {
-  line-height: 1.1 !important;
-}
-
-/* 🔥 Espacement global entre blocs */
-.home-stack {
-  gap: 6px !important;
-}
-
-/* 🔥 Cards rapprochées */
-.home-stack > * {
-  margin-bottom: 6px !important;
-}
-
-/* 🔥 Header encore plus compact */
-.home-hero-content {
-  padding: 8px 10px 0 !important;
-}
-
-    /* ===== HOME UNIFORME ===== */
-
-.home-topbar {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  z-index: 3;
-  width: 62%;
-  max-width: 430px;
-}
-
-.home-user-mini {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 8px 10px 8px 12px;
-  background: rgba(255, 250, 243, 0.96);
-  border: 1px solid rgba(255,255,255,0.55);
-  box-shadow: 0 8px 20px rgba(15,68,61,0.12);
-}
-
-.home-user-mini-left {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.home-user-mini-label {
-  font-size: 0.64rem;
-  line-height: 1.05;
-  font-weight: 900;
-  color: #5f6258;
-}
-
-.home-user-mini-name {
-  font-size: 0.88rem;
-  line-height: 1.02;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-user-mini-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.home-user-mini-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.92);
-  font-size: 1rem;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.home-hero {
-  height: 190px !important;
-  margin: -12px -12px 0 -12px;
-}
-
-.home-hero-content {
-  padding: 18px 16px 0 !important;
-}
-
-.home-hero-brand {
-  max-width: 180px;
-}
-
-.home-hero-brand-top {
-  font-size: 0.72rem;
-}
-
-.home-hero-brand-main {
-  font-size: 1.25rem !important;
-  line-height: 0.92;
-}
-
-.home-hero-brand-date {
-  margin-top: 6px;
-  font-size: 0.74rem;
-}
-
-.home-stack {
-  margin-top: -14px !important;
-}
-
-.home-test-row {
-  display: flex;
-  gap: 8px;
-  margin: 6px 0 8px 0;
-}
-
-.home-test-row button {
-  border: 1px solid #aaa;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.9rem;
-}
-
-.home-primary-card {
-  border-radius: 22px !important;
-  padding: 14px 16px !important;
-  min-height: 132px;
-}
-
-.home-primary-card .home-main-title {
-  font-size: 0.9rem !important;
-  line-height: 1.02 !important;
-  margin-bottom: 8px !important;
-}
-
-.home-primary-card .home-main-line {
-  font-size: 0.98rem !important;
-  line-height: 1.04 !important;
-  margin-bottom: 8px !important;
-}
-
-.home-primary-card .home-subline {
-  font-size: 0.9rem !important;
-  line-height: 1.04 !important;
-  margin-bottom: 4px !important;
-}
-
-.home-primary-card .mini-note {
-  font-size: 0.82rem !important;
-  line-height: 1.04 !important;
-  margin-top: 0 !important;
-}
-
-.home-section-card {
-  border-radius: 22px !important;
-  padding: 12px 14px !important;
-}
-
-.home-section-card .section-title {
-  margin-bottom: 10px !important;
-}
-
-.concert-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid rgba(222,212,194,0.7);
-}
-
-.concert-row:first-child {
-  border-top: none;
-}
-
-.concert-row-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.concert-row-kicker {
-  font-size: 0.8rem;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent-dark);
-  margin-bottom: 3px;
-  line-height: 1.02;
-}
-
-.concert-row-title {
-  font-size: 0.96rem;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  line-height: 1.04;
-  margin-bottom: 2px;
-}
-
-.concert-row-meta {
-  font-size: 0.86rem;
-  color: var(--muted);
-  line-height: 1.04;
-}
-
-.home-dropdown-btn {
-  width: 100%;
-  margin-top: 8px;
-  border: 1px solid rgba(222,212,194,0.9);
-  background: #fffdf8;
-  border-radius: 16px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.95rem;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  cursor: pointer;
-}
-
-.home-dropdown-panel {
-  margin-top: 8px;
-  border-top: 1px solid rgba(222,212,194,0.8);
-  padding-top: 8px;
-}
-
-.home-stack > .card {
-  margin-bottom: 8px !important;
-}
-
-@media (max-width: 380px) {
-  .home-topbar {
-    width: 66%;
-    right: 10px;
-    top: 10px;
-  }
-
-  .home-user-mini {
-    padding: 6px 8px 6px 10px;
-  }
-
-  .home-user-mini-name {
-    font-size: 0.8rem;
-  }
-
-  .home-user-mini-btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  .home-hero {
-    height: 172px !important;
-  }
-
-  .home-hero-brand-main {
-    font-size: 1.08rem !important;
-  }
-
-  .home-primary-card {
-    min-height: 122px;
-    padding: 12px 14px !important;
-  }
-
-  .home-primary-card .home-main-line {
-    font-size: 0.9rem !important;
-  }
-}
+    
 </style>
 </head>
 
@@ -3358,160 +3048,105 @@ function toggleHomeConcertsMore() {
 
 function renderHomeHeroUserPill() {
   return `
-    <div class="home-topbar">
-      <div class="home-user-mini">
-        <div class="home-user-mini-left">
-          <div class="home-user-mini-label">Hello John, connecté en tant que</div>
-          <div class="home-user-mini-name">${escapeHtml(getSelectedUserFirstName())}</div>
+    <div
+      style="
+        position:absolute;
+        top:12px;
+        right:12px;
+        z-index:4;
+        max-width:62%;
+      "
+    >
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:8px;
+          background:rgba(255,253,247,0.96);
+          border:1px solid rgba(255,255,255,0.55);
+          border-radius:999px;
+          padding:6px 8px 6px 10px;
+          box-shadow:0 8px 18px rgba(15,68,61,0.14);
+        "
+      >
+        <div style="min-width:0; line-height:1.05;">
+          <div style="font-size:0.56rem; font-weight:900; color:#EDE7DA; display:none;"></div>
+          <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
+            Hello John, connecté en tant que
+          </div>
+          <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${escapeHtml(getSelectedUserFirstName())}
+          </div>
         </div>
 
-        <div class="home-user-mini-actions">
+        <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
           <button
             type="button"
-            class="home-user-mini-btn"
             onclick="changeUser()"
             title="Changer de personne"
             aria-label="Changer de personne"
-          >👤</button>
+            style="
+              width:30px;
+              height:30px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.95);
+              border:1px solid rgba(0,0,0,0.08);
+              font-size:13px;
+              cursor:pointer;
+              padding:0;
+            "
+          >
+            👤
+          </button>
 
           <button
             type="button"
-            class="home-user-mini-btn"
             onclick="openPrintModal()"
             title="Imprimer"
             aria-label="Imprimer"
-          >🖨️</button>
+            style="
+              width:30px;
+              height:30px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.95);
+              border:1px solid rgba(0,0,0,0.08);
+              font-size:13px;
+              cursor:pointer;
+              padding:0;
+            "
+          >
+            🖨️
+          </button>
         </div>
       </div>
     </div>
   `;
 }
 
-function CurrentCard() {
-  const festivalEntry = getCurrentFestivalEntry();
-  const myCurrentShift = getCurrentShiftForPerson(state.userId);
-
-  if (festivalEntry && isUserInFestivalEntry(festivalEntry) && myCurrentShift) {
-    const role = getRoleInfo(myCurrentShift.vehicule || "");
-    const info = getShiftStatusInfo(myCurrentShift);
-
-    return `
-      <div class="card home-main-card home-primary-card home-link-card clickable-card" onclick="showView('direct')">
-        <div class="home-main-title">Mon créneau en cours</div>
-        <div class="home-main-line">${escapeHtml(myCurrentShift.jour)} • ${escapeHtml(myCurrentShift.debut)} – ${escapeHtml(myCurrentShift.fin)}</div>
-        <div class="home-subline">${escapeHtml(role.label)}</div>
-        <div class="mini-note">${escapeHtml(info.timerText || "")}</div>
-      </div>
-    `;
-  }
-
-  if (festivalEntry && festivalEntry.shift) {
-    const shift = festivalEntry.shift;
-
-    return `
-      <div class="card home-main-card home-primary-card home-link-card clickable-card" onclick="showView('direct')">
-        <div class="home-main-title">Créneau en cours</div>
-        <div class="home-main-line">${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}</div>
-      </div>
-    `;
-  }
+function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
+  if (!concert) return "";
 
   return `
-    <div class="card home-main-card home-primary-card">
-      <div class="home-main-title">Créneau en cours</div>
-      <div class="home-empty-line">Aucun créneau en cours</div>
-    </div>
-  `;
-}
+    <div class="card compact" style="margin-bottom:8px;">
+      <div style="font-size:0.76rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
+        ${escapeHtml(title)}
+      </div>
 
-function NextCard() {
-  const nextShift = getUpcomingShiftForPerson(state.userId);
-
-  if (!nextShift) {
-    const message = getFestivalMessageForHome(state.userId);
-
-    if (message) {
-      return `
-        <div class="card home-section-card">
-          <div class="home-main-title">Mon prochain créneau</div>
-          <div class="home-subline">${escapeHtml(message.title)}</div>
-          <div class="mini-note">${escapeHtml(message.sub)}</div>
+      <div class="shift-header" style="margin-bottom:0;">
+        <div style="min-width:0;">
+          <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
+            ${escapeHtml(concert.artiste || "")}
+          </div>
+          <div class="subtle-text">
+            ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
+          </div>
         </div>
-      `;
-    }
-
-    return `
-      <div class="card home-section-card">
-        <div class="home-main-title">Mon prochain créneau</div>
-        <div class="home-empty-line">Aucun créneau à venir</div>
-      </div>
-    `;
-  }
-
-  const role = getRoleInfo(nextShift.vehicule || "");
-  const info = getShiftStatusInfo(nextShift);
-
-  return `
-    <div class="card home-section-card">
-      <div class="home-main-title">Mon prochain créneau</div>
-      <div class="home-main-line">${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}</div>
-      <div class="home-subline">${escapeHtml(role.label)}</div>
-      <div class="mini-note">${escapeHtml(info.timerText || "")}</div>
-    </div>
-  `;
-}
-
-function renderConcertTimelineCard() {
-  return `
-    <div class="card home-section-card">
-      <div class="section-title">Concerts</div>
-      <div>OK concerts</div>
-    </div>
-  `;
-}
-
-function renderHome() {
-  const container = document.getElementById("homeContent");
-  if (!container) return;
-
-  if (!APP_DATA) {
-    container.innerHTML = `<div class="card">Aucune donnée disponible</div>`;
-    return;
-  }
-
-  container.innerHTML = `
-    <div class="home-hero">
-      <div class="home-hero-content">
-        <div class="home-hero-brand">
-          <div class="home-hero-brand-top">Festival</div>
-          <div class="home-hero-brand-main">Beau<br>Regard</div>
-          <div class="home-hero-brand-date">1+2.3.4.5 juillet 2026</div>
-        </div>
-
-        ${renderHomeHeroUserPill()}
-      </div>
-    </div>
-
-    <div class="home-stack">
-      <div class="home-test-row">
-        <button type="button" onclick="setTestNowPrompt()">🧪 Test</button>
-        <button type="button" onclick="clearForcedNow()">🕒 Réel</button>
-      </div>
-
-      ${renderHomeCurrentCard()}
-      ${renderHomeNextCard()}
-      ${renderConcertTimelineCard()}
-
-      <div class="card home-meta-card">
-        Dernière mise à jour : ${escapeHtml(
-          APP_DATA?.meta?.lastUpdate
-            ? formatLastUpdateLabel(APP_DATA.meta.lastUpdate).replace("Aujourd’hui à ", "").replace("Hier à ", "Hier ")
-            : "indisponible"
-        )}
+        <span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span>
       </div>
     </div>
   `;
 }
+
 /*********************************
  * OFFLINE-FIRST BOOTSTRAP
  *********************************/
@@ -4072,80 +3707,7 @@ function renderUserHeader(options = {}) {
     </div>
   `;
 }
-function renderHomeCurrentCard() {
-  const entry = getCurrentFestivalEntry();
-
-  if (!entry || !entry.shift) {
-    return `
-      <div class="card home-primary-card clickable-card" onclick="showView('direct')">
-        <div class="home-main-title">Créneau en cours</div>
-        <div class="home-main-line">Aucun créneau en cours</div>
-      </div>
-    `;
-  }
-
-  const shift = entry.shift;
-  const userIsInShift = isUserInFestivalEntry(entry);
-
-  if (userIsInShift) {
-    const me = (entry.benevoles || []).find(person =>
-      String(person.id || "") === String(state.userId || "")
-    );
-    const role = getRoleInfo(me?.vehicule || "-");
-    const info = getShiftStatusInfo(shift);
-
-    return `
-      <div class="card home-main-card home-primary-card clickable-card" onclick="showView('direct')">
-        <div class="home-main-title">Mon créneau en cours</div>
-        <div class="home-main-line">${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}</div>
-        <div class="home-subline">${escapeHtml(role.label)}</div>
-        ${info.timerText ? `<div class="mini-note">${escapeHtml(info.timerText)}</div>` : ``}
-      </div>
-    `;
-  }
-
-  return `
-    <div class="card home-main-card home-primary-card clickable-card" onclick="showView('direct')">
-      <div class="home-main-title">Créneau en cours</div>
-      <div class="home-main-line">${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}</div>
-    </div>
-  `;
-}
-  function renderHomeNextCard() {
-  const nextShift = getUpcomingShiftForPerson(state.userId);
-
-  if (!nextShift) {
-    const message = getFestivalMessageForHome(state.userId);
-
-    if (message) {
-      return `
-        <div class="card home-primary-card">
-          <div class="home-main-title">${escapeHtml(message.title)}</div>
-          <div class="home-subline">${escapeHtml(message.sub || "")}</div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="card home-primary-card">
-        <div class="home-main-title">Mon prochain créneau</div>
-        <div class="home-main-line">Aucun créneau à venir</div>
-      </div>
-    `;
-  }
-
-  const role = getRoleInfo(nextShift.vehicule || "-");
-  const info = getShiftStatusInfo(nextShift);
-
-  return `
-    <div class="card home-primary-card">
-      <div class="home-main-title">Mon prochain créneau</div>
-      <div class="home-main-line">${escapeHtml(nextShift.jour || "")} • ${escapeHtml(nextShift.debut || "")} – ${escapeHtml(nextShift.fin || "")}</div>
-      <div class="home-subline">${escapeHtml(role.label)}</div>
-      ${info.timerText ? `<div class="mini-note">${escapeHtml(info.timerText)}</div>` : ``}
-    </div>
-  `;
-}
+  
 /*********************************
  * HOME
  *********************************/
@@ -4235,6 +3797,151 @@ function renderConcertTimelineCard() {
   html += `</div>`;
   return html;
 }
+  function renderHome() {
+  const el = document.getElementById("homeContent");
+  if (!el) return;
+
+  if (!APP_DATA) {
+    el.innerHTML = renderSkeletonList(3);
+    return;
+  }
+
+  const phase = getFestivalPhase(state.userId);
+  const currentPersonalShift = getCurrentShiftForPerson(state.userId);
+  const nextPersonalShift = getUpcomingShiftForPerson(state.userId);
+  const currentFestivalEntry = getCurrentFestivalEntry();
+  const finalMessage = getFestivalMessageForHome(state.userId);
+
+  let currentBox = "";
+  let nextBox = "";
+
+  if (phase === "during") {
+    if (currentPersonalShift) {
+      const role = getRoleInfo(currentPersonalShift.vehicule);
+
+      currentBox = `
+        <div
+          class="card clickable-card home-main-card home-card-raise"
+          onclick="showView('direct')"
+          style="margin-bottom:8px;"
+        >
+          <div class="home-main-title">Mon créneau en cours</div>
+          <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+          <div class="mini-note">${escapeHtml(getShiftStatusInfo(currentPersonalShift).timerText || "")}</div>
+        </div>
+      `;
+    } else if (currentFestivalEntry && currentFestivalEntry.shift) {
+      const shift = currentFestivalEntry.shift;
+
+      currentBox = `
+        <div
+          class="card clickable-card home-main-card home-card-raise"
+          onclick="showView('direct')"
+          style="margin-bottom:8px;"
+        >
+          <div class="home-main-title">Créneau en cours</div>
+          <div class="home-main-line">${escapeHtml(shift.jour)} • ${escapeHtml(shift.debut)} – ${escapeHtml(shift.fin)}</div>
+        </div>
+      `;
+    } else {
+      currentBox = `
+        <div
+          class="card clickable-card home-main-card home-card-raise"
+          onclick="showView('direct')"
+          style="margin-bottom:8px;"
+        >
+          <div class="home-main-title">Créneau en cours</div>
+          <div class="home-main-line">Aucun créneau en cours</div>
+        </div>
+      `;
+    }
+
+    if (nextPersonalShift) {
+      const role = getRoleInfo(nextPersonalShift.vehicule);
+
+      nextBox = `
+        <div class="card home-card-raise" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+          <div class="mini-note">${escapeHtml(getShiftStatusInfo(nextPersonalShift).timerText || "")}</div>
+        </div>
+      `;
+    } else {
+      nextBox = `
+        <div class="card home-card-raise" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-subline">Aucun autre créneau prévu</div>
+        </div>
+      `;
+    }
+  } else if (phase === "before") {
+    const daysNumber = Math.max(
+      0,
+      Math.round(
+        (new Date("2026-07-01T00:00:00").setHours(0,0,0,0) - new Date(getCurrentNowDate()).setHours(0,0,0,0)) / 86400000
+      )
+    );
+
+    currentBox = `
+      <div class="card home-main-card home-card-raise" style="margin-bottom:8px;">
+        <div class="home-main-title">Avant le festival</div>
+        <div class="home-main-line">J-${daysNumber}</div>
+        <div class="home-subline">Ton planning est déjà disponible.</div>
+      </div>
+    `;
+
+    if (nextPersonalShift) {
+      const role = getRoleInfo(nextPersonalShift.vehicule);
+
+      nextBox = `
+        <div class="card home-card-raise" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+        </div>
+      `;
+    }
+  } else if (phase === "after" && finalMessage) {
+    currentBox = `
+      <div class="card home-main-card home-card-raise" style="margin-bottom:8px;">
+        <div class="home-main-line">${escapeHtml(finalMessage.title)}</div>
+        <div class="home-subline">${escapeHtml(finalMessage.sub)}</div>
+      </div>
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="home-hero compact-home-hero">
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Festival</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Beau<br>regard</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">1+2.3.4.5 juillet 2026</div>
+        </div>
+      </div>
+
+      ${renderHomeHeroUserPill()}
+    </div>
+
+    <div class="home-stack" style="margin-top:-28px;">
+      <div style="margin-top:6px; display:flex; gap:8px; margin-bottom:8px;">
+        <button onclick="setTestNowPrompt()">🧪 Test</button>
+        <button onclick="clearForcedNow()">🕒 Réel</button>
+      </div>
+
+      ${currentBox}
+      ${nextBox}
+      ${renderConcertTimelineCard()}
+
+      <div class="card compact home-meta-card" style="margin-bottom:0;">
+        <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
+      </div>
+    </div>
+  `;
+}
+
 /*********************************
  * MES CRENEAUX
  *********************************/
@@ -5359,262 +5066,6 @@ function loadPersonDetail() {
       margin: 0;
     }
   }
-
-    /* ===== HOME UNIFORME ===== */
-
-.home-topbar {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  z-index: 3;
-  width: 62%;
-  max-width: 430px;
-}
-
-.home-user-mini {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 8px 10px 8px 12px;
-  background: rgba(255, 250, 243, 0.96);
-  border: 1px solid rgba(255,255,255,0.55);
-  box-shadow: 0 8px 20px rgba(15,68,61,0.12);
-}
-
-.home-user-mini-left {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.home-user-mini-label {
-  font-size: 0.64rem;
-  line-height: 1.05;
-  font-weight: 900;
-  color: #5f6258;
-}
-
-.home-user-mini-name {
-  font-size: 0.88rem;
-  line-height: 1.02;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-user-mini-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.home-user-mini-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.92);
-  font-size: 1rem;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.home-hero {
-  height: 190px !important;
-  margin: -12px -12px 0 -12px;
-}
-
-.home-hero-content {
-  padding: 18px 16px 0 !important;
-}
-
-.home-hero-brand {
-  max-width: 180px;
-}
-
-.home-hero-brand-top {
-  font-size: 0.72rem;
-}
-
-.home-hero-brand-main {
-  font-size: 1.25rem !important;
-  line-height: 0.92;
-}
-
-.home-hero-brand-date {
-  margin-top: 6px;
-  font-size: 0.74rem;
-}
-
-.home-stack {
-  margin-top: -14px !important;
-}
-
-.home-test-row {
-  display: flex;
-  gap: 8px;
-  margin: 6px 0 8px 0;
-}
-
-.home-test-row button {
-  border: 1px solid #aaa;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.9rem;
-}
-
-.home-primary-card {
-  border-radius: 22px !important;
-  padding: 14px 16px !important;
-  min-height: 132px;
-}
-
-.home-primary-card .home-main-title {
-  font-size: 0.9rem !important;
-  line-height: 1.02 !important;
-  margin-bottom: 8px !important;
-}
-
-.home-primary-card .home-main-line {
-  font-size: 0.98rem !important;
-  line-height: 1.04 !important;
-  margin-bottom: 8px !important;
-}
-
-.home-primary-card .home-subline {
-  font-size: 0.9rem !important;
-  line-height: 1.04 !important;
-  margin-bottom: 4px !important;
-}
-
-.home-primary-card .mini-note {
-  font-size: 0.82rem !important;
-  line-height: 1.04 !important;
-  margin-top: 0 !important;
-}
-
-.home-section-card {
-  border-radius: 22px !important;
-  padding: 12px 14px !important;
-}
-
-.home-section-card .section-title {
-  margin-bottom: 10px !important;
-}
-
-.concert-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid rgba(222,212,194,0.7);
-}
-
-.concert-row:first-child {
-  border-top: none;
-}
-
-.concert-row-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.concert-row-kicker {
-  font-size: 0.8rem;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent-dark);
-  margin-bottom: 3px;
-  line-height: 1.02;
-}
-
-.concert-row-title {
-  font-size: 0.96rem;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  line-height: 1.04;
-  margin-bottom: 2px;
-}
-
-.concert-row-meta {
-  font-size: 0.86rem;
-  color: var(--muted);
-  line-height: 1.04;
-}
-
-.home-dropdown-btn {
-  width: 100%;
-  margin-top: 8px;
-  border: 1px solid rgba(222,212,194,0.9);
-  background: #fffdf8;
-  border-radius: 16px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.95rem;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  cursor: pointer;
-}
-
-.home-dropdown-panel {
-  margin-top: 8px;
-  border-top: 1px solid rgba(222,212,194,0.8);
-  padding-top: 8px;
-}
-
-.home-stack > .card {
-  margin-bottom: 8px !important;
-}
-
-@media (max-width: 380px) {
-  .home-topbar {
-    width: 66%;
-    right: 10px;
-    top: 10px;
-  }
-
-  .home-user-mini {
-    padding: 6px 8px 6px 10px;
-  }
-
-  .home-user-mini-name {
-    font-size: 0.8rem;
-  }
-
-  .home-user-mini-btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  .home-hero {
-    height: 172px !important;
-  }
-
-  .home-hero-brand-main {
-    font-size: 1.08rem !important;
-  }
-
-  .home-primary-card {
-    min-height: 122px;
-    padding: 12px 14px !important;
-  }
-
-  .home-primary-card .home-main-line {
-    font-size: 0.9rem !important;
-  }
-}
 </style>
     </head>
 
@@ -5831,8 +5282,6 @@ function closePrintDayPicker() {
   if (!modal) return;
   modal.classList.add("hidden");
 }
-
-
 </script>
 
 </body>
