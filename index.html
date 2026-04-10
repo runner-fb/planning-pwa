@@ -3539,8 +3539,8 @@ function renderUserHeader(options = {}) {
  *********************************/
 function renderConcertTimelineCard() {
   const state = getConcertTimelineState();
-  const concerts = state.concerts || [];
-
+const concerts = state.concerts || [];
+console.log("CONCERTS DEBUG:", concerts);
   if (!concerts.length) return "";
 
   const now = getCurrentNowDate();
