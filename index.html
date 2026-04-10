@@ -956,35 +956,10 @@ body {
   line-height: 1.1 !important;
 }
 
-.home-main-line {
-  font-size: 0.98rem !important;
-  font-weight: 1000;
-  line-height: 1.1 !important;
-  margin-bottom: 2px !important;
-  color: var(--primary-dark);
+.pre-festival-card .home-main-title {
+  color: #8C5A2B !important;
 }
 
-.home-subline {
-  font-size: 0.9rem !important;
-  color: #43544E;
-  font-weight: 850;
-  line-height: 1.15 !important;
-  margin-bottom: 2px !important;
-}
-
-@media (max-width: 380px) {
-  .home-hero.compact-home-hero {
-    height: 138px;
-  }
-
-  .home-main-line {
-    font-size: 1.06rem;
-  }
-
-  .home-subline {
-    font-size: 0.90rem;
-  }
-}
 
 .home-hero::before {
   content: "";
@@ -2575,6 +2550,13 @@ body {
 .concert-more-meta {
   font-size: 0.76rem;
   color: #8A8A82;
+}
+  .concert-empty-line {
+  padding: 8px 0 4px 0;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #7B8078;
+  line-height: 1.2;
 }
 </style>
 </head>
@@ -4477,20 +4459,14 @@ function renderConcertTimelineCard() {
   `;
 
   if (currentConcert) {
-    html += renderCompactConcertRow(currentConcert, "En cours", "current");
-  } else {
-    html += `
-      <div class="concert-compact-row">
-        <div class="concert-compact-main">
-          <div class="concert-compact-topline">
-            <span class="concert-compact-label">En cours</span>
-          </div>
-          <div class="concert-compact-name">Aucun concert</div>
-          <div class="concert-compact-meta">Aucun concert en cours</div>
-        </div>
-      </div>
-    `;
-  }
+  html += renderCompactConcertRow(currentConcert, "En cours", "current");
+} else {
+  html += `
+    <div class="concert-empty-line">
+      Aucun concert en cours
+    </div>
+  `;
+}
 
 if (nextConcert && new Date() >= new Date("2026-07-01T00:00:00")) {
   html += renderCompactConcertRow(nextConcert, "Suivant", "next");
@@ -4635,11 +4611,7 @@ onclick="showView('direct')"
     );
 
     currentBox = `
-      <div class="card home-main-card home-card-raise" style="margin-bottom:8px;">
-        <div class="home-main-title">Avant le festival</div>
-        <div class="home-main-line">J-${daysNumber}</div>
-        <div class="home-subline">Ton planning est déjà disponible.</div>
-      </div>
+      <div class="home-main-title">J-${daysNumber} avant le festival</div>
     `;
 
 if (nextPersonalShift && new Date() >= new Date("2026-06-30T00:00:00")) {
