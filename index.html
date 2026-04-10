@@ -777,7 +777,7 @@
   }
 
   .mini-note {
-    font-size: 0.92rem;
+    font-size: 0.8rem;
     color: var(--muted);
     margin-top: 10px;
     line-height: 1.4;
@@ -927,7 +927,7 @@
   }
 
     .home-hero.compact-home-hero {
-  height: 150px;
+  height: 120px;
 }
 
 .home-hero.compact-home-hero::after {
@@ -944,12 +944,12 @@
 }
 
 .home-main-line {
-  font-size: 1.18rem;
-  margin-bottom: 8px;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
 }
 
 .home-subline {
-  font-size: 0.96rem;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 380px) {
@@ -3065,7 +3065,7 @@ function renderHomeHeroUserPill() {
           background:rgba(255,253,247,0.96);
           border:1px solid rgba(255,255,255,0.55);
           border-radius:999px;
-          padding:6px 8px 6px 10px;
+          padding:4px 6px 4px 8px;
           box-shadow:0 8px 18px rgba(15,68,61,0.14);
         "
       >
@@ -3086,8 +3086,8 @@ function renderHomeHeroUserPill() {
             title="Changer de personne"
             aria-label="Changer de personne"
             style="
-              width:30px;
-              height:30px;
+              width:26px;
+              height:26px;
               border-radius:999px;
               background:rgba(255,255,255,0.95);
               border:1px solid rgba(0,0,0,0.08);
@@ -3127,8 +3127,8 @@ function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
   if (!concert) return "";
 
   return `
-    <div class="card compact" style="margin-bottom:8px;">
-      <div style="font-size:0.76rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
+    <div class="card compact" style="margin-bottom:6px;">
+      <div style="font-size:0.68rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
         ${escapeHtml(title)}
       </div>
 
@@ -3925,7 +3925,7 @@ function renderConcertTimelineCard() {
       ${renderHomeHeroUserPill()}
     </div>
 
-    <div class="home-stack" style="margin-top:-28px;">
+    <div class="home-stack" style="margin-top:-20px;">
       <div style="margin-top:6px; display:flex; gap:8px; margin-bottom:8px;">
         <button onclick="setTestNowPrompt()">🧪 Test</button>
         <button onclick="clearForcedNow()">🕒 Réel</button>
