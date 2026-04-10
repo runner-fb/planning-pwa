@@ -3387,7 +3387,7 @@ function renderHomeHeroUserPill() {
   `;
 }
 
-function renderHomeCurrentCard() {
+function CurrentCard() {
   const festivalEntry = getCurrentFestivalEntry();
   const myCurrentShift = getCurrentShiftForPerson(state.userId);
 
@@ -3424,7 +3424,7 @@ function renderHomeCurrentCard() {
   `;
 }
 
-function renderHomeNextCard() {
+function NextCard() {
   const nextShift = getUpcomingShiftForPerson(state.userId);
 
   if (!nextShift) {
@@ -4160,7 +4160,80 @@ function renderUserHeader(options = {}) {
     </div>
   `;
 }
-  
+function renderHomeCurrentCard() {
+  const entry = getCurrentFestivalEntry();
+
+  if (!entry || !entry.shift) {
+    return `
+      <div class="card home-primary-card clickable-card" onclick="showView('direct')">
+        <div class="home-main-title">Créneau en cours</div>
+        <div class="home-main-line">Aucun créneau en cours</div>
+      </div>
+    `;
+  }
+
+  const shift = entry.shift;
+  const userIsInShift = isUserInFestivalEntry(entry);
+
+  if (userIsInShift) {
+    const me = (entry.benevoles || []).find(person =>
+      String(person.id || "") === String(state.userId || "")
+    );
+    const role = getRoleInfo(me?.vehicule || "-");
+    const info = getShiftStatusInfo(shift);
+
+    return `
+      <div class="card home-main-card home-primary-card clickable-card" onclick="showView('direct')">
+        <div class="home-main-title">Mon créneau en cours</div>
+        <div class="home-main-line">${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}</div>
+        <div class="home-subline">${escapeHtml(role.label)}</div>
+        ${info.timerText ? `<div class="mini-note">${escapeHtml(info.timerText)}</div>` : ``}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card home-main-card home-primary-card clickable-card" onclick="showView('direct')">
+      <div class="home-main-title">Créneau en cours</div>
+      <div class="home-main-line">${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}</div>
+    </div>
+  `;
+}
+  function renderHomeNextCard() {
+  const nextShift = getUpcomingShiftForPerson(state.userId);
+
+  if (!nextShift) {
+    const message = getFestivalMessageForHome(state.userId);
+
+    if (message) {
+      return `
+        <div class="card home-primary-card">
+          <div class="home-main-title">${escapeHtml(message.title)}</div>
+          <div class="home-subline">${escapeHtml(message.sub || "")}</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="card home-primary-card">
+        <div class="home-main-title">Mon prochain créneau</div>
+        <div class="home-main-line">Aucun créneau à venir</div>
+      </div>
+    `;
+  }
+
+  const role = getRoleInfo(nextShift.vehicule || "-");
+  const info = getShiftStatusInfo(nextShift);
+
+  return `
+    <div class="card home-primary-card">
+      <div class="home-main-title">Mon prochain créneau</div>
+      <div class="home-main-line">${escapeHtml(nextShift.jour || "")} • ${escapeHtml(nextShift.debut || "")} – ${escapeHtml(nextShift.fin || "")}</div>
+      <div class="home-subline">${escapeHtml(role.label)}</div>
+      ${info.timerText ? `<div class="mini-note">${escapeHtml(info.timerText)}</div>` : ``}
+    </div>
+  `;
+}
 /*********************************
  * HOME
  *********************************/
