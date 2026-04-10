@@ -3735,7 +3735,12 @@ function personHasMondayShift(personId) {
   if (!full) return "Aucun";
   return full.split(/\s+/)[0] || full;
 }
+function getSelectedUserFullName() {
+  const user = getSelectedUser();
+  if (!user) return "";
 
+  return [user.prenom, user.nom].filter(Boolean).join(" ");
+}
 function getCurrentFestivalEntry() {
   const all = Array.isArray(APP_DATA?.direct?.allShifts) ? APP_DATA.direct.allShifts : [];
   if (!all.length) return null;
@@ -3790,8 +3795,8 @@ function renderHomeHeroUserPill() {
             Hello John, connecté en tant que
           </div>
           <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${escapeHtml(getSelectedUserFirstName())}
-          </div>
+${escapeHtml(getSelectedUserFullName())}
+</div>
         </div>
 
         <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
@@ -4478,8 +4483,8 @@ function renderConcertTimelineCard() {
     html += renderCompactConcertRow(nextConcert, "Suivant", "next");
   }
 
-  if (remainingConcerts.length) {
-    html += `
+if (remainingConcerts.length && new Date() >= new Date("2026-07-01T00:00:00")) {
+  html += `
       <button class="concerts-more-btn" onclick="toggleHomeConcertsMore()">
         <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
         <span class="planning-chevron ${homeConcertsState.openMore ? "open" : ""}">▼</span>
@@ -4624,8 +4629,8 @@ onclick="showView('direct')"
       </div>
     `;
 
-    if (nextPersonalShift) {
-      const role = getRoleInfo(nextPersonalShift.vehicule);
+if (nextPersonalShift && new Date() >= new Date("2026-06-30T00:00:00")) {
+  const role = getRoleInfo(nextPersonalShift.vehicule);
 
       nextBox = `
         <div class="card home-card-raise" style="margin-bottom:8px;">
@@ -6023,7 +6028,24 @@ function closePrintDayPicker() {
     panel.classList.toggle("hidden");
     chevron.textContent = panel.classList.contains("hidden") ? "▼" : "▲";
   }
-  
+  function isBeforeFixedDate(dateString) {
+  return new Date() < new Date(dateString);
+}
+
+function shouldShowHomeNextShift() {
+  return !isBeforeFixedDate("2026-06-30T00:00:00");
+}
+
+function shouldShowHomeFollowingConcerts() {
+  return !isBeforeFixedDate("2026-07-01T00:00:00");
+}
+
+function getFullName(person) {
+  const prenom = String(person?.prenom || "").trim();
+  const nom = String(person?.nom || "").trim();
+  const fullName = [prenom, nom].filter(Boolean).join(" ").trim();
+  return fullName || String(person?.label || "").trim();
+}
 </script>
 
 </body>
