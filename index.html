@@ -3462,100 +3462,12 @@ function NextCard() {
 }
 
 function renderConcertTimelineCard() {
-  const timelineState = getConcertTimelineState();
-  const concerts = timelineState.concerts || [];
-
-  if (!concerts.length) {
-    return `
-      <div class="card home-section-card">
-        <div class="section-title">Concerts</div>
-        <div class="home-empty-line">Aucune donnée concert</div>
-      </div>
-    `;
-  }
-
-  const currentIndex = timelineState.currentIndex;
-  const nextIndex = timelineState.nextIndex;
-
-  let currentConcert = null;
-  let nextConcert = null;
-  let remainingConcerts = [];
-
-  if (currentIndex !== -1) {
-    currentConcert = concerts[currentIndex] || null;
-    nextConcert = concerts[currentIndex + 1] || null;
-    remainingConcerts = concerts.slice(currentIndex + 2);
-  } else if (nextIndex !== -1) {
-    nextConcert = concerts[nextIndex] || null;
-    remainingConcerts = concerts.slice(nextIndex + 1);
-  }
-
-  let html = `
+  return `
     <div class="card home-section-card">
       <div class="section-title">Concerts</div>
-  `;
-
-  html += `
-    <div class="concert-row">
-      <div class="concert-row-main">
-        <div class="concert-row-kicker">Concert en cours</div>
-        ${
-          currentConcert
-            ? `
-              <div class="concert-row-title">${escapeHtml(currentConcert.artiste || "")}</div>
-              <div class="concert-row-meta">${escapeHtml(currentConcert.scene || "")} • ${escapeHtml(currentConcert.debut || "")} – ${escapeHtml(currentConcert.fin || "")}</div>
-            `
-            : `
-              <div class="home-empty-line">Aucun concert en cours</div>
-            `
-        }
-      </div>
-      ${currentConcert ? `<span class="badge current">En cours</span>` : ``}
+      <div>OK concerts</div>
     </div>
   `;
-
-  if (nextConcert) {
-    html += `
-      <div class="concert-row">
-        <div class="concert-row-main">
-          <div class="concert-row-kicker">Concert suivant</div>
-          <div class="concert-row-title">${escapeHtml(nextConcert.artiste || "")}</div>
-          <div class="concert-row-meta">${escapeHtml(nextConcert.scene || "")} • ${escapeHtml(nextConcert.debut || "")} – ${escapeHtml(nextConcert.fin || "")}</div>
-        </div>
-        <span class="badge next">À venir</span>
-      </div>
-    `;
-  }
-
-  if (remainingConcerts.length) {
-    html += `
-      <button type="button" class="home-dropdown-btn" onclick="toggleHomeConcertsMore()">
-        <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
-        <span>${homeConcertsState.openMore ? "▲" : "▼"}</span>
-      </button>
-    `;
-
-    if (homeConcertsState.openMore) {
-      html += `<div class="home-dropdown-panel">`;
-
-      remainingConcerts.forEach(concert => {
-        html += `
-          <div class="concert-row">
-            <div class="concert-row-main">
-              <div class="concert-row-title">${escapeHtml(concert.artiste || "")}</div>
-              <div class="concert-row-meta">${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}</div>
-            </div>
-            <span class="badge next">À venir</span>
-          </div>
-        `;
-      });
-
-      html += `</div>`;
-    }
-  }
-
-  html += `</div>`;
-  return html;
 }
 
 function renderHome() {
