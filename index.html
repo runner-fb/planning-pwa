@@ -751,12 +751,13 @@ body {
 }
 
 .sync-bar {
-  font-size: 12px;
-  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.1;
+  padding: 4px 10px;
   text-align: center;
-  background: #F3EBDD;
-  color: #6A6255;
-  border-bottom: 1px solid #E0D3BF;
+  background: #EAF5EF;
+  color: #2F6E5E;
+  border-bottom: 1px solid rgba(15,90,79,0.08);
 }
 
 .sync-bar.hidden {
@@ -764,8 +765,8 @@ body {
 }
 
 .sync-bar.ok {
-  background: #ECF8F2;
-  color: #1F7A5C;
+  background: #EAF5EF;
+  color: #2F6E5E;
 }
 
 .sync-bar.offline {
@@ -2217,48 +2218,48 @@ body {
 
 .current-slot-card {
   position: relative;
-  background: linear-gradient(135deg, #EEF9F5 0%, #FDFBF6 100%);
-  border: 2px solid #0F7B63;
-  box-shadow: 0 14px 34px rgba(15,123,99,0.22);
-  transform: scale(1.025);
-  z-index: 3;
+  background: linear-gradient(180deg, #EDF8F3 0%, #E6F4EE 100%) !important;
+  border: 1px solid rgba(15,90,79,0.18) !important;
+  border-left: 7px solid #1F7A5C !important;
+  box-shadow: 0 10px 22px rgba(15,90,79,0.12) !important;
+  transform: none !important;
+  z-index: 2;
 }
 
-.current-slot-card::before {
-  content: "";
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: 0;
-  width: 8px;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #0F7B63, #38C79D);
+.current-slot-card::before,
+.current-slot-card::after {
+  content: none !important;
 }
 
 .current-slot-card .home-main-title {
-  font-size: 19px;
-  font-weight: 900;
-  color: #A35D1F;
-  letter-spacing: 0.6px;
+  color: #0F5A4F !important;
+  font-size: 0.96rem !important;
+  font-weight: 1000 !important;
+  margin-bottom: 8px !important;
+  letter-spacing: 0.08em !important;
 }
 
 .current-slot-card .home-main-line {
-  font-size: 28px;
-  font-weight: 900;
-  color: #0F5A4F;
-  line-height: 1.05;
+  color: #0F5A4F !important;
+  font-size: 1.46rem !important;
+  font-weight: 1000 !important;
+  line-height: 1.14 !important;
+  margin-bottom: 8px !important;
 }
 
 .current-slot-card .home-subline {
-  font-size: 18px;
-  font-weight: 800;
-  color: #18443D;
+  color: #18443D !important;
+  font-size: 1.05rem !important;
+  font-weight: 850 !important;
+  line-height: 1.2 !important;
+  margin-bottom: 4px !important;
 }
 
 .current-slot-card .mini-note {
-  font-size: 15px;
-  font-weight: 800;
-  color: #0F7B63;
+  color: #1F7A5C !important;
+  font-size: 0.95rem !important;
+  font-weight: 900 !important;
+  margin-top: 2px !important;
 }
 
 .user-pill-clean {
@@ -2335,6 +2336,58 @@ body {
 @keyframes concertMarquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
+}
+  /* ================================
+   CONCERTS = MODULE SECONDAIRE
+   ================================ */
+
+.concerts-card {
+  background: linear-gradient(180deg, #FCFBF7 0%, #F8F5EE 100%) !important;
+  border: 1px solid rgba(24,68,61,0.06) !important;
+  box-shadow: 0 6px 14px rgba(78,57,31,0.05) !important;
+}
+
+.concerts-card .section-title {
+  font-size: 0.98rem !important;
+  color: #24564F !important;
+  margin-bottom: 8px !important;
+}
+
+.concerts-card .card {
+  background: #FFFEFA !important;
+  border: 1px solid rgba(24,68,61,0.07) !important;
+  box-shadow: none !important;
+  border-radius: 18px !important;
+  padding: 10px 12px !important;
+}
+
+.concerts-card .concert-row-kicker,
+.concerts-card .home-main-title {
+  font-size: 0.76rem !important;
+  color: #9A6B3A !important;
+  margin-bottom: 4px !important;
+}
+
+.concerts-card .concert-row-title,
+.concerts-card .home-main-line {
+  font-size: 0.92rem !important;
+  font-weight: 900 !important;
+  color: #1F4F49 !important;
+  margin-bottom: 2px !important;
+}
+
+.concerts-card .concert-row-meta,
+.concerts-card .home-subline,
+.concerts-card .subtle-text,
+.concerts-card .mini-note {
+  font-size: 0.82rem !important;
+  color: #6E746B !important;
+}
+
+.concerts-card .badge,
+.concerts-card .status-badge {
+  transform: scale(0.88);
+  box-shadow: none !important;
 }
 </style>
 </head>
@@ -4211,8 +4264,8 @@ function renderConcertTimelineCard() {
   }
 
   let html = `
-    <div class="card" style="margin-bottom:8px;">
-      <div class="section-title" style="margin-bottom:10px;">Concerts</div>
+<div class="card concerts-card" style="margin-bottom:8px;">
+<div class="section-title" style="margin-bottom:10px;">Concerts</div>
   `;
 
   if (currentConcert) {
