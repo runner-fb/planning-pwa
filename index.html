@@ -926,6 +926,46 @@
       linear-gradient(135deg, #1C5A51 0%, #18443D 42%, #2B625A 100%);
   }
 
+    .home-hero.compact-home-hero {
+  height: 150px;
+}
+
+.home-hero.compact-home-hero::after {
+  bottom: -58px;
+  height: 96px;
+}
+
+.home-card-raise {
+  border-radius: 20px;
+}
+
+.home-main-title {
+  margin-bottom: 8px;
+}
+
+.home-main-line {
+  font-size: 1.18rem;
+  margin-bottom: 8px;
+}
+
+.home-subline {
+  font-size: 0.96rem;
+}
+
+@media (max-width: 380px) {
+  .home-hero.compact-home-hero {
+    height: 138px;
+  }
+
+  .home-main-line {
+    font-size: 1.06rem;
+  }
+
+  .home-subline {
+    font-size: 0.90rem;
+  }
+}
+
   .home-hero::before {
     content: "";
     position: absolute;
@@ -2103,7 +2143,9 @@ let contactsState = {
 let mesCreneauxState = {
   autoScrolled: false
 };
-
+let homeConcertsState = {
+  openMore: false
+};
 /*********************************
  * CACHE OFFLINE
  *********************************/
@@ -2973,6 +3015,138 @@ function personHasMondayShift(personId) {
   return getPersonShifts(personId).some(s => String(s.jour || "") === "Lundi");
 }
 
+  function getSelectedUserFirstName() {
+  const full = String(state.userLabel || "").trim();
+  if (!full) return "Aucun";
+  return full.split(/\s+/)[0] || full;
+}
+
+function getCurrentFestivalEntry() {
+  const all = Array.isArray(APP_DATA?.direct?.allShifts) ? APP_DATA.direct.allShifts : [];
+  if (!all.length) return null;
+
+  const computed = computeDirectDefaultIndexFromNow(all);
+
+  if (computed.liveState !== "current") return null;
+  if (computed.defaultIndex < 0) return null;
+
+  return all[computed.defaultIndex] || null;
+}
+
+function isUserInFestivalEntry(entry) {
+  if (!entry || !Array.isArray(entry.benevoles)) return false;
+
+  return entry.benevoles.some(person =>
+    String(person.id || "") === String(state.userId || "")
+  );
+}
+
+function toggleHomeConcertsMore() {
+  homeConcertsState.openMore = !homeConcertsState.openMore;
+  renderHome();
+}
+
+function renderHomeHeroUserPill() {
+  return `
+    <div
+      style="
+        position:absolute;
+        top:12px;
+        right:12px;
+        z-index:4;
+        max-width:62%;
+      "
+    >
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:8px;
+          background:rgba(255,253,247,0.96);
+          border:1px solid rgba(255,255,255,0.55);
+          border-radius:999px;
+          padding:6px 8px 6px 10px;
+          box-shadow:0 8px 18px rgba(15,68,61,0.14);
+        "
+      >
+        <div style="min-width:0; line-height:1.05;">
+          <div style="font-size:0.56rem; font-weight:900; color:#EDE7DA; display:none;"></div>
+          <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
+            Hello John, connecté en tant que
+          </div>
+          <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${escapeHtml(getSelectedUserFirstName())}
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
+          <button
+            type="button"
+            onclick="changeUser()"
+            title="Changer de personne"
+            aria-label="Changer de personne"
+            style="
+              width:30px;
+              height:30px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.95);
+              border:1px solid rgba(0,0,0,0.08);
+              font-size:13px;
+              cursor:pointer;
+              padding:0;
+            "
+          >
+            👤
+          </button>
+
+          <button
+            type="button"
+            onclick="openPrintModal()"
+            title="Imprimer"
+            aria-label="Imprimer"
+            style="
+              width:30px;
+              height:30px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.95);
+              border:1px solid rgba(0,0,0,0.08);
+              font-size:13px;
+              cursor:pointer;
+              padding:0;
+            "
+          >
+            🖨️
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
+  if (!concert) return "";
+
+  return `
+    <div class="card compact" style="margin-bottom:8px;">
+      <div style="font-size:0.76rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
+        ${escapeHtml(title)}
+      </div>
+
+      <div class="shift-header" style="margin-bottom:0;">
+        <div style="min-width:0;">
+          <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
+            ${escapeHtml(concert.artiste || "")}
+          </div>
+          <div class="subtle-text">
+            ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
+          </div>
+        </div>
+        <span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+      </div>
+    </div>
+  `;
+}
+
 /*********************************
  * OFFLINE-FIRST BOOTSTRAP
  *********************************/
@@ -3538,43 +3712,87 @@ function renderUserHeader(options = {}) {
  * HOME
  *********************************/
 function renderConcertTimelineCard() {
-  const state = getConcertTimelineState();
-const concerts = state.concerts || [];
-console.log("CONCERTS DEBUG:", concerts);
+  const timelineState = getConcertTimelineState();
+  const concerts = timelineState.concerts || [];
+
   if (!concerts.length) return "";
 
-  const now = getCurrentNowDate();
-  let html = `<div class="card"><div class="section-title">Concerts</div>`;
+  const currentIndex = timelineState.currentIndex;
+  const nextIndex = timelineState.nextIndex;
 
-  concerts.slice(0, 6).forEach((c) => {
-    const start = parseConcertDateLabel(c.startLabel);
-    const end = parseConcertDateLabel(c.endLabel);
+  let currentConcert = null;
+  let nextConcert = null;
+  let remainingConcerts = [];
 
-    let badge = "À venir";
-    let badgeClass = "next";
+  if (currentIndex !== -1) {
+    currentConcert = concerts[currentIndex] || null;
+    nextConcert = concerts[currentIndex + 1] || null;
+    remainingConcerts = concerts.slice(currentIndex + 2);
+  } else if (nextIndex !== -1) {
+    nextConcert = concerts[nextIndex] || null;
+    remainingConcerts = concerts.slice(nextIndex + 1);
+  } else {
+    remainingConcerts = [];
+  }
 
-    if (start && end) {
-      if (now >= start && now < end) {
-        badge = "En cours";
-        badgeClass = "current";
-      } else if (now >= end) {
-        badge = "Terminé";
-        badgeClass = "previous";
-      }
-    }
+  let html = `
+    <div class="card" style="margin-bottom:8px;">
+      <div class="section-title" style="margin-bottom:10px;">Concerts</div>
+  `;
 
+  if (currentConcert) {
+    html += renderSingleConcertCard(currentConcert, "Concert en cours", "current", "En cours");
+  } else {
     html += `
       <div class="card compact" style="margin-bottom:8px;">
-        <div class="shift-header">
-          <div style="min-width:0;">
-            <div class="shift-line">${escapeHtml(c.artiste || "")}</div>
-            <div class="subtle-text">${escapeHtml(c.scene || "")} • ${escapeHtml(c.debut || "")} – ${escapeHtml(c.fin || "")}</div>
+        <div style="font-size:0.76rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
+          Concert en cours
+        </div>
+        <div class="subtle-text">Aucun concert en cours</div>
+      </div>
+    `;
+  }
+
+  if (nextConcert) {
+    html += renderSingleConcertCard(nextConcert, "Concert suivant", "next", "À venir");
+  }
+
+  if (remainingConcerts.length) {
+    html += `
+      <div
+        class="card clickable-card"
+        onclick="toggleHomeConcertsMore()"
+        style="margin-bottom:${homeConcertsState.openMore ? "8px" : "0"};"
+      >
+        <div class="shift-header" style="margin-bottom:0;">
+          <div style="font-size:0.95rem; font-weight:1000; color:var(--primary-dark);">
+            ${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}
           </div>
-          <span class="badge ${badgeClass}">${badge}</span>
+          <span class="planning-chevron ${homeConcertsState.openMore ? "open" : ""}">▼</span>
         </div>
       </div>
     `;
-  });
+
+    if (homeConcertsState.openMore) {
+      remainingConcerts.forEach(concert => {
+        html += `
+          <div class="card compact" style="margin-bottom:8px;">
+            <div class="shift-header" style="margin-bottom:0;">
+              <div style="min-width:0;">
+                <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
+                  ${escapeHtml(concert.artiste || "")}
+                </div>
+                <div class="subtle-text">
+                  ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
+                </div>
+              </div>
+              <span class="badge next">À venir</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+  }
 
   html += `</div>`;
   return html;
@@ -3589,39 +3807,75 @@ console.log("CONCERTS DEBUG:", concerts);
   }
 
   const phase = getFestivalPhase(state.userId);
-  const current = getCurrentShiftForPerson(state.userId);
-  const next = getUpcomingShiftForPerson(state.userId);
+  const currentPersonalShift = getCurrentShiftForPerson(state.userId);
+  const nextPersonalShift = getUpcomingShiftForPerson(state.userId);
+  const currentFestivalEntry = getCurrentFestivalEntry();
   const finalMessage = getFestivalMessageForHome(state.userId);
 
-  let mainCard = "";
+  let currentBox = "";
+  let nextBox = "";
 
-  if (phase === "during" && current) {
-    const role = getRoleInfo(current.vehicule);
-    mainCard = `
-      <div class="card clickable-card home-main-card home-card-raise" onclick="showView('mes-creneaux')">
-        <div class="home-main-title">En cours</div>
-        <div class="home-main-line">${escapeHtml(current.jour)} • ${escapeHtml(current.debut)} – ${escapeHtml(current.fin)}</div>
-        <div class="home-subline">${escapeHtml(role.label)}</div>
-        <div class="mini-note">${escapeHtml(getShiftStatusInfo(current).timerText || "")}</div>
-      </div>
-    `;
-  } else if (phase === "during" && next) {
-    const role = getRoleInfo(next.vehicule);
-    mainCard = `
-      <div class="card clickable-card home-main-card home-card-raise" onclick="showView('mes-creneaux')">
-        <div class="home-main-title">Mon prochain créneau</div>
-        <div class="home-main-line">${escapeHtml(next.jour)} • ${escapeHtml(next.debut)} – ${escapeHtml(next.fin)}</div>
-        <div class="home-subline">${escapeHtml(role.label)}</div>
-        <div class="mini-note">${escapeHtml(getShiftStatusInfo(next).timerText || "")}</div>
-      </div>
-    `;
-  } else if (phase === "after" && finalMessage) {
-    mainCard = `
-      <div class="card home-main-card home-card-raise">
-        <div class="home-main-line">${escapeHtml(finalMessage.title)}</div>
-        <div class="home-subline">${escapeHtml(finalMessage.sub)}</div>
-      </div>
-    `;
+  if (phase === "during") {
+    if (currentPersonalShift) {
+      const role = getRoleInfo(currentPersonalShift.vehicule);
+
+      currentBox = `
+        <div
+          class="card clickable-card home-main-card home-card-raise"
+          onclick="showView('direct')"
+          style="margin-bottom:8px;"
+        >
+          <div class="home-main-title">Mon créneau en cours</div>
+          <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+          <div class="mini-note">${escapeHtml(getShiftStatusInfo(currentPersonalShift).timerText || "")}</div>
+        </div>
+      `;
+    } else if (currentFestivalEntry && currentFestivalEntry.shift) {
+      const shift = currentFestivalEntry.shift;
+
+      currentBox = `
+        <div
+          class="card clickable-card home-main-card home-card-raise"
+          onclick="showView('direct')"
+          style="margin-bottom:8px;"
+        >
+          <div class="home-main-title">Créneau en cours</div>
+          <div class="home-main-line">${escapeHtml(shift.jour)} • ${escapeHtml(shift.debut)} – ${escapeHtml(shift.fin)}</div>
+        </div>
+      `;
+    } else {
+      currentBox = `
+        <div
+          class="card clickable-card home-main-card home-card-raise"
+          onclick="showView('direct')"
+          style="margin-bottom:8px;"
+        >
+          <div class="home-main-title">Créneau en cours</div>
+          <div class="home-main-line">Aucun créneau en cours</div>
+        </div>
+      `;
+    }
+
+    if (nextPersonalShift) {
+      const role = getRoleInfo(nextPersonalShift.vehicule);
+
+      nextBox = `
+        <div class="card home-card-raise" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+          <div class="mini-note">${escapeHtml(getShiftStatusInfo(nextPersonalShift).timerText || "")}</div>
+        </div>
+      `;
+    } else {
+      nextBox = `
+        <div class="card home-card-raise" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-subline">Aucun autre créneau prévu</div>
+        </div>
+      `;
+    }
   } else if (phase === "before") {
     const daysNumber = Math.max(
       0,
@@ -3630,60 +3884,58 @@ console.log("CONCERTS DEBUG:", concerts);
       )
     );
 
-    mainCard = `
-      <div class="card home-main-card home-card-raise">
-        <div class="home-countdown-line">
-          <span class="home-countdown-value">J-${daysNumber}</span>
-          <span class="home-countdown-sep">·</span>
-          <span class="home-countdown-label">Avant le festival</span>
-        </div>
-
-        <div class="home-main-line">Prépare-toi tranquillement</div>
-
-        <div class="home-subline">
-          Ton planning est déjà disponible dans l’application.
-        </div>
+    currentBox = `
+      <div class="card home-main-card home-card-raise" style="margin-bottom:8px;">
+        <div class="home-main-title">Avant le festival</div>
+        <div class="home-main-line">J-${daysNumber}</div>
+        <div class="home-subline">Ton planning est déjà disponible.</div>
       </div>
     `;
-  } else if (finalMessage) {
-    mainCard = `
-      <div class="card home-main-card home-card-raise">
+
+    if (nextPersonalShift) {
+      const role = getRoleInfo(nextPersonalShift.vehicule);
+
+      nextBox = `
+        <div class="card home-card-raise" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+        </div>
+      `;
+    }
+  } else if (phase === "after" && finalMessage) {
+    currentBox = `
+      <div class="card home-main-card home-card-raise" style="margin-bottom:8px;">
         <div class="home-main-line">${escapeHtml(finalMessage.title)}</div>
         <div class="home-subline">${escapeHtml(finalMessage.sub)}</div>
-      </div>
-    `;
-  } else {
-    mainCard = `
-      <div class="card home-main-card home-card-raise">
-        <div class="home-main-line">Aucune information disponible</div>
       </div>
     `;
   }
 
   el.innerHTML = `
-    <div class="home-hero">
-      <div class="home-hero-content">
-        <div class="home-hero-brand">
-          <div class="home-hero-brand-top">Festival</div>
-          <div class="home-hero-brand-main">Beau<br>regard</div>
-          <div class="home-hero-brand-date">1+2.3.4.5 juillet 2026</div>
+    <div class="home-hero compact-home-hero">
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Festival</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Beau<br>regard</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">1+2.3.4.5 juillet 2026</div>
         </div>
-
-
       </div>
+
+      ${renderHomeHeroUserPill()}
     </div>
 
-    <div class="home-stack">
-      ${renderUserHeader()}
+    <div class="home-stack" style="margin-top:-28px;">
+      <div style="margin-top:6px; display:flex; gap:8px; margin-bottom:8px;">
+        <button onclick="setTestNowPrompt()">🧪 Test</button>
+        <button onclick="clearForcedNow()">🕒 Réel</button>
+      </div>
 
-      <div style="margin-top:10px; display:flex; gap:8px;">
-  <button onclick="setTestNowPrompt()">🧪 Test</button>
-  <button onclick="clearForcedNow()">🕒 Réel</button>
-</div>
+      ${currentBox}
+      ${nextBox}
+      ${renderConcertTimelineCard()}
 
-      ${mainCard}
-${renderConcertTimelineCard()}
-      <div class="card compact home-meta-card">
+      <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
       </div>
     </div>
