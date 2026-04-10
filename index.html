@@ -3736,10 +3736,14 @@ function personHasMondayShift(personId) {
   return full.split(/\s+/)[0] || full;
 }
 function getSelectedUserFullName() {
-  const user = getSelectedUser();
-  if (!user) return "";
+  try {
+    const firstName = getSelectedUserFirstName();
+    const user = window.selectedUser || window.currentUser || {};
 
-  return [user.prenom, user.nom].filter(Boolean).join(" ");
+    return [firstName, user.nom].filter(Boolean).join(" ");
+  } catch (e) {
+    return getSelectedUserFirstName();
+  }
 }
 function getCurrentFestivalEntry() {
   const all = Array.isArray(APP_DATA?.direct?.allShifts) ? APP_DATA.direct.allShifts : [];
