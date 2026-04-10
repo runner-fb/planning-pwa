@@ -3358,105 +3358,248 @@ function toggleHomeConcertsMore() {
 
 function renderHomeHeroUserPill() {
   return `
-    <div
-      style="
-        position:absolute;
-        top:12px;
-        right:12px;
-        z-index:4;
-        max-width:62%;
-      "
-    >
-      <div
-        style="
-          display:flex;
-          align-items:center;
-          gap:8px;
-          background:rgba(255,253,247,0.96);
-          border:1px solid rgba(255,255,255,0.55);
-          border-radius:999px;
-          padding:4px 6px 4px 8px;
-          box-shadow:0 8px 18px rgba(15,68,61,0.14);
-        "
-      >
-        <div style="min-width:0; line-height:1.05;">
-          <div style="font-size:0.56rem; font-weight:900; color:#EDE7DA; display:none;"></div>
-          <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
-            Hello John, connecté en tant que
-          </div>
-          <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${escapeHtml(getSelectedUserFirstName())}
-          </div>
+    <div class="home-topbar">
+      <div class="home-user-mini">
+        <div class="home-user-mini-left">
+          <div class="home-user-mini-label">Hello John, connecté en tant que</div>
+          <div class="home-user-mini-name">${escapeHtml(getSelectedUserFirstName())}</div>
         </div>
 
-        <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
+        <div class="home-user-mini-actions">
           <button
             type="button"
+            class="home-user-mini-btn"
             onclick="changeUser()"
             title="Changer de personne"
             aria-label="Changer de personne"
-            style="
-              width:26px;
-              height:26px;
-              border-radius:999px;
-              background:rgba(255,255,255,0.95);
-              border:1px solid rgba(0,0,0,0.08);
-              font-size:13px;
-              cursor:pointer;
-              padding:0;
-            "
-          >
-            👤
-          </button>
+          >👤</button>
 
           <button
             type="button"
+            class="home-user-mini-btn"
             onclick="openPrintModal()"
             title="Imprimer"
             aria-label="Imprimer"
-            style="
-              width:30px;
-              height:30px;
-              border-radius:999px;
-              background:rgba(255,255,255,0.95);
-              border:1px solid rgba(0,0,0,0.08);
-              font-size:13px;
-              cursor:pointer;
-              padding:0;
-            "
-          >
-            🖨️
-          </button>
+          >🖨️</button>
         </div>
       </div>
     </div>
   `;
 }
 
-function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
-  if (!concert) return "";
+function renderHomeCurrentCard() {
+  const festivalEntry = getCurrentFestivalEntry();
+  const myCurrentShift = getCurrentShiftForPerson(state.userId);
+
+  if (festivalEntry && isUserInFestivalEntry(festivalEntry) && myCurrentShift) {
+    const role = getRoleInfo(myCurrentShift.vehicule || "");
+    const info = getShiftStatusInfo(myCurrentShift);
+
+    return `
+      <div class="card home-main-card home-primary-card home-link-card clickable-card" onclick="showView('direct')">
+        <div class="home-main-title">Mon créneau en cours</div>
+        <div class="home-main-line">${escapeHtml(myCurrentShift.jour)} • ${escapeHtml(myCurrentShift.debut)} – ${escapeHtml(myCurrentShift.fin)}</div>
+        <div class="home-subline">${escapeHtml(role.label)}</div>
+        <div class="mini-note">${escapeHtml(info.timerText || "")}</div>
+      </div>
+    `;
+  }
+
+  if (festivalEntry && festivalEntry.shift) {
+    const shift = festivalEntry.shift;
+
+    return `
+      <div class="card home-main-card home-primary-card home-link-card clickable-card" onclick="showView('direct')">
+        <div class="home-main-title">Créneau en cours</div>
+        <div class="home-main-line">${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}</div>
+      </div>
+    `;
+  }
 
   return `
-    <div class="card compact" style="margin-bottom:6px;">
-      <div style="font-size:0.68rem; font-weight:1000; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent-dark); margin-bottom:8px;">
-        ${escapeHtml(title)}
-      </div>
-
-      <div class="shift-header" style="margin-bottom:0;">
-        <div style="min-width:0;">
-          <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
-            ${escapeHtml(concert.artiste || "")}
-          </div>
-          <div class="subtle-text">
-            ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
-          </div>
-        </div>
-        <span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span>
-      </div>
+    <div class="card home-main-card home-primary-card">
+      <div class="home-main-title">Créneau en cours</div>
+      <div class="home-empty-line">Aucun créneau en cours</div>
     </div>
   `;
 }
 
+function renderHomeNextCard() {
+  const nextShift = getUpcomingShiftForPerson(state.userId);
+
+  if (!nextShift) {
+    const message = getFestivalMessageForHome(state.userId);
+
+    if (message) {
+      return `
+        <div class="card home-section-card">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-subline">${escapeHtml(message.title)}</div>
+          <div class="mini-note">${escapeHtml(message.sub)}</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="card home-section-card">
+        <div class="home-main-title">Mon prochain créneau</div>
+        <div class="home-empty-line">Aucun créneau à venir</div>
+      </div>
+    `;
+  }
+
+  const role = getRoleInfo(nextShift.vehicule || "");
+  const info = getShiftStatusInfo(nextShift);
+
+  return `
+    <div class="card home-section-card">
+      <div class="home-main-title">Mon prochain créneau</div>
+      <div class="home-main-line">${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}</div>
+      <div class="home-subline">${escapeHtml(role.label)}</div>
+      <div class="mini-note">${escapeHtml(info.timerText || "")}</div>
+    </div>
+  `;
+}
+
+function renderConcertTimelineCard() {
+  const timelineState = getConcertTimelineState();
+  const concerts = timelineState.concerts || [];
+
+  if (!concerts.length) {
+    return `
+      <div class="card home-section-card">
+        <div class="section-title">Concerts</div>
+        <div class="home-empty-line">Aucune donnée concert</div>
+      </div>
+    `;
+  }
+
+  const currentIndex = timelineState.currentIndex;
+  const nextIndex = timelineState.nextIndex;
+
+  let currentConcert = null;
+  let nextConcert = null;
+  let remainingConcerts = [];
+
+  if (currentIndex !== -1) {
+    currentConcert = concerts[currentIndex] || null;
+    nextConcert = concerts[currentIndex + 1] || null;
+    remainingConcerts = concerts.slice(currentIndex + 2);
+  } else if (nextIndex !== -1) {
+    nextConcert = concerts[nextIndex] || null;
+    remainingConcerts = concerts.slice(nextIndex + 1);
+  }
+
+  let html = `
+    <div class="card home-section-card">
+      <div class="section-title">Concerts</div>
+  `;
+
+  html += `
+    <div class="concert-row">
+      <div class="concert-row-main">
+        <div class="concert-row-kicker">Concert en cours</div>
+        ${
+          currentConcert
+            ? `
+              <div class="concert-row-title">${escapeHtml(currentConcert.artiste || "")}</div>
+              <div class="concert-row-meta">${escapeHtml(currentConcert.scene || "")} • ${escapeHtml(currentConcert.debut || "")} – ${escapeHtml(currentConcert.fin || "")}</div>
+            `
+            : `
+              <div class="home-empty-line">Aucun concert en cours</div>
+            `
+        }
+      </div>
+      ${currentConcert ? `<span class="badge current">En cours</span>` : ``}
+    </div>
+  `;
+
+  if (nextConcert) {
+    html += `
+      <div class="concert-row">
+        <div class="concert-row-main">
+          <div class="concert-row-kicker">Concert suivant</div>
+          <div class="concert-row-title">${escapeHtml(nextConcert.artiste || "")}</div>
+          <div class="concert-row-meta">${escapeHtml(nextConcert.scene || "")} • ${escapeHtml(nextConcert.debut || "")} – ${escapeHtml(nextConcert.fin || "")}</div>
+        </div>
+        <span class="badge next">À venir</span>
+      </div>
+    `;
+  }
+
+  if (remainingConcerts.length) {
+    html += `
+      <button type="button" class="home-dropdown-btn" onclick="toggleHomeConcertsMore()">
+        <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
+        <span>${homeConcertsState.openMore ? "▲" : "▼"}</span>
+      </button>
+    `;
+
+    if (homeConcertsState.openMore) {
+      html += `<div class="home-dropdown-panel">`;
+
+      remainingConcerts.forEach(concert => {
+        html += `
+          <div class="concert-row">
+            <div class="concert-row-main">
+              <div class="concert-row-title">${escapeHtml(concert.artiste || "")}</div>
+              <div class="concert-row-meta">${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}</div>
+            </div>
+            <span class="badge next">À venir</span>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+    }
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderHome() {
+  const container = document.getElementById("homeContent");
+  if (!container) return;
+
+  if (!APP_DATA) {
+    container.innerHTML = `<div class="card">Aucune donnée disponible</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="home-hero">
+      <div class="home-hero-content">
+        <div class="home-hero-brand">
+          <div class="home-hero-brand-top">Festival</div>
+          <div class="home-hero-brand-main">Beau<br>Regard</div>
+          <div class="home-hero-brand-date">1+2.3.4.5 juillet 2026</div>
+        </div>
+
+        ${renderHomeHeroUserPill()}
+      </div>
+    </div>
+
+    <div class="home-stack">
+      <div class="home-test-row">
+        <button type="button" onclick="setTestNowPrompt()">🧪 Test</button>
+        <button type="button" onclick="clearForcedNow()">🕒 Réel</button>
+      </div>
+
+      ${renderHomeCurrentCard()}
+      ${renderHomeNextCard()}
+      ${renderConcertTimelineCard()}
+
+      <div class="card home-meta-card">
+        Dernière mise à jour : ${escapeHtml(
+          APP_DATA?.meta?.lastUpdate
+            ? formatLastUpdateLabel(APP_DATA.meta.lastUpdate).replace("Aujourd’hui à ", "").replace("Hier à ", "Hier ")
+            : "indisponible"
+        )}
+      </div>
+    </div>
+  `;
+}
 /*********************************
  * OFFLINE-FIRST BOOTSTRAP
  *********************************/
@@ -4106,261 +4249,6 @@ function renderConcertTimelineCard() {
 
   html += `</div>`;
   return html;
-}
-  /* ===== HOME UNIFORME ===== */
-
-.home-topbar {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  z-index: 3;
-  width: 62%;
-  max-width: 430px;
-}
-
-.home-user-mini {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 8px 10px 8px 12px;
-  background: rgba(255, 250, 243, 0.96);
-  border: 1px solid rgba(255,255,255,0.55);
-  box-shadow: 0 8px 20px rgba(15,68,61,0.12);
-}
-
-.home-user-mini-left {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.home-user-mini-label {
-  font-size: 0.64rem;
-  line-height: 1.05;
-  font-weight: 900;
-  color: #5f6258;
-}
-
-.home-user-mini-name {
-  font-size: 0.88rem;
-  line-height: 1.02;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-user-mini-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.home-user-mini-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.92);
-  font-size: 1rem;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.home-hero {
-  height: 190px !important;
-  margin: -12px -12px 0 -12px;
-}
-
-.home-hero-content {
-  padding: 18px 16px 0 !important;
-}
-
-.home-hero-brand {
-  max-width: 180px;
-}
-
-.home-hero-brand-top {
-  font-size: 0.72rem;
-}
-
-.home-hero-brand-main {
-  font-size: 1.25rem !important;
-  line-height: 0.92;
-}
-
-.home-hero-brand-date {
-  margin-top: 6px;
-  font-size: 0.74rem;
-}
-
-.home-stack {
-  margin-top: -14px !important;
-}
-
-.home-test-row {
-  display: flex;
-  gap: 8px;
-  margin: 6px 0 8px 0;
-}
-
-.home-test-row button {
-  border: 1px solid #aaa;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.9rem;
-}
-
-.home-primary-card {
-  border-radius: 22px !important;
-  padding: 14px 16px !important;
-  min-height: 132px;
-}
-
-.home-primary-card .home-main-title {
-  font-size: 0.9rem !important;
-  line-height: 1.02 !important;
-  margin-bottom: 8px !important;
-}
-
-.home-primary-card .home-main-line {
-  font-size: 0.98rem !important;
-  line-height: 1.04 !important;
-  margin-bottom: 8px !important;
-}
-
-.home-primary-card .home-subline {
-  font-size: 0.9rem !important;
-  line-height: 1.04 !important;
-  margin-bottom: 4px !important;
-}
-
-.home-primary-card .mini-note {
-  font-size: 0.82rem !important;
-  line-height: 1.04 !important;
-  margin-top: 0 !important;
-}
-
-.home-section-card {
-  border-radius: 22px !important;
-  padding: 12px 14px !important;
-}
-
-.home-section-card .section-title {
-  margin-bottom: 10px !important;
-}
-
-.concert-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid rgba(222,212,194,0.7);
-}
-
-.concert-row:first-child {
-  border-top: none;
-}
-
-.concert-row-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.concert-row-kicker {
-  font-size: 0.8rem;
-  font-weight: 1000;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent-dark);
-  margin-bottom: 3px;
-  line-height: 1.02;
-}
-
-.concert-row-title {
-  font-size: 0.96rem;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  line-height: 1.04;
-  margin-bottom: 2px;
-}
-
-.concert-row-meta {
-  font-size: 0.86rem;
-  color: var(--muted);
-  line-height: 1.04;
-}
-
-.home-dropdown-btn {
-  width: 100%;
-  margin-top: 8px;
-  border: 1px solid rgba(222,212,194,0.9);
-  background: #fffdf8;
-  border-radius: 16px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.95rem;
-  font-weight: 1000;
-  color: var(--primary-dark);
-  cursor: pointer;
-}
-
-.home-dropdown-panel {
-  margin-top: 8px;
-  border-top: 1px solid rgba(222,212,194,0.8);
-  padding-top: 8px;
-}
-
-.home-stack > .card {
-  margin-bottom: 8px !important;
-}
-
-@media (max-width: 380px) {
-  .home-topbar {
-    width: 66%;
-    right: 10px;
-    top: 10px;
-  }
-
-  .home-user-mini {
-    padding: 6px 8px 6px 10px;
-  }
-
-  .home-user-mini-name {
-    font-size: 0.8rem;
-  }
-
-  .home-user-mini-btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  .home-hero {
-    height: 172px !important;
-  }
-
-  .home-hero-brand-main {
-    font-size: 1.08rem !important;
-  }
-
-  .home-primary-card {
-    min-height: 122px;
-    padding: 12px 14px !important;
-  }
-
-  .home-primary-card .home-main-line {
-    font-size: 0.9rem !important;
-  }
 }
 /*********************************
  * MES CRENEAUX
@@ -5486,6 +5374,262 @@ function loadPersonDetail() {
       margin: 0;
     }
   }
+
+    /* ===== HOME UNIFORME ===== */
+
+.home-topbar {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 3;
+  width: 62%;
+  max-width: 430px;
+}
+
+.home-user-mini {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 8px 10px 8px 12px;
+  background: rgba(255, 250, 243, 0.96);
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow: 0 8px 20px rgba(15,68,61,0.12);
+}
+
+.home-user-mini-left {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.home-user-mini-label {
+  font-size: 0.64rem;
+  line-height: 1.05;
+  font-weight: 900;
+  color: #5f6258;
+}
+
+.home-user-mini-name {
+  font-size: 0.88rem;
+  line-height: 1.02;
+  font-weight: 1000;
+  color: var(--primary-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-user-mini-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.home-user-mini-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.92);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.home-hero {
+  height: 190px !important;
+  margin: -12px -12px 0 -12px;
+}
+
+.home-hero-content {
+  padding: 18px 16px 0 !important;
+}
+
+.home-hero-brand {
+  max-width: 180px;
+}
+
+.home-hero-brand-top {
+  font-size: 0.72rem;
+}
+
+.home-hero-brand-main {
+  font-size: 1.25rem !important;
+  line-height: 0.92;
+}
+
+.home-hero-brand-date {
+  margin-top: 6px;
+  font-size: 0.74rem;
+}
+
+.home-stack {
+  margin-top: -14px !important;
+}
+
+.home-test-row {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 8px 0;
+}
+
+.home-test-row button {
+  border: 1px solid #aaa;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+
+.home-primary-card {
+  border-radius: 22px !important;
+  padding: 14px 16px !important;
+  min-height: 132px;
+}
+
+.home-primary-card .home-main-title {
+  font-size: 0.9rem !important;
+  line-height: 1.02 !important;
+  margin-bottom: 8px !important;
+}
+
+.home-primary-card .home-main-line {
+  font-size: 0.98rem !important;
+  line-height: 1.04 !important;
+  margin-bottom: 8px !important;
+}
+
+.home-primary-card .home-subline {
+  font-size: 0.9rem !important;
+  line-height: 1.04 !important;
+  margin-bottom: 4px !important;
+}
+
+.home-primary-card .mini-note {
+  font-size: 0.82rem !important;
+  line-height: 1.04 !important;
+  margin-top: 0 !important;
+}
+
+.home-section-card {
+  border-radius: 22px !important;
+  padding: 12px 14px !important;
+}
+
+.home-section-card .section-title {
+  margin-bottom: 10px !important;
+}
+
+.concert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(222,212,194,0.7);
+}
+
+.concert-row:first-child {
+  border-top: none;
+}
+
+.concert-row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.concert-row-kicker {
+  font-size: 0.8rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-dark);
+  margin-bottom: 3px;
+  line-height: 1.02;
+}
+
+.concert-row-title {
+  font-size: 0.96rem;
+  font-weight: 1000;
+  color: var(--primary-dark);
+  line-height: 1.04;
+  margin-bottom: 2px;
+}
+
+.concert-row-meta {
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.04;
+}
+
+.home-dropdown-btn {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid rgba(222,212,194,0.9);
+  background: #fffdf8;
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  font-weight: 1000;
+  color: var(--primary-dark);
+  cursor: pointer;
+}
+
+.home-dropdown-panel {
+  margin-top: 8px;
+  border-top: 1px solid rgba(222,212,194,0.8);
+  padding-top: 8px;
+}
+
+.home-stack > .card {
+  margin-bottom: 8px !important;
+}
+
+@media (max-width: 380px) {
+  .home-topbar {
+    width: 66%;
+    right: 10px;
+    top: 10px;
+  }
+
+  .home-user-mini {
+    padding: 6px 8px 6px 10px;
+  }
+
+  .home-user-mini-name {
+    font-size: 0.8rem;
+  }
+
+  .home-user-mini-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .home-hero {
+    height: 172px !important;
+  }
+
+  .home-hero-brand-main {
+    font-size: 1.08rem !important;
+  }
+
+  .home-primary-card {
+    min-height: 122px;
+    padding: 12px 14px !important;
+  }
+
+  .home-primary-card .home-main-line {
+    font-size: 0.9rem !important;
+  }
+}
 </style>
     </head>
 
@@ -5703,14 +5847,7 @@ function closePrintDayPicker() {
   modal.classList.add("hidden");
 }
 
-  function toggleHomeConcertsDropdown() {
-  const panel = document.getElementById("homeConcertsPanel");
-  const chevron = document.getElementById("homeConcertsChevron");
-  if (!panel || !chevron) return;
 
-  panel.classList.toggle("hidden");
-  chevron.textContent = panel.classList.contains("hidden") ? "▼" : "▲";
-}
 </script>
 
 </body>
