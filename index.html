@@ -2216,6 +2216,21 @@ body {
   margin-top:2px;
 }
 
+.current-slot-card {
+  position: relative;
+  background: linear-gradient(180deg, #E4F3EC 0%, #DCEEE6 100%) !important;
+  border: 1px solid rgba(15,90,79,0.22) !important;
+  border-left: 7px solid #1F7A5C !important;
+  box-shadow: 0 10px 24px rgba(15,90,79,0.14) !important;
+  transform: none !important;
+  z-index: 2;
+}
+
+.current-slot-card::before,
+.current-slot-card::after {
+  content: none !important;
+}
+
 .current-slot-card .home-main-title {
   color: #7A4E24 !important;
   font-size: 0.96rem !important;
