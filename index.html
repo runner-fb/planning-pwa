@@ -4557,8 +4557,8 @@ onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
 <div class="home-main-title" style="font-weight:900; font-size:18px;">
-  Mon créneau en cours
-</div>          <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
+  Mon créneau en cours</div>          
+  <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
           <div class="mini-note">${escapeHtml(getShiftStatusInfo(currentPersonalShift).timerText || "")}</div>
         </div>
@@ -4568,8 +4568,8 @@ onclick="showView('direct')"
 
       currentBox = `
         <div
-          class="card clickable-card home-main-card home-card-raise"
-          onclick="showView('direct')"
+class="card clickable-card home-main-card home-card-raise slot-card-current"
+onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
           <div class="home-main-title">Créneau en cours</div>
@@ -4579,8 +4579,8 @@ onclick="showView('direct')"
     } else {
       currentBox = `
         <div
-          class="card clickable-card home-main-card home-card-raise"
-          onclick="showView('direct')"
+class="card clickable-card home-main-card home-card-raise slot-card-current"
+onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
           <div class="home-main-title">Créneau en cours</div>
