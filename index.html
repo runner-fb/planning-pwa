@@ -4596,8 +4596,8 @@ onclick="showView('direct')"
       const role = getRoleInfo(nextPersonalShift.vehicule);
 
       nextBox = `
-        <div class="card home-card-raise" style="margin-bottom:8px;">
-          <div class="home-main-title">Mon prochain créneau</div>
+        <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+  <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
           <div class="mini-note">${escapeHtml(getShiftStatusInfo(nextPersonalShift).timerText || "")}</div>
@@ -4605,8 +4605,8 @@ onclick="showView('direct')"
       `;
     } else {
       nextBox = `
-        <div class="card home-card-raise" style="margin-bottom:8px;">
-          <div class="home-main-title">Mon prochain créneau</div>
+        <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+  <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-subline">Aucun autre créneau prévu</div>
         </div>
       `;
@@ -4629,8 +4629,8 @@ if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T0
   const role = getRoleInfo(nextPersonalShift.vehicule);
 
       nextBox = `
-        <div class="card home-card-raise" style="margin-bottom:8px;">
-          <div class="home-main-title">Mon prochain créneau</div>
+        <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+  <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
         </div>
