@@ -2678,11 +2678,6 @@ body {
         <span>Accueil</span>
       </button>
 
-      <button class="nav-item" data-nav="direct" onclick="showView('direct')">
-        <span class="nav-icon">⚡</span>
-        <span>Direct</span>
-      </button>
-
       <button class="nav-item" data-nav="mes-creneaux" onclick="showView('mes-creneaux')">
         <span class="nav-icon">🗓️</span>
         <span>Mes créneaux</span>
@@ -5015,7 +5010,7 @@ function renderDirectCurrentView() {
         <button class="btn btn-next" onclick="directNext()" ${nextDisabled}>Suivant ➡</button>
       </div>
 
-      <button class="btn-link" onclick="directBackToLive()">Retour au direct</button>
+      <button class="btn-link" onclick="showView('home')">Retour à l’accueil</button>
     </div>
   `;
 }
