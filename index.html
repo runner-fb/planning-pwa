@@ -2558,6 +2558,14 @@ body {
   color: #7B8078;
   line-height: 1.2;
 }
+  .pre-festival-card {
+  background: #FFFDF7; /* même que les autres cartes */
+}
+
+.pre-festival-card .home-main-title {
+  color: #8C5A2B;
+  font-weight: 900;
+}
 </style>
 </head>
 
@@ -4611,8 +4619,9 @@ onclick="showView('direct')"
     );
 
     currentBox = `
-      <div class="home-main-title">J-${daysNumber} avant le festival</div>
-    `;
+<div class="card home-main-card home-card-raise pre-festival-card">
+  <div class="home-main-title">J-82 avant le festival</div>
+</div>    `;
 
 if (nextPersonalShift && new Date() >= new Date("2026-06-30T00:00:00")) {
   const role = getRoleInfo(nextPersonalShift.vehicule);
