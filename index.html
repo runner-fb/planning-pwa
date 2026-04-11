@@ -4437,7 +4437,8 @@ function renderUserHeader(options = {}) {
 function renderConcertTimelineCard() {
   const timelineState = getConcertTimelineState();
   const concerts = timelineState.concerts || [];
-
+  const now = new Date(getCurrentNowDate());
+  
   if (!concerts.length) return "";
 
   const currentIndex = timelineState.currentIndex;
@@ -4476,7 +4477,7 @@ function renderConcertTimelineCard() {
   `;
 }
 
-if (nextConcert && new Date() >= new Date("2026-07-01T01:00:00")) {
+if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
   html += renderCompactConcertRow(nextConcert, "Suivant", "next");
 }
 
@@ -4619,11 +4620,12 @@ onclick="showView('direct')"
     );
 
     currentBox = `
-<div class="card home-main-card home-card-raise pre-festival-card">
-  <div class="home-main-title">J-82 avant le festival</div>
-</div>    `;
+  <div class="card home-main-card home-card-raise pre-festival-card" style="margin-bottom:8px;">
+    <div class="home-main-title">J-${daysNumber} avant le festival</div>
+  </div>
+`;    `;
 
-if (nextPersonalShift && new Date() >= new Date("2026-06-30T00:00:00")) {
+if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T00:00:00")) {
   const role = getRoleInfo(nextPersonalShift.vehicule);
 
       nextBox = `
