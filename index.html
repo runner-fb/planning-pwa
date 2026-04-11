@@ -4481,7 +4481,7 @@ if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
   html += renderCompactConcertRow(nextConcert, "Suivant", "next");
 }
 
-if (remainingConcerts.length && new Date() >= new Date("2026-07-01T00:00:00")) {
+if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
   html += `
       <button class="concerts-more-btn" onclick="toggleHomeConcertsMore()">
         <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
@@ -4623,7 +4623,7 @@ onclick="showView('direct')"
   <div class="card home-main-card home-card-raise pre-festival-card" style="margin-bottom:8px;">
     <div class="home-main-title">J-${daysNumber} avant le festival</div>
   </div>
-`;    `;
+`;
 
 if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T00:00:00")) {
   const role = getRoleInfo(nextPersonalShift.vehicule);
