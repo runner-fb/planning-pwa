@@ -2822,7 +2822,8 @@ async function apiGetBundle_(password, userId) {
  *********************************/
 let state = {
   currentView: "login",
-  password: localStorage.getItem("planning_pwd") || "",
+  password: "",
+authOk: localStorage.getItem("planning_auth_ok") === "1",
   userId: localStorage.getItem("planning_user_id") || "",
   userLabel: localStorage.getItem("planning_user_label") || "",
   allUsers: [],
@@ -4146,7 +4147,8 @@ async function login() {
     }
 
     state.password = pwd;
-    localStorage.setItem("planning_pwd", pwd);
+state.authOk = true;
+localStorage.setItem("planning_auth_ok", "1");
     loginSuccess.textContent = "Mot de passe correct.";
 
     if (state.userId) {
@@ -4170,12 +4172,13 @@ function logout() {
   stopUiMinuteRefresh();
   clearTimeout(syncHideTimer);
   clearCache();
-  localStorage.removeItem("planning_pwd");
+  localStorage.removeItem("planning_auth_ok");
   localStorage.removeItem("planning_user_id");
   localStorage.removeItem("planning_user_label");
   localStorage.removeItem("planning_contacts_query");
 
   state.password = "";
+  state.authOk = false;
   state.userId = "";
   state.userLabel = "";
   state.selectedUserId = "";
@@ -5898,12 +5901,13 @@ showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date
     const ok = await apiCheckPassword_(state.password);
 
     if (!ok) {
-      localStorage.removeItem("planning_pwd");
+      localStorage.removeItem("planning_auth_ok");
       localStorage.removeItem("planning_user_id");
       localStorage.removeItem("planning_user_label");
       localStorage.removeItem("planning_contacts_query");
 
       state.password = "";
+      state.authOk = false;
       state.userId = "";
       state.userLabel = "";
 
