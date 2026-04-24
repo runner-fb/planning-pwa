@@ -2826,6 +2826,7 @@ let state = {
 authOk: localStorage.getItem("planning_auth_ok") === "1",
   userId: localStorage.getItem("planning_user_id") || "",
   userLabel: localStorage.getItem("planning_user_label") || "",
+  isRef: false,
   allUsers: [],
   filteredUsers: [],
   selectedUserId: "",
@@ -3989,6 +3990,10 @@ function applyAppData(data) {
 
   APP_DATA = data;
 
+state.userId = data.user?.id || state.userId || "";
+state.userLabel = data.user?.label || state.userLabel || "";
+state.isRef = data.user?.isRef === true;
+  
   planningState.allShifts = getPlanningShiftsFromAppData(data);
   planningState.byDay = buildPlanningByDay(planningState.allShifts);
 
