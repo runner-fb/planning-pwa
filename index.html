@@ -2790,6 +2790,19 @@ async function apiCheckPassword_(password) {
   return res.valid;
 }
 
+  async function apiCheckRefPassword_(password) {
+  const res = await apiGet_({
+    api: "checkRefPassword",
+    pwd: password
+  });
+
+  if (!res || typeof res.valid !== "boolean") {
+    throw new Error("INVALID_CHECK_REF_PASSWORD_RESPONSE");
+  }
+
+  return res.valid;
+}
+
 async function apiGetUsers_(password) {
   const res = await apiGet_({
     api: "users",
@@ -2823,10 +2836,11 @@ async function apiGetBundle_(password, userId) {
 let state = {
   currentView: "login",
   password: "",
-authOk: localStorage.getItem("planning_auth_ok") === "1",
+  authOk: localStorage.getItem("planning_auth_ok") === "1",
   userId: localStorage.getItem("planning_user_id") || "",
   userLabel: localStorage.getItem("planning_user_label") || "",
   isRef: false,
+  isRefMode: false,
   allUsers: [],
   filteredUsers: [],
   selectedUserId: "",
@@ -4145,6 +4159,7 @@ async function login() {
 
   try {
     const ok = await apiCheckPassword_(pwd);
+    const isRef = await apiCheckRefPassword_(pwd).catch(() => false);
 
     if (!ok) {
       loginError.textContent = "Mot de passe incorrect.";
@@ -4152,9 +4167,14 @@ async function login() {
     }
 
     state.password = pwd;
-state.authOk = true;
-localStorage.setItem("planning_auth_ok", "1");
-    loginSuccess.textContent = "Mot de passe correct.";
+    state.authOk = true;
+    state.isRefMode = isRef;
+
+    localStorage.setItem("planning_auth_ok", "1");
+
+    loginSuccess.textContent = isRef
+      ? "Mot de passe référent correct."
+      : "Mot de passe correct.";
 
     if (state.userId) {
       await loadAppData(false);
@@ -4177,6 +4197,7 @@ function logout() {
   stopUiMinuteRefresh();
   clearTimeout(syncHideTimer);
   clearCache();
+
   localStorage.removeItem("planning_auth_ok");
   localStorage.removeItem("planning_user_id");
   localStorage.removeItem("planning_user_label");
@@ -4184,11 +4205,13 @@ function logout() {
 
   state.password = "";
   state.authOk = false;
+  state.isRefMode = false;
   state.userId = "";
   state.userLabel = "";
   state.selectedUserId = "";
   state.selectedUserLabel = "";
   state.previousView = "home";
+
   detailState.shiftId = "";
   personDetailState.personId = "";
   personDetailState.sourceView = "planning";
