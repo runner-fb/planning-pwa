@@ -4224,16 +4224,29 @@ if (!ok) {
       ? "Mot de passe référent correct."
       : "Mot de passe correct.";
 
-    if (state.userId) {
-      await loadAppData(false);
-      startAutoRefresh();
-      startUiMinuteRefresh();
-      const targetView = getLastView();
-      showView(targetView, { push: false });
-      replaceHistoryRoot(targetView);
-    } else {
-      await loadUsers();
-    }
+    // 👇 CAS REFERENT
+if (state.isRefMode) {
+  await loadAppData(false);
+  startAutoRefresh();
+  startUiMinuteRefresh();
+
+  showView("referent", { push: false });
+  replaceHistoryRoot("referent");
+  return;
+}
+
+// 👇 CAS BENEVOLE
+if (state.userId) {
+  await loadAppData(false);
+  startAutoRefresh();
+  startUiMinuteRefresh();
+
+  const targetView = getLastView();
+  showView(targetView, { push: false });
+  replaceHistoryRoot(targetView);
+} else {
+  await loadUsers();
+}
   } catch (err) {
     console.error("Erreur login", err);
     loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
