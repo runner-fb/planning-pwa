@@ -5931,13 +5931,6 @@ function loadPersonDetail() {
  *********************************/
 async function boot() {
   try {
-    if (!state.password) {
-      state.currentView = "login";
-      showView("login", { push: false });
-      replaceHistoryRoot("login");
-      return;
-    }
-
     let cache = loadCache();
 
     if (shouldResetCache(cache)) {
@@ -5950,7 +5943,9 @@ async function boot() {
       cache = null;
     }
 
-    if (cache && state.userId) {
+    // ✅ Si l'utilisateur était déjà authentifié et qu'on a un cache valide,
+    // on recharge l'app depuis le cache sans redemander le mot de passe.
+    if (state.authOk && cache && state.userId) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
@@ -5962,17 +5957,32 @@ async function boot() {
         startAutoRefresh();
         startUiMinuteRefresh();
 
-        if (navigator.onLine) {
+        // Si on a encore le mot de passe en mémoire, on peut rafraîchir.
+        // Après un refresh complet, state.password est vide, donc on reste sur cache.
+        if (navigator.onLine && state.password) {
           loadAppData(false);
         } else {
-showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null));
+          showSyncStatus(
+            "offline",
+            cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
+          );
         }
+
         return;
       } catch (e) {
         console.error("Erreur boot cache", e);
         clearCache();
         APP_DATA = null;
       }
+    }
+
+    // ❌ Pas de mot de passe en mémoire ET pas de cache utilisable
+    // => on redemande le mot de passe.
+    if (!state.password) {
+      state.currentView = "login";
+      showView("login", { push: false });
+      replaceHistoryRoot("login");
+      return;
     }
 
     if (!navigator.onLine) {
@@ -6027,7 +6037,11 @@ showSyncStatus("offline", cache?.meta?.lastUpdate || (loadCacheTime() ? new Date
 
         startAutoRefresh();
         startUiMinuteRefresh();
-showSyncStatus("offline", fallbackCache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null));
+
+        showSyncStatus(
+          "offline",
+          fallbackCache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
+        );
       } catch (e) {
         console.error("Erreur fallback boot", e);
         showView("login", { push: false });
