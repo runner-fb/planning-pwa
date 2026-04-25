@@ -6171,6 +6171,7 @@ function getFullName(person) {
   const fullName = [prenom, nom].filter(Boolean).join(" ").trim();
   return fullName || String(person?.label || "").trim();
 }
+  window.logout = logout;
 </script>
 
 </body>
