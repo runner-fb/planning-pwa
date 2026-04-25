@@ -4732,6 +4732,9 @@ if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T0
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
+    <button class="home-user-mini-btn" onclick="logout()" title="Déconnexion">
+  ⎋
+</button>
 
   ${state.isRefMode ? `
     <div class="ref-mode-banner">
