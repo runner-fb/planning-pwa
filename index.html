@@ -2865,7 +2865,8 @@ let state = {
   currentView: "login",
   password: "",
   authOk: localStorage.getItem("planning_auth_ok") === "1",
-  userId: localStorage.getItem("planning_user_id") || "",
+appMode: localStorage.getItem("planning_app_mode") || "",
+userId: localStorage.getItem("planning_user_id") || "",
   userLabel: localStorage.getItem("planning_user_label") || "",
   isRef: false,
   isRefMode: false,
@@ -4214,11 +4215,20 @@ if (!ok) {
   return;
 }
 
-    state.password = pwd;
-    state.authOk = true;
-    state.isRefMode = isRef;
+   state.password = pwd;
+state.authOk = true;
+state.isRefMode = isRef;
 
-    localStorage.setItem("planning_auth_ok", "1");
+if (isRef) {
+  state.appMode = "referent";
+} else if (pwd === "test26") {
+  state.appMode = "test";
+} else {
+  state.appMode = "benevole";
+}
+
+localStorage.setItem("planning_auth_ok", "1");
+localStorage.setItem("planning_app_mode", state.appMode);
 
     loginSuccess.textContent = isRef
       ? "Mot de passe référent correct."
@@ -4260,13 +4270,15 @@ function logout() {
   clearCache();
 
   localStorage.removeItem("planning_auth_ok");
-  localStorage.removeItem("planning_user_id");
-  localStorage.removeItem("planning_user_label");
-  localStorage.removeItem("planning_contacts_query");
+localStorage.removeItem("planning_app_mode");
+localStorage.removeItem("planning_user_id");
+localStorage.removeItem("planning_user_label");
+localStorage.removeItem("planning_contacts_query");
 
   state.password = "";
   state.authOk = false;
-  state.isRefMode = false;
+state.appMode = "";
+state.isRefMode = false;
   state.userId = "";
   state.userLabel = "";
   state.selectedUserId = "";
@@ -4654,7 +4666,32 @@ if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
     </div>
   `;
 }
-  function renderHome() {
+function renderHome() {
+  if (state.appMode === "referent") {
+    renderHomeReferent();
+    return;
+  }
+
+  if (state.appMode === "test") {
+    renderHomeStandard({
+      showTestButtons: true,
+      showUserPill: true
+    });
+    return;
+  }
+
+  renderHomeStandard({
+    showTestButtons: false,
+    showUserPill: true
+  });
+}
+
+function renderHomeStandard(options = {}) {
+  const {
+    showTestButtons = false,
+    showUserPill = true
+  } = options;
+
   const el = document.getElementById("homeContent");
   if (!el) return;
 
@@ -4678,13 +4715,14 @@ if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
 
       currentBox = `
         <div
-class="card clickable-card home-main-card home-card-raise current-slot-card"
-onclick="showView('direct')"
+          class="card clickable-card home-main-card home-card-raise current-slot-card"
+          onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
-<div class="home-main-title" style="font-weight:900; font-size:18px;">
-  Mon créneau en cours</div>          
-  <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
+          <div class="home-main-title" style="font-weight:900; font-size:18px;">
+            Mon créneau en cours
+          </div>
+          <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
           <div class="mini-note">${escapeHtml(getShiftStatusInfo(currentPersonalShift).timerText || "")}</div>
         </div>
@@ -4694,8 +4732,8 @@ onclick="showView('direct')"
 
       currentBox = `
         <div
-class="card clickable-card home-main-card home-card-raise current-slot-card"
-onclick="showView('direct')"
+          class="card clickable-card home-main-card home-card-raise current-slot-card"
+          onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
           <div class="home-main-title">Créneau en cours</div>
@@ -4705,8 +4743,8 @@ onclick="showView('direct')"
     } else {
       currentBox = `
         <div
-class="card clickable-card home-main-card home-card-raise current-slot-card"
-onclick="showView('direct')"
+          class="card clickable-card home-main-card home-card-raise current-slot-card"
+          onclick="showView('direct')"
           style="margin-bottom:8px;"
         >
           <div class="home-main-title">Créneau en cours</div>
@@ -4720,7 +4758,7 @@ onclick="showView('direct')"
 
       nextBox = `
         <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
-  <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
           <div class="mini-note">${escapeHtml(getShiftStatusInfo(nextPersonalShift).timerText || "")}</div>
@@ -4729,7 +4767,7 @@ onclick="showView('direct')"
     } else {
       nextBox = `
         <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
-  <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-subline">Aucun autre créneau prévu</div>
         </div>
       `;
@@ -4743,17 +4781,17 @@ onclick="showView('direct')"
     );
 
     currentBox = `
-  <div class="card home-main-card home-card-raise pre-festival-card" style="margin-bottom:8px;">
-    <div class="home-main-title">J-${daysNumber} avant le festival</div>
-  </div>
-`;
+      <div class="card home-main-card home-card-raise pre-festival-card" style="margin-bottom:8px;">
+        <div class="home-main-title">J-${daysNumber} avant le festival</div>
+      </div>
+    `;
 
-if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T00:00:00")) {
-  const role = getRoleInfo(nextPersonalShift.vehicule);
+    if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T00:00:00")) {
+      const role = getRoleInfo(nextPersonalShift.vehicule);
 
       nextBox = `
         <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
-  <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
         </div>
@@ -4770,12 +4808,6 @@ if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T0
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
-
-  ${state.isRefMode ? `
-    <div class="ref-mode-banner">
-      🔐 Mode référent actif
-    </div>
-  ` : ""}
       <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Festival</div>
@@ -4784,18 +4816,74 @@ if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T0
         </div>
       </div>
 
-      ${renderHomeHeroUserPill()}
+      ${showUserPill ? renderHomeHeroUserPill() : ""}
     </div>
 
     <div class="home-stack" style="margin-top:-20px;">
-      <div style="margin-top:6px; display:flex; gap:8px; margin-bottom:8px;">
-        <button onclick="setTestNowPrompt()">🧪 Test</button>
-        <button onclick="clearForcedNow()">🕒 Réel</button>
-      </div>
+      ${
+        showTestButtons
+          ? `
+            <div style="margin-top:6px; display:flex; gap:8px; margin-bottom:8px;">
+              <button onclick="setTestNowPrompt()">🧪 Test</button>
+              <button onclick="clearForcedNow()">🕒 Réel</button>
+            </div>
+          `
+          : ""
+      }
 
       ${currentBox}
       ${nextBox}
       ${renderConcertTimelineCard()}
+
+      <div class="card compact home-meta-card" style="margin-bottom:0;">
+        <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHomeReferent() {
+  const el = document.getElementById("homeContent");
+  if (!el) return;
+
+  if (!APP_DATA) {
+    el.innerHTML = renderSkeletonList(3);
+    return;
+  }
+
+  const currentFestivalEntry = getCurrentFestivalEntry();
+  const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
+
+  el.innerHTML = `
+    <div class="home-hero compact-home-hero">
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-stack" style="margin-top:-20px;">
+      <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
+        <div class="home-main-title">Créneau en cours</div>
+        ${
+          currentShift
+            ? `
+              <div class="home-main-line">${escapeHtml(currentShift.jour)} • ${escapeHtml(currentShift.debut)} – ${escapeHtml(currentShift.fin)}</div>
+              <div class="home-subline">${escapeHtml(currentShift.libelle || "")}</div>
+            `
+            : `
+              <div class="home-main-line">Aucun créneau en cours</div>
+            `
+        }
+      </div>
+
+      <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+        <div class="home-main-title">Créneau suivant</div>
+        <div class="home-subline">On va construire cette partie à l’étape suivante.</div>
+      </div>
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
