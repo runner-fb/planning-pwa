@@ -2668,10 +2668,14 @@ body {
       </section>
 
       <section id="view-home" class="page">
-        <div id="homeContent"></div>
-      </section>
+  <div id="homeContent"></div>
+</section>
 
-      <section id="view-mes-creneaux" class="page">
+<section id="view-referent" class="page">
+  <div id="referentContent"></div>
+</section>
+
+<section id="view-mes-creneaux" class="page">
 
   <div id="mesCreneauxContent"></div>
 </section>
@@ -4133,12 +4137,13 @@ function showView(name, options = {}) {
 
   try {
     if (name === "home") renderHome();
-    if (name === "mes-creneaux") loadMesCreneaux();
-    if (name === "direct") loadDirect();
-    if (name === "planning") loadPlanning();
-    if (name === "contacts") loadContacts();
-    if (name === "shift-detail") loadShiftDetail();
-    if (name === "person-detail") loadPersonDetail();
+if (name === "mes-creneaux") loadMesCreneaux();
+if (name === "direct") loadDirect();
+if (name === "planning") loadPlanning();
+if (name === "contacts") loadContacts();
+if (name === "referent") renderReferent();
+if (name === "shift-detail") loadShiftDetail();
+if (name === "person-detail") loadPersonDetail();
 
     if (opts.push && name !== "login" && name !== "select-user") {
       pushHistoryState(name);
@@ -4760,7 +4765,27 @@ if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T0
     </div>
   `;
 }
+function renderReferent() {
+  const el = document.getElementById("referentContent");
+  if (!el) return;
 
+  if (!state.isRefMode) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="home-main-title">Accès refusé</div>
+        <div class="home-subline">Cette page est réservée aux référents.</div>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="home-main-title">Espace référent</div>
+      <div class="home-subline">Vue référent active. On va construire cette page proprement ici.</div>
+    </div>
+  `;
+}
 /*********************************
  * MES CRENEAUX
  *********************************/
