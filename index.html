@@ -3909,6 +3909,25 @@ ${escapeHtml(getSelectedUserDisplayName())}
           >
             🖨️
           </button>
+
+          <button
+            type="button"
+            onclick="logout()"
+            title="Déconnexion"
+            aria-label="Déconnexion"
+            style="
+              width:30px;
+              height:30px;
+              border-radius:999px;
+              background:rgba(255,255,255,0.95);
+              border:1px solid rgba(0,0,0,0.08);
+              font-size:13px;
+              cursor:pointer;
+              padding:0;
+            "
+          >
+            ⎋
+          </button>
         </div>
       </div>
     </div>
@@ -4732,9 +4751,6 @@ if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T0
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
-    <button class="home-user-mini-btn" onclick="logout()" title="Déconnexion">
-  ⎋
-</button>
 
   ${state.isRefMode ? `
     <div class="ref-mode-banner">
