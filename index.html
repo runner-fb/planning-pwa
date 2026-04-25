@@ -4311,7 +4311,12 @@ async function loadUsers() {
 
   try {
     const data = await apiGetUsers_(state.password);
-    const users = Array.isArray(data) ? data.slice() : [];
+let users = Array.isArray(data) ? data.slice() : [];
+
+// En mode bénévole, on ne propose pas les référents dans le choix de profil
+if (!state.isRefMode) {
+  users = users.filter(u => u.isRef !== true);
+}
 
     users.sort((a, b) => {
       const labelA = String(a.label || "").trim();
@@ -4447,6 +4452,7 @@ function getFestivalMessageForHome(personId) {
   return null;
 }
 function renderUserHeader(options = {}) {
+  if (state.isRefMode) return "";
   const {
     showPrint = true,
     extraClass = ""
