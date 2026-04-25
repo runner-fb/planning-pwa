@@ -4187,7 +4187,7 @@ if (!ok) {
     }
   } catch (err) {
     console.error("Erreur login", err);
-    loginError.textContent = err && err.message ? err.message : "Erreur Apps Script";
+    loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
   }
 }
 
