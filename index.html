@@ -5237,40 +5237,46 @@ function renderMessagesBox() {
 
   if (!messages.length) return "";
 
-  // 🔥 tri : important d'abord
-  messages = messages.sort((a, b) => {
+  messages = messages.slice().sort((a, b) => {
     const pa = a.priorite === "important" ? 1 : 0;
     const pb = b.priorite === "important" ? 1 : 0;
     return pb - pa;
   });
 
+  const texteDefilant = messages.map(m => {
+    const prefix = m.priorite === "important" ? "⚠️ " : "ℹ️ ";
+    const titre = m.titre ? m.titre + " : " : "";
+    return prefix + titre + m.message;
+  }).join("     •     ");
+
   return `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
+    <div class="card home-card-raise" style="margin-bottom:8px; overflow:hidden;">
       <div class="home-main-title">Messages</div>
 
-      ${messages.map(m => {
-        const isImportant = m.priorite === "important";
-
-        return `
-          <div style="
-            margin-top:8px;
-            padding:10px;
-            border-radius:12px;
-            background:${isImportant ? "#ffe9e9" : "rgba(255,255,255,0.6)"};
-            border:${isImportant ? "2px solid #ff4d4d" : "none"};
+      <div
+        style="
+          margin-top:8px;
+          background:rgba(255,255,255,0.65);
+          border-radius:14px;
+          overflow:hidden;
+          padding:8px 0;
+          border:1px solid rgba(222,212,194,0.7);
+        "
+      >
+        <div
+          style="
+            white-space:nowrap;
+            display:inline-block;
+            padding-left:100%;
+            animation: messagesScroll 22s linear infinite;
             font-size:0.9rem;
+            font-weight:900;
             color:#18443D;
-          ">
-            ${isImportant ? `<div style="font-weight:900; color:#b00000;">⚠️ IMPORTANT</div>` : ""}
-
-            ${m.titre ? `<div style="font-weight:900;">${escapeHtml(m.titre)}</div>` : ""}
-
-            <div>${escapeHtml(m.message)}</div>
-
-            ${m.updatedAt ? `<div class="mini-note">Maj ${escapeHtml(m.updatedAt)}</div>` : ""}
-          </div>
-        `;
-      }).join("")}
+          "
+        >
+          ${escapeHtml(texteDefilant)}
+        </div>
+      </div>
     </div>
   `;
 }
