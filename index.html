@@ -4011,7 +4011,11 @@ if (cache) {
   showSyncStatus("loading");
 
   try {
-    const data = await apiGetBundle_(state.password, state.userId);
+    const bundleUserId = state.appMode === "referent"
+  ? "__REFERENT__"
+  : state.userId;
+
+const data = await apiGetBundle_(state.password, bundleUserId);
 
     if (!isValidAppDataShape(data)) {
       throw new Error("Structure bundle invalide");
