@@ -4337,14 +4337,22 @@ function loadVehicules() {
   </div>
 
   <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
-    <input type="checkbox" ${v.desactive ? "checked" : ""}>
-    Véhicule désactivé
-  </label>
+  <input 
+    type="checkbox" 
+    ${v.desactive ? "checked" : ""} 
+    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','desactive', this.checked)"
+  >
+  Véhicule désactivé
+</label>
 
-  <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
-    <input type="checkbox" ${v.pleinAFaire ? "checked" : ""}>
-    Plein à faire
-  </label>
+<label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
+  <input 
+    type="checkbox" 
+    ${v.pleinAFaire ? "checked" : ""} 
+    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','pleinAFaire', this.checked)"
+  >
+  Plein à faire
+</label>
 </div>
             `
             : ""
@@ -4354,6 +4362,24 @@ function loadVehicules() {
   });
 
   el.innerHTML = html;
+}
+
+  async function toggleVehiculeFlag(id, field, value) {
+  try {
+    await apiGet_({
+      api: "updateVehicule",
+      pwd: state.password,
+      id: id,
+      field: field,
+      value: value ? "true" : "false"
+    });
+
+    await loadAppData(true);
+
+  } catch (e) {
+    alert("Erreur mise à jour véhicule");
+    console.error(e);
+  }
 }
 /*********************************
  * LOGIN / COMPTE
