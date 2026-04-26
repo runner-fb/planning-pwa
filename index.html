@@ -4910,14 +4910,21 @@ function renderReferentPeopleList(entry, id = "current") {
     const va = String(a.vehicule || "").toUpperCase();
     const vb = String(b.vehicule || "").toUpperCase();
 
-    const isChargeurA = va.includes("CHARGEUR");
-    const isChargeurB = vb.includes("CHARGEUR");
+    const ca = va.includes("CHARGEUR");
+    const cb = vb.includes("CHARGEUR");
 
-    if (isChargeurA && !isChargeurB) return 1;
-    if (!isChargeurA && isChargeurB) return -1;
+    if (ca && !cb) return 1;
+    if (!ca && cb) return -1;
 
     return va.localeCompare(vb, "fr", { numeric: true });
   });
+
+  function formatVehicleLabel(v) {
+    const txt = String(v || "").trim();
+    if (!txt) return "-";
+    if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
+    return "Véhicule " + txt;
+  }
 
   return `
     <div
@@ -4946,76 +4953,53 @@ function renderReferentPeopleList(entry, id = "current") {
         "
       >
         <span>Voir l’équipe</span>
-<span id="chevron-${id}" style="font-size:0.75rem;">${referentUiState.openMenuId === id ? "▲" : "▼"}</span>
-</button>
+        <span id="chevron-${id}" style="font-size:0.75rem;">
+          ${referentUiState.openMenuId === id ? "▲" : "▼"}
+        </span>
+      </button>
 
       <div
         id="people-${id}"
         style="
-display:${referentUiState.openMenuId === id ? "block" : "none"};
-padding:0 12px 8px 12px;
+          display:${referentUiState.openMenuId === id ? "block" : "none"};
+          padding:0 12px 8px 12px;
           background:rgba(255,255,255,0.35);
         "
       >
-        ${benevoles.map(person => `
-          <div
-            style="
-              display:grid;
-              grid-template-columns: 1fr 96px 28px;
-              align-items:center;
-              gap:6px;
-              padding:5px 0;
-              border-top:1px solid rgba(222,212,194,0.45);
-              font-size:0.82rem;
-              line-height:1.1;
-              color:#18443D;
-              font-weight:900;
-            "
-          >
+        ${benevoles.map(person => {
+          const vehicule = String(person.vehicule || "").trim();
+
+          return `
             <div
               style="
-                min-width:0;
-                white-space:nowrap;
-                overflow:hidden;
-                text-overflow:ellipsis;
+                display:grid;
+                grid-template-columns: 90px 1fr;
+                gap:8px;
+                padding:7px 0;
+                border-top:1px solid rgba(222,212,194,0.45);
+                font-size:0.80rem;
+                line-height:1.15;
+                color:#18443D;
               "
             >
-              ${escapeHtml(person.label || person.benevole || "")}
-            </div>
+              <div style="font-weight:1000; color:#0F5A4F;">
+                ${escapeHtml(formatVehicleLabel(vehicule))}
+              </div>
 
-            <div
-              style="
-                opacity:0.82;
-                white-space:nowrap;
-                text-align:left;
-              "
-            >
-              ${
-                String(person.vehicule || "").toUpperCase().includes("CHARGEUR")
-                  ? "chargeur"
-                  : "véhicule " + escapeHtml(person.vehicule || "-")
-              }
+              <div
+                style="
+                  min-width:0;
+                  font-weight:900;
+                  white-space:nowrap;
+                  overflow:hidden;
+                  text-overflow:ellipsis;
+                "
+              >
+                ${escapeHtml(person.label || person.benevole || "")}
+              </div>
             </div>
-
-            ${
-              person.tel
-                ? `
-                  <a
-                    href="tel:${escapeHtml(person.tel)}"
-                    style="
-                      text-decoration:none;
-                      font-size:0.9rem;
-                      text-align:right;
-                    "
-                    title="Appeler"
-                  >
-                    📞
-                  </a>
-                `
-                : `<span></span>`
-            }
-          </div>
-        `).join("")}
+          `;
+        }).join("")}
       </div>
     </div>
   `;
