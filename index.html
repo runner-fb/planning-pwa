@@ -2927,6 +2927,13 @@ let mesCreneauxState = {
 let homeConcertsState = {
   openMore: false
 };
+let homeConcertsState = {
+  openMore: false
+};
+
+let vehiculesState = {
+  openId: ""
+};
 /*********************************
  * CACHE OFFLINE
  *********************************/
@@ -4266,7 +4273,13 @@ function refreshCurrentViewOnly() {
 /*********************************
  * VEHICULES
  *********************************/
-function loadVehicules() {
+function toggleVehicule(id) {
+  vehiculesState.openId =
+    vehiculesState.openId === id ? "" : id;
+
+  loadVehicules();
+}
+  function loadVehicules() {
   const el = document.getElementById("vehiculesContent");
   if (!el) return;
 
@@ -4284,22 +4297,51 @@ function loadVehicules() {
     return;
   }
 
-  el.innerHTML = `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Véhicules</div>
-      <div class="home-subline">État des véhicules référents</div>
-    </div>
+ el.innerHTML = `
+ ${vehicules.map(v => {
+  const id = String(v.id || "");
+  const isOpen = vehiculesState.openId === id;
 
-    ${vehicules.map(v => `
-      <div class="card compact" style="margin-bottom:8px;">
+  return `
+    <div class="card compact" style="margin-bottom:8px;">
+      <button
+        type="button"
+        onclick="toggleVehicule('${escapeHtml(id)}')"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          padding:0;
+          text-align:left;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          cursor:pointer;
+        "
+      >
         <div style="font-weight:1000; color:#18443D;">
-          🚗 Véhicule ${escapeHtml(v.id || "")}
+          🚗 Véhicule ${escapeHtml(id)}
         </div>
-        <div class="subtle-text">
-          Immatriculation : ${escapeHtml(v.immat || "—")}
+
+        <div style="font-weight:1000;">
+          ${isOpen ? "▲" : "▼"}
         </div>
-      </div>
-    `).join("")}
+      </button>
+
+      ${
+        isOpen
+          ? `
+            <div style="margin-top:10px;">
+              <div class="subtle-text">
+                Immatriculation : ${escapeHtml(v.immat || "—")}
+              </div>
+            </div>
+          `
+          : ""
+      }
+    </div>
+  `;
+}).join("")}
   `;
 }
 /*********************************
