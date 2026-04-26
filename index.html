@@ -2623,6 +2623,15 @@ body {
   body {
   padding-bottom: 110px;
 }
+
+@keyframes referentMessageScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
   
 </style>
 </head>
@@ -5220,6 +5229,254 @@ padding:0 12px 8px 12px;
     </div>
   `;
 }
+
+function getReferentMessageData() {
+  return APP_DATA?.referentMessage || {
+    message: "",
+    updatedAt: ""
+  };
+}
+
+function renderReferentMessageBox() {
+  const data = getReferentMessageData();
+  const message = String(data.message || "").trim();
+
+  if (!message || message === "Aucun message référent pour le moment.") {
+    return "";
+  }
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px; overflow:hidden;">
+      <div class="home-main-title">Message référent</div>
+
+      <div style="
+        margin-top:8px;
+        background:rgba(255,255,255,0.55);
+        border-radius:14px;
+        overflow:hidden;
+        padding:8px 0;
+      ">
+        <div style="
+          white-space:nowrap;
+          display:inline-block;
+          padding-left:100%;
+          animation: referentMessageScroll 18s linear infinite;
+          font-size:0.9rem;
+          font-weight:900;
+          color:#18443D;
+        ">
+          ${escapeHtml(message)}
+        </div>
+      </div>
+
+      ${
+        data.updatedAt
+          ? `<div class="mini-note" style="margin-top:6px;">Modifié le ${escapeHtml(data.updatedAt)}</div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderReferentMessageEditor() {
+  const data = getReferentMessageData();
+  const message = String(data.message || "").trim();
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Modifier le message</div>
+
+      <textarea
+        id="referentMessageInput"
+        rows="3"
+        style="
+          width:100%;
+          margin-top:8px;
+          border-radius:14px;
+          border:1px solid rgba(222,212,194,0.9);
+          padding:10px;
+          font-size:0.9rem;
+          font-family:inherit;
+          resize:vertical;
+          color:#18443D;
+          background:rgba(255,255,255,0.75);
+        "
+      >${escapeHtml(message === "Aucun message référent pour le moment." ? "" : message)}</textarea>
+
+      <button
+        type="button"
+        onclick="saveReferentMessageFront()"
+        style="
+          width:100%;
+          margin-top:8px;
+          border:none;
+          border-radius:14px;
+          background:#18443D;
+          color:white;
+          padding:10px;
+          font-weight:900;
+          font-size:0.9rem;
+        "
+      >
+        Enregistrer le message
+      </button>
+    </div>
+  `;
+}
+
+async function saveReferentMessageFront() {
+  const input = document.getElementById("referentMessageInput");
+  if (!input) return;
+
+  const message = input.value.trim();
+
+  try {
+    const res = await apiGet_({
+      api: "setReferentMessage",
+      pwd: state.password,
+      message: message
+    });
+
+    if (!res || !res.ok) {
+      throw new Error((res && res.error) || "MESSAGE_SAVE_ERROR");
+    }
+
+    if (!APP_DATA) APP_DATA = {};
+    APP_DATA.referentMessage = res.data;
+
+    await loadAppData(true);
+    renderHomeReferent();
+
+  } catch (err) {
+    alert("Impossible d’enregistrer le message : " + (err.message || err));
+  }
+}
+
+function getReferentMessageData() {
+  return APP_DATA?.referentMessage || {
+    message: "",
+    updatedAt: ""
+  };
+}
+
+function renderReferentMessageBox() {
+  const data = getReferentMessageData();
+  const message = String(data.message || "").trim();
+
+  if (!message || message === "Aucun message référent pour le moment.") {
+    return "";
+  }
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px; overflow:hidden;">
+      <div class="home-main-title">Message référent</div>
+
+      <div
+        style="
+          margin-top:8px;
+          background:rgba(255,255,255,0.55);
+          border-radius:14px;
+          overflow:hidden;
+          padding:8px 0;
+        "
+      >
+        <div
+          style="
+            white-space:nowrap;
+            display:inline-block;
+            padding-left:100%;
+            animation: referentMessageScroll 18s linear infinite;
+            font-size:0.9rem;
+            font-weight:900;
+            color:#18443D;
+          "
+        >
+          ${escapeHtml(message)}
+        </div>
+      </div>
+
+      ${
+        data.updatedAt
+          ? `<div class="mini-note" style="margin-top:6px;">Modifié le ${escapeHtml(data.updatedAt)}</div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderReferentMessageEditor() {
+  const data = getReferentMessageData();
+  const message = String(data.message || "").trim();
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Modifier le message</div>
+
+      <textarea
+        id="referentMessageInput"
+        rows="3"
+        style="
+          width:100%;
+          margin-top:8px;
+          border-radius:14px;
+          border:1px solid rgba(222,212,194,0.9);
+          padding:10px;
+          font-size:0.9rem;
+          font-family:inherit;
+          resize:vertical;
+          color:#18443D;
+          background:rgba(255,255,255,0.75);
+        "
+      >${escapeHtml(message === "Aucun message référent pour le moment." ? "" : message)}</textarea>
+
+      <button
+        type="button"
+        onclick="saveReferentMessageFront()"
+        style="
+          width:100%;
+          margin-top:8px;
+          border:none;
+          border-radius:14px;
+          background:#18443D;
+          color:white;
+          padding:10px;
+          font-weight:900;
+          font-size:0.9rem;
+        "
+      >
+        Enregistrer le message
+      </button>
+    </div>
+  `;
+}
+
+async function saveReferentMessageFront() {
+  const input = document.getElementById("referentMessageInput");
+  if (!input) return;
+
+  const message = input.value.trim();
+
+  try {
+    const res = await apiGet_({
+      api: "setReferentMessage",
+      pwd: state.password,
+      message: message
+    });
+
+    if (!res || !res.ok) {
+      throw new Error((res && res.error) || "MESSAGE_SAVE_ERROR");
+    }
+
+    if (!APP_DATA) APP_DATA = {};
+    APP_DATA.referentMessage = res.data;
+
+    await loadAppData(true);
+    renderHomeReferent();
+
+  } catch (err) {
+    alert("Impossible d’enregistrer le message : " + (err.message || err));
+  }
+}
   
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
@@ -5231,79 +5488,78 @@ function renderHomeReferent() {
   }
 
   const currentFestivalEntry = getCurrentFestivalEntry();
-const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
+  const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
 
-const nextFestivalEntry = getNextFestivalEntry();
-const nextShift = nextFestivalEntry && nextFestivalEntry.shift ? nextFestivalEntry.shift : null;
+  const nextFestivalEntry = getNextFestivalEntry();
+  const nextShift = nextFestivalEntry && nextFestivalEntry.shift ? nextFestivalEntry.shift : null;
 
-const currentPeopleHtml = currentFestivalEntry
-  ? renderReferentPeopleList(currentFestivalEntry, "current")
-  : "";
+  const currentPeopleHtml = currentFestivalEntry
+    ? renderReferentPeopleList(currentFestivalEntry, "current")
+    : "";
 
-const nextPeopleHtml = nextFestivalEntry
-  ? renderReferentPeopleList(nextFestivalEntry, "next")
-  : "";
-
-const replacementHtml = currentFestivalEntry && nextFestivalEntry
-  ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
-  : "";
+  const replacementHtml = currentFestivalEntry && nextFestivalEntry
+    ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
+    : "";
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
-    <button
-  onclick="logout()"
-  style="
-    position:absolute;
-    top:12px;
-    right:12px;
-    z-index:50;
-    border:none;
-    border-radius:999px;
-    background:rgba(0,0,0,0.72);
-    color:white;
-    padding:8px 12px;
-    font-weight:900;
-    font-size:12px;
-  "
->
-  Déconnexion
-</button>
-<button
-  onclick="clearForcedNow()"
-  style="
-    position:absolute;
-    top:52px;
-    right:12px;
-    z-index:50;
-    border:none;
-    border-radius:999px;
-    background:rgba(255,255,255,0.9);
-    color:#18443D;
-    padding:8px 12px;
-    font-weight:900;
-    font-size:12px;
-  "
->
-  Heure réelle
-</button>
-<button
-  onclick="setTestNowPrompt()"
-  style="
-    position:absolute;
-    top:92px;
-    right:12px;
-    z-index:50;
-    border:none;
-    border-radius:999px;
-    background:#18443D;
-    color:white;
-    padding:8px 12px;
-    font-weight:900;
-    font-size:12px;
-  "
->
-  Heure simulée
-</button>
+      <button
+        onclick="logout()"
+        style="
+          position:absolute;
+          top:12px;
+          right:12px;
+          z-index:50;
+          border:none;
+          border-radius:999px;
+          background:rgba(0,0,0,0.72);
+          color:white;
+          padding:8px 12px;
+          font-weight:900;
+          font-size:12px;
+        "
+      >
+        Déconnexion
+      </button>
+
+      <button
+        onclick="clearForcedNow()"
+        style="
+          position:absolute;
+          top:52px;
+          right:12px;
+          z-index:50;
+          border:none;
+          border-radius:999px;
+          background:rgba(255,255,255,0.9);
+          color:#18443D;
+          padding:8px 12px;
+          font-weight:900;
+          font-size:12px;
+        "
+      >
+        Heure réelle
+      </button>
+
+      <button
+        onclick="setTestNowPrompt()"
+        style="
+          position:absolute;
+          top:92px;
+          right:12px;
+          z-index:50;
+          border:none;
+          border-radius:999px;
+          background:#18443D;
+          color:white;
+          padding:8px 12px;
+          font-weight:900;
+          font-size:12px;
+        "
+      >
+        Heure simulée
+      </button>
+
       <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
@@ -5330,48 +5586,32 @@ const replacementHtml = currentFestivalEntry && nextFestivalEntry
       </div>
 
       <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
-  <div class="home-main-title">Créneau suivant</div>
+        <div class="home-main-title">Créneau suivant</div>
 
-  ${
-    nextShift
-      ? `
-        <div class="home-main-line">
-          ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
-        </div>
-        <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
+        ${
+          nextShift
+            ? `
+              <div class="home-main-line">
+                ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
+              </div>
+              <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
 
-        ${replacementHtml}
-      `
-      : `
-        <div class="home-subline">Aucun créneau suivant</div>
-      `
-  }
-</div>
+              ${replacementHtml}
+            `
+            : `
+              <div class="home-subline">Aucun créneau suivant</div>
+            `
+        }
+      </div>
+
+      ${renderReferentMessageBox()}
+      ${renderReferentMessageEditor()}
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
-        <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
+        <div class="subtle-text">
+          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
+        </div>
       </div>
-    </div>
-  `;
-}
-function renderReferent() {
-  const el = document.getElementById("referentContent");
-  if (!el) return;
-
-  if (!state.isRefMode) {
-    el.innerHTML = `
-      <div class="card">
-        <div class="home-main-title">Accès refusé</div>
-        <div class="home-subline">Cette page est réservée aux référents.</div>
-      </div>
-    `;
-    return;
-  }
-
-  el.innerHTML = `
-    <div class="card">
-      <div class="home-main-title">Espace référent</div>
-      <div class="home-subline">Vue référent active. On va construire cette page proprement ici.</div>
     </div>
   `;
 }
@@ -6380,6 +6620,15 @@ function loadPersonDetail() {
     <head>
       <meta charset="UTF-8">
       <title>${escapeHtml(title)}</title>
+
+@keyframes referentMessageScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
 
       <style>
   @page {
