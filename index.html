@@ -5251,100 +5251,6 @@ function renderReferentMessageBox() {
     <div class="card home-card-raise" style="margin-bottom:8px; overflow:hidden;">
       <div class="home-main-title">Message référent</div>
 
-      <div style="
-        margin-top:8px;
-        background:rgba(255,255,255,0.55);
-        border-radius:14px;
-        overflow:hidden;
-        padding:8px 0;
-      ">
-        <div style="
-          white-space:nowrap;
-          display:inline-block;
-          padding-left:100%;
-          animation: referentMessageScroll 18s linear infinite;
-          font-size:0.9rem;
-          font-weight:900;
-          color:#18443D;
-        ">
-          ${escapeHtml(message)}
-        </div>
-      </div>
-
-      ${
-        data.updatedAt
-          ? `<div class="mini-note" style="margin-top:6px;">Modifié le ${escapeHtml(data.updatedAt)}</div>`
-          : ""
-      }
-    </div>
-  `;
-}
-
-function renderReferentMessageEditor() {
-  const data = getReferentMessageData();
-  const message = String(data.message || "").trim();
-
-  return `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Modifier le message</div>
-
-      <textarea
-        id="referentMessageInput"
-        rows="3"
-        style="
-          width:100%;
-          margin-top:8px;
-          border-radius:14px;
-          border:1px solid rgba(222,212,194,0.9);
-          padding:10px;
-          font-size:0.9rem;
-          font-family:inherit;
-          resize:vertical;
-          color:#18443D;
-          background:rgba(255,255,255,0.75);
-        "
-      >${escapeHtml(message === "Aucun message référent pour le moment." ? "" : message)}</textarea>
-
-      <button
-        type="button"
-        onclick="saveReferentMessageFront()"
-        style="
-          width:100%;
-          margin-top:8px;
-          border:none;
-          border-radius:14px;
-          background:#18443D;
-          color:white;
-          padding:10px;
-          font-weight:900;
-          font-size:0.9rem;
-        "
-      >
-        Enregistrer le message
-      </button>
-    </div>
-  `;
-}
-
-function getReferentMessageData() {
-  return APP_DATA?.referentMessage || {
-    message: "",
-    updatedAt: ""
-  };
-}
-
-function renderReferentMessageBox() {
-  const data = getReferentMessageData();
-  const message = String(data.message || "").trim();
-
-  if (!message || message === "Aucun message référent pour le moment.") {
-    return "";
-  }
-
-  return `
-    <div class="card home-card-raise" style="margin-bottom:8px; overflow:hidden;">
-      <div class="home-main-title">Message référent</div>
-
       <div
         style="
           margin-top:8px;
@@ -5420,23 +5326,38 @@ function renderReferentMessageEditor() {
       >
         Enregistrer le message
       </button>
+
+      <div id="referentMessageSaveStatus" class="mini-note" style="margin-top:6px;"></div>
     </div>
   `;
 }
 
 async function saveReferentMessageFront() {
   const input = document.getElementById("referentMessageInput");
+  const status = document.getElementById("referentMessageSaveStatus");
+
   if (!input) return;
 
   const message = input.value.trim();
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
+
+  const pwd =
+    state.password ||
+    localStorage.getItem("planning_password") ||
+    localStorage.getItem("planning_pwd") ||
+    "";
+
+  if (status) status.textContent = "Enregistrement...";
 
   try {
+    console.log("SAVE REFERENT MESSAGE — pwd présent ?", !!pwd);
+
     const res = await apiGet_({
       api: "setReferentMessage",
       pwd: pwd,
       message: message
     });
+
+    console.log("SAVE REFERENT MESSAGE — réponse", res);
 
     if (!res || !res.ok) {
       throw new Error((res && res.error) || "MESSAGE_SAVE_ERROR");
@@ -5445,10 +5366,16 @@ async function saveReferentMessageFront() {
     if (!APP_DATA) APP_DATA = {};
     APP_DATA.referentMessage = res.data;
 
+    saveCache(APP_DATA);
+
+    if (status) status.textContent = "Message enregistré.";
+
     await loadAppData(true);
     renderHomeReferent();
 
   } catch (err) {
+    console.error("Erreur saveReferentMessageFront", err);
+    if (status) status.textContent = "";
     alert("Impossible d’enregistrer le message : " + (err.message || err));
   }
 }
