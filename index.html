@@ -4890,48 +4890,116 @@ function renderHomeStandard(options = {}) {
   `;
 }
 function renderReferentPeopleList(entry, id = "current") {
-  const benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles : [];
+  let benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
 
   if (!benevoles.length) {
     return `
-      <div class="subtle-text" style="margin-top:10px;">
+      <div class="subtle-text" style="margin-top:8px;">
         Aucun bénévole affecté.
       </div>
     `;
   }
 
+  benevoles.sort((a, b) => {
+    const va = String(a.vehicule || "").toUpperCase();
+    const vb = String(b.vehicule || "").toUpperCase();
+
+    const isChargeurA = va.includes("CHARGEUR");
+    const isChargeurB = vb.includes("CHARGEUR");
+
+    if (isChargeurA && !isChargeurB) return 1;
+    if (!isChargeurA && isChargeurB) return -1;
+
+    return va.localeCompare(vb, "fr", { numeric: true });
+  });
+
   return `
     <div style="margin-top:10px;">
-      <div
+      <button
+        type="button"
         onclick="togglePeopleList('${id}')"
         style="
+          width:100%;
+          border:none;
+          border-radius:12px;
+          background:rgba(255,255,255,0.55);
+          color:#18443D;
+          padding:7px 10px;
           display:flex;
           justify-content:space-between;
           align-items:center;
-          font-weight:700;
+          font-size:0.82rem;
+          font-weight:900;
           cursor:pointer;
-          padding:8px 0;
         "
       >
-        <span>Voir l’équipe (${benevoles.length})</span>
-        <span id="chevron-${id}">▼</span>
-      </div>
+        <span>Voir l’équipe</span>
+        <span id="chevron-${id}" style="font-size:0.75rem;">▼</span>
+      </button>
 
-      <div id="people-${id}" style="display:none;">
+      <div id="people-${id}" style="display:none; margin-top:6px;">
         ${benevoles.map(person => `
-          <div style="border-top:1px solid rgba(222,212,194,0.65); padding:10px 0;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-weight:600;">${escapeHtml(person.label || "")}</div>
-                <div class="mini-note">${escapeHtml(person.vehicule || "-")}</div>
-              </div>
+          <div
+            style="
+              display:flex;
+              align-items:center;
+              justify-content:space-between;
+              gap:8px;
+              padding:6px 0;
+              border-top:1px solid rgba(222,212,194,0.55);
+              font-size:0.82rem;
+              line-height:1.1;
+            "
+          >
+            <div
+              style="
+                min-width:0;
+                flex:1;
+                display:flex;
+                align-items:center;
+                gap:8px;
+              "
+            >
+              <span
+                style="
+                  min-width:42px;
+                  font-weight:1000;
+                  color:#0F5A4F;
+                "
+              >
+                ${escapeHtml(person.vehicule || "-")}
+              </span>
 
-              ${
-                person.tel
-                  ? `<a href="tel:${escapeHtml(person.tel)}">📞</a>`
-                  : ""
-              }
+              <span
+                style="
+                  font-weight:850;
+                  color:#18443D;
+                  white-space:nowrap;
+                  overflow:hidden;
+                  text-overflow:ellipsis;
+                "
+              >
+                ${escapeHtml(person.label || person.benevole || "")}
+              </span>
             </div>
+
+            ${
+              person.tel
+                ? `
+                  <a
+                    href="tel:${escapeHtml(person.tel)}"
+                    style="
+                      flex-shrink:0;
+                      text-decoration:none;
+                      font-size:0.95rem;
+                    "
+                    title="Appeler"
+                  >
+                    📞
+                  </a>
+                `
+                : ""
+            }
           </div>
         `).join("")}
       </div>
