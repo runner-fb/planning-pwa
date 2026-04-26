@@ -5283,8 +5283,6 @@ padding:0 12px 8px 12px;
 function renderMessagesBox() {
   let messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
-  if (!messages.length && !state.isRefMode) return "";
-
   messages = messages.slice().sort((a, b) => {
     const pa = a.priorite === "important" ? 1 : 0;
     const pb = b.priorite === "important" ? 1 : 0;
@@ -5293,6 +5291,8 @@ function renderMessagesBox() {
 
   const importants = messages.filter(m => m.priorite === "important");
   const standards = messages.filter(m => m.priorite !== "important");
+
+  if (!messages.length && !state.isRefMode) return "";
 
   return `
     <div class="card home-card-raise" style="margin-bottom:8px;">
