@@ -3311,14 +3311,14 @@ function setMainScrollTop(value) {
 }
 
 function saveLastView(name) {
-  const allowed = ["home", "direct", "mes-creneaux", "planning", "contacts"];
+  const allowed = ["home", "direct", "mes-creneaux", "planning", "contacts", "vehicules"];
   if (allowed.includes(name)) {
     localStorage.setItem("planning_last_view", name);
   }
 }
 
 function getLastView() {
-  const allowed = ["home", "direct", "mes-creneaux", "planning", "contacts"];
+  const allowed = ["home", "direct", "mes-creneaux", "planning", "contacts", "vehicules"];
   const saved = localStorage.getItem("planning_last_view");
   return allowed.includes(saved) ? saved : "home";
 }
