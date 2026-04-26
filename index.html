@@ -2927,8 +2927,9 @@ let mesCreneauxState = {
 let homeConcertsState = {
   openMore: false
 };
-let homeConcertsState = {
-  openMore: false
+
+let vehiculesState = {
+  openId: ""
 };
 
 let vehiculesState = {
@@ -4266,6 +4267,7 @@ function refreshCurrentViewOnly() {
     if (state.currentView === "contacts") loadContacts();
     if (state.currentView === "shift-detail") loadShiftDetail();
     if (state.currentView === "person-detail") loadPersonDetail();
+    if (state.currentView === "vehicules") loadVehicules();
   } catch (e) {
     console.error("Erreur refreshCurrentViewOnly", e);
   }
