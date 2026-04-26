@@ -6387,6 +6387,13 @@ function shouldShowHomeNextShift() {
 function shouldShowHomeFollowingConcerts() {
   return !isBeforeFixedDate("2026-07-01T00:00:00");
 }
+  function setSimulatedNow() {
+  const value = prompt("Entrer une date JJ/MM HH:MM", "02/07 17:01");
+  if (!value) return;
+
+  localStorage.setItem("forced_now", value);
+  location.reload();
+}
 
 function getFullName(person) {
   const prenom = String(person?.prenom || "").trim();
