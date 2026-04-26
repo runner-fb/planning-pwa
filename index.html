@@ -5015,49 +5015,156 @@ function renderReferentPeopleList(entry, id = "current") {
   `;
 }
 
-  function getNextFestivalEntry() {
+ function getNextFestivalEntry() {
   const entries = Array.isArray(directState.allShifts) ? directState.allShifts : [];
-  const currentIndex = Number(directState.currentIndex);
+  const now = getCurrentNowDate();
 
-  if (!entries.length) return null;
+  const upcoming = entries.filter(entry => {
+    const shift = entry && entry.shift ? entry.shift : null;
+    if (!shift) return false;
 
-  if (currentIndex < 0) {
-    return entries[0] || null;
-  }
+    const start = parseShiftDateFromLabel(shift.startLabel);
+    return start && start > now;
+  });
 
-  return entries[currentIndex + 1] || null;
+  upcoming.sort((a, b) => {
+    const da = parseShiftDateFromLabel(a.shift.startLabel);
+    const db = parseShiftDateFromLabel(b.shift.startLabel);
+    return da - db;
+  });
+
+  return upcoming[0] || null;
 }
 
+function parseShiftDateFromLabel(label) {
+  const txt = String(label || "").trim();
+  const match = txt.match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const hour = Number(match[3]);
+  const minute = Number(match[4]);
+
+  return new Date(2026, month - 1, day, hour, minute);
+}
+  
 function renderReferentReplacementList(currentEntry, nextEntry, id = "replacement") {
   const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
   const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
 
   if (!nextPeople.length) return "";
 
-  const currentByVehicle = {};
+  const isChargeur = v => String(v || "").toUpperCase().includes("CHARGEUR");
+
+  const currentVehicles = {};
+  const nextVehicles = [];
+
+  const currentChargeurs = [];
+  const nextChargeurs = [];
+
   currentPeople.forEach(p => {
     const v = String(p.vehicule || "").trim();
-    if (v) currentByVehicle[v] = p;
+    if (isChargeur(v)) {
+      currentChargeurs.push(p);
+    } else if (v) {
+      currentVehicles[v] = p;
+    }
   });
 
-  const sortedNext = nextPeople.slice().sort((a, b) => {
-    const va = String(a.vehicule || "").toUpperCase();
-    const vb = String(b.vehicule || "").toUpperCase();
-
-    const ca = va.includes("CHARGEUR");
-    const cb = vb.includes("CHARGEUR");
-
-    if (ca && !cb) return 1;
-    if (!ca && cb) return -1;
-
-    return va.localeCompare(vb, "fr", { numeric: true });
+  nextPeople.forEach(p => {
+    const v = String(p.vehicule || "").trim();
+    if (isChargeur(v)) {
+      nextChargeurs.push(p);
+    } else {
+      nextVehicles.push(p);
+    }
   });
 
-  function formatVehicleLabel(v) {
-    const txt = String(v || "").trim();
-    if (!txt) return "-";
-    if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
-    return "Véhicule " + txt;
+  nextVehicles.sort((a, b) =>
+    String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true })
+  );
+
+  const vehicleRows = nextVehicles.map(p => {
+    const v = String(p.vehicule || "").trim();
+    const prev = currentVehicles[v];
+
+    const prevName = String(prev?.label || prev?.benevole || "").trim();
+    const nextName = String(p.label || p.benevole || "").trim();
+
+    if (prevName && prevName === nextName) return "";
+
+    return `
+      <div
+        style="
+          display:grid;
+          grid-template-columns: 90px 1fr;
+          gap:8px;
+          padding:7px 0;
+          border-top:1px solid rgba(222,212,194,0.45);
+          font-size:0.80rem;
+          line-height:1.15;
+          color:#18443D;
+        "
+      >
+        <div style="font-weight:1000; color:#0F5A4F;">
+          Véhicule ${escapeHtml(v)}
+        </div>
+
+        <div style="min-width:0;">
+          ${
+            prevName
+              ? `
+                <div style="opacity:0.6; font-weight:600;">
+                  ${escapeHtml(prevName)}
+                </div>
+                <div style="font-weight:900;">
+                  → ${escapeHtml(nextName)}
+                </div>
+              `
+              : `
+                <div style="font-weight:900;">
+                  ${escapeHtml(nextName)}
+                </div>
+                <div style="opacity:0.6;">
+                  nouveau
+                </div>
+              `
+          }
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const currentChargeurNames = currentChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
+  const nextChargeurNames = nextChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
+
+  const chargeurRows = nextChargeurNames.map((nextName, index) => {
+    const prevName = currentChargeurNames[index] || "";
+
+    if (prevName && prevName === nextName) return "";
+
+    return `
+      <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
+        ${
+          prevName
+            ? `
+              <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
+              <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
+            `
+            : `
+              <span style="font-weight:900;">${escapeHtml(nextName)}</span>
+              <span style="opacity:0.6;"> nouveau</span>
+            `
+        }
+      </div>
+    `;
+  }).join("");
+
+  const hasContent = vehicleRows.trim() || chargeurRows.trim();
+
+  if (!hasContent) {
+    return "";
   }
 
   return `
@@ -5098,51 +5205,20 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
           background:rgba(255,255,255,0.35);
         "
       >
-        ${sortedNext.map(p => {
-          const vehicule = String(p.vehicule || "").trim();
-          const prev = currentByVehicle[vehicule];
+        ${vehicleRows}
 
-          return `
-            <div
-              style="
-                display:grid;
-                grid-template-columns: 90px 1fr;
-                gap:8px;
-                padding:7px 0;
-                border-top:1px solid rgba(222,212,194,0.45);
-                font-size:0.80rem;
-                line-height:1.15;
-                color:#18443D;
-              "
-            >
-              <div style="font-weight:1000; color:#0F5A4F;">
-                ${escapeHtml(formatVehicleLabel(vehicule))}
+        ${
+          chargeurRows.trim()
+            ? `
+              <div style="padding-top:8px; margin-top:4px; border-top:1px solid rgba(222,212,194,0.55);">
+                <div style="font-weight:1000; color:#0F5A4F; font-size:0.82rem; margin-bottom:4px;">
+                  Chargeurs
+                </div>
+                ${chargeurRows}
               </div>
-
-              <div style="min-width:0;">
-                ${
-                  prev
-                    ? `
-                      <div style="opacity:0.6; font-weight:600;">
-                        ${escapeHtml(prev.label || prev.benevole || "")}
-                      </div>
-                      <div style="font-weight:900;">
-                        → ${escapeHtml(p.label || p.benevole || "")}
-                      </div>
-                    `
-                    : `
-                      <div style="font-weight:900;">
-                        ${escapeHtml(p.label || p.benevole || "")}
-                      </div>
-                      <div style="opacity:0.6;">
-                        nouveau
-                      </div>
-                    `
-                }
-              </div>
-            </div>
-          `;
-        }).join("")}
+            `
+            : ""
+        }
       </div>
     </div>
   `;
