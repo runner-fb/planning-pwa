@@ -2629,7 +2629,7 @@ body {
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
   
@@ -5264,19 +5264,22 @@ function renderMessagesBox() {
         "
       >
         <div
-          style="
-            white-space:nowrap;
-            display:inline-block;
-            animation: messagesScroll 24s linear infinite;
-            font-size:0.9rem;
-            font-weight:900;
-            color:#18443D;
-            padding-left:8px;
-          "
-        >
-          ${escapeHtml(texteDefilant)}
-        </div>
-      </div>
+  style="
+    display:flex;
+    width:max-content;
+    animation: messagesScroll 20s linear infinite;
+    font-size:0.9rem;
+    font-weight:900;
+    color:#18443D;
+  "
+>
+  <div style="margin-right:40px;">
+    ${escapeHtml(texteDefilant)}
+  </div>
+  <div>
+    ${escapeHtml(texteDefilant)}
+  </div>
+</div>
     </div>
   `;
 }
