@@ -4238,15 +4238,21 @@ localStorage.setItem("planning_app_mode", state.appMode);
       ? "Mot de passe référent correct."
       : "Mot de passe correct.";
 
-    // 👇 CAS REFERENT
+   // 👇 CAS REFERENT
 if (state.isRefMode) {
+  state.userId = "__REFERENT__";
+  state.userLabel = "Référent";
+
+  localStorage.setItem("planning_user_id", "__REFERENT__");
+  localStorage.setItem("planning_user_label", "Référent");
+
   await loadAppData(false);
   startAutoRefresh();
   startUiMinuteRefresh();
 
   showView("home", { push: false });
-replaceHistoryRoot("home");
-return;
+  replaceHistoryRoot("home");
+  return;
 }
 
 // 👇 CAS BENEVOLE
@@ -4860,6 +4866,42 @@ function renderHomeReferent() {
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
+    <button
+  onclick="logout()"
+  style="
+    position:absolute;
+    top:12px;
+    right:12px;
+    z-index:50;
+    border:none;
+    border-radius:999px;
+    background:rgba(0,0,0,0.72);
+    color:white;
+    padding:8px 12px;
+    font-weight:900;
+    font-size:12px;
+  "
+>
+  Déconnexion
+</button>
+<button
+  onclick="clearForcedNow()"
+  style="
+    position:absolute;
+    top:52px;
+    right:12px;
+    z-index:50;
+    border:none;
+    border-radius:999px;
+    background:rgba(255,255,255,0.9);
+    color:#18443D;
+    padding:8px 12px;
+    font-weight:900;
+    font-size:12px;
+  "
+>
+  Heure réelle
+</button>
       <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
@@ -6073,9 +6115,7 @@ async function boot() {
       cache = null;
     }
 
-    // ✅ Si l'utilisateur était déjà authentifié et qu'on a un cache valide,
-    // on recharge l'app depuis le cache sans redemander le mot de passe.
-    if (state.authOk && cache && state.userId) {
+    if (state.authOk && cache && (state.userId || state.appMode === "referent")) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
