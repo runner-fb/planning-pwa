@@ -2701,28 +2701,8 @@ body {
       </section>
     </main>
 
-    <nav id="shellBottomNav" class="bottom-nav hidden">
-      <button class="nav-item" data-nav="home" onclick="showView('home')">
-        <span class="nav-icon">🏠</span>
-        <span>Accueil</span>
-      </button>
-
-      <button class="nav-item" data-nav="mes-creneaux" onclick="showView('mes-creneaux')">
-        <span class="nav-icon">🗓️</span>
-        <span>Mes créneaux</span>
-      </button>
-
-      <button class="nav-item" data-nav="planning" onclick="showView('planning')">
-        <span class="nav-icon">📋</span>
-        <span>Planning</span>
-      </button>
-
-      <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
-        <span class="nav-icon">📞</span>
-        <span>Contacts</span>
-      </button>
-    </nav>
-  </div>
+<nav id="shellBottomNav" class="bottom-nav hidden"></nav>
+    
     <div id="printModal" class="print-modal-backdrop hidden" onclick="closePrintModal()">
   <div class="print-modal" onclick="event.stopPropagation()">
     <div class="print-modal-title">Imprimer</div>
@@ -4083,7 +4063,65 @@ state.isRef = data.user?.isRef === true;
 /*********************************
  * SHELL
  *********************************/
-function updateShellForView(name) {
+function renderBottomNav() {
+  const nav = document.getElementById("shellBottomNav");
+  if (!nav) return;
+
+  if (state.appMode === "referent") {
+    nav.innerHTML = `
+      <button class="nav-item" data-nav="home" onclick="showView('home')">
+        <span class="nav-icon">🏠</span>
+        <span>Accueil</span>
+      </button>
+
+      <button class="nav-item" data-nav="planning" onclick="showView('planning')">
+        <span class="nav-icon">📋</span>
+        <span>Planning</span>
+      </button>
+
+      <button class="nav-item" data-nav="vehicules" onclick="showView('vehicules')">
+        <span class="nav-icon">🚐</span>
+        <span>Véhicules</span>
+      </button>
+
+      <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
+        <span class="nav-icon">📞</span>
+        <span>Contacts</span>
+      </button>
+
+      <button class="nav-item" data-nav="infos" onclick="showView('infos')">
+        <span class="nav-icon">ℹ️</span>
+        <span>Infos</span>
+      </button>
+    `;
+    return;
+  }
+
+  nav.innerHTML = `
+    <button class="nav-item" data-nav="home" onclick="showView('home')">
+      <span class="nav-icon">🏠</span>
+      <span>Accueil</span>
+    </button>
+
+    <button class="nav-item" data-nav="mes-creneaux" onclick="showView('mes-creneaux')">
+      <span class="nav-icon">🗓️</span>
+      <span>Mes créneaux</span>
+    </button>
+
+    <button class="nav-item" data-nav="planning" onclick="showView('planning')">
+      <span class="nav-icon">📋</span>
+      <span>Planning</span>
+    </button>
+
+    <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
+      <span class="nav-icon">📞</span>
+      <span>Contacts</span>
+    </button>
+  `;
+}
+  
+  function updateShellForView(name) {
+    renderBottomNav();
   const bottomNav = document.getElementById("shellBottomNav");
   const titleEl = document.getElementById("miniPageTitle");
   const inAppViews = ["home", "direct", "mes-creneaux", "planning", "contacts", "shift-detail", "person-detail"];
