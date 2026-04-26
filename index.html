@@ -5233,28 +5233,44 @@ padding:0 12px 8px 12px;
 }
 
 function renderMessagesBox() {
-  const messages = APP_DATA?.messages || [];
+  let messages = APP_DATA?.messages || [];
 
   if (!messages.length) return "";
+
+  // 🔥 tri : important d'abord
+  messages = messages.sort((a, b) => {
+    const pa = a.priorite === "important" ? 1 : 0;
+    const pb = b.priorite === "important" ? 1 : 0;
+    return pb - pa;
+  });
 
   return `
     <div class="card home-card-raise" style="margin-bottom:8px;">
       <div class="home-main-title">Messages</div>
 
-      ${messages.map(m => `
-        <div style="
-          margin-top:8px;
-          padding:10px;
-          border-radius:12px;
-          background:${m.priorite === "important" ? "#ffe9e9" : "rgba(255,255,255,0.6)"};
-          font-size:0.9rem;
-          color:#18443D;
-        ">
-          ${m.titre ? `<div style="font-weight:900;">${escapeHtml(m.titre)}</div>` : ""}
-          <div>${escapeHtml(m.message)}</div>
-          ${m.updatedAt ? `<div class="mini-note">Maj ${escapeHtml(m.updatedAt)}</div>` : ""}
-        </div>
-      `).join("")}
+      ${messages.map(m => {
+        const isImportant = m.priorite === "important";
+
+        return `
+          <div style="
+            margin-top:8px;
+            padding:10px;
+            border-radius:12px;
+            background:${isImportant ? "#ffe9e9" : "rgba(255,255,255,0.6)"};
+            border:${isImportant ? "2px solid #ff4d4d" : "none"};
+            font-size:0.9rem;
+            color:#18443D;
+          ">
+            ${isImportant ? `<div style="font-weight:900; color:#b00000;">⚠️ IMPORTANT</div>` : ""}
+
+            ${m.titre ? `<div style="font-weight:900;">${escapeHtml(m.titre)}</div>` : ""}
+
+            <div>${escapeHtml(m.message)}</div>
+
+            ${m.updatedAt ? `<div class="mini-note">Maj ${escapeHtml(m.updatedAt)}</div>` : ""}
+          </div>
+        `;
+      }).join("")}
     </div>
   `;
 }
