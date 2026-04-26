@@ -4900,6 +4900,7 @@ function renderReferentPeopleList(entry, id = "current") {
     `;
   }
 
+  // TRI : véhicules A → Z puis chargeurs à la fin
   benevoles.sort((a, b) => {
     const va = String(a.vehicule || "").toUpperCase();
     const vb = String(b.vehicule || "").toUpperCase();
@@ -4941,68 +4942,62 @@ function renderReferentPeopleList(entry, id = "current") {
         ${benevoles.map(person => `
           <div
             style="
-              display:flex;
+              display:grid;
+              grid-template-columns: 1fr 96px 28px;
               align-items:center;
-              justify-content:space-between;
-              gap:8px;
-              padding:6px 0;
-              border-top:1px solid rgba(222,212,194,0.55);
+              gap:6px;
+              padding:5px 0;
+              border-top:1px solid rgba(222,212,194,0.45);
               font-size:0.82rem;
               line-height:1.1;
+              color:#18443D;
+              font-weight:900;
             "
           >
+            <!-- NOM -->
             <div
               style="
                 min-width:0;
-                flex:1;
-                display:flex;
-                align-items:center;
-                gap:4px;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
               "
             >
-              <span
-                style="
-                  font-weight:850;
-                  color:#18443D;
-                  white-space:nowrap;
-                  overflow:hidden;
-                  text-overflow:ellipsis;
-                "
-              >
-                ${escapeHtml(person.label || person.benevole || "")}
-              </span>
-
-              <span
-                style="
-                  flex-shrink:0;
-                  font-weight:700;
-                  color:#6F7364;
-                "
-              >
-                ${
-                  String(person.vehicule || "").toUpperCase().includes("CHARGEUR")
-                    ? "— chargeur"
-                    : "— véhicule " + escapeHtml(person.vehicule || "-")
-                }
-              </span>
+              ${escapeHtml(person.label || person.benevole || "")}
             </div>
 
+            <!-- VEHICULE -->
+            <div
+              style="
+                opacity:0.82;
+                white-space:nowrap;
+                text-align:left;
+              "
+            >
+              ${
+                String(person.vehicule || "").toUpperCase().includes("CHARGEUR")
+                  ? "chargeur"
+                  : "véhicule " + escapeHtml(person.vehicule || "-")
+              }
+            </div>
+
+            <!-- TEL -->
             ${
               person.tel
                 ? `
                   <a
                     href="tel:${escapeHtml(person.tel)}"
                     style="
-                      flex-shrink:0;
                       text-decoration:none;
-                      font-size:0.95rem;
+                      font-size:0.9rem;
+                      text-align:right;
                     "
                     title="Appeler"
                   >
                     📞
                   </a>
                 `
-                : ""
+                : `<span></span>`
             }
           </div>
         `).join("")}
