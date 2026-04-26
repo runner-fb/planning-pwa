@@ -2855,7 +2855,7 @@ async function apiGetBundle_(password, userId) {
  *********************************/
 let state = {
   currentView: "login",
-  password: "",
+  password: localStorage.getItem("planning_password") || "",
   authOk: localStorage.getItem("planning_auth_ok") === "1",
 appMode: localStorage.getItem("planning_app_mode") || "",
 userId: localStorage.getItem("planning_user_id") || "",
@@ -4273,6 +4273,7 @@ if (!ok) {
 }
 
    state.password = pwd;
+    localStorage.setItem("planning_password", pwd);
 state.authOk = true;
 state.isRefMode = isRef;
 
@@ -4337,6 +4338,7 @@ localStorage.removeItem("planning_app_mode");
 localStorage.removeItem("planning_user_id");
 localStorage.removeItem("planning_user_label");
 localStorage.removeItem("planning_contacts_query");
+  localStorage.removeItem("planning_password");
 
   state.password = "";
   state.authOk = false;
