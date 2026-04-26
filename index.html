@@ -5292,7 +5292,9 @@ function renderMessagesBox() {
   const importants = messages.filter(m => m.priorite === "important");
   const standards = messages.filter(m => m.priorite !== "important");
 
-  if (!messages.length && !state.isRefMode) return "";
+  const isReferentMode = state.appMode === "referent" || state.isRefMode === true;
+
+  if (!messages.length && !isReferentMode) return "";
 
   return `
     <div class="card home-card-raise" style="margin-bottom:8px;">
@@ -5300,7 +5302,7 @@ function renderMessagesBox() {
         <div class="home-main-title">Infos</div>
 
         ${
-          state.isRefMode
+          isReferentMode
             ? `
               <button
                 type="button"
@@ -5346,7 +5348,7 @@ function renderMessagesBox() {
       ` : ""}
 
       ${
-        !messages.length && state.isRefMode
+        !messages.length && isReferentMode
           ? `<div class="home-subline">Aucun message actif.</div>`
           : ""
       }
