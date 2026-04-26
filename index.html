@@ -2861,6 +2861,9 @@ userId: localStorage.getItem("planning_user_id") || "",
   previousView: "home"
 };
 
+  let referentUiState = {
+  openMenuId: ""
+};
 /*********************************
  * DIRECT : STATE
  *********************************/
@@ -4943,14 +4946,14 @@ function renderReferentPeopleList(entry, id = "current") {
         "
       >
         <span>Voir l’équipe</span>
-        <span id="chevron-${id}" style="font-size:0.75rem;">▼</span>
-      </button>
+<span id="chevron-${id}" style="font-size:0.75rem;">${referentUiState.openMenuId === id ? "▲" : "▼"}</span>
+</button>
 
       <div
         id="people-${id}"
         style="
-          display:none;
-          padding:0 12px 8px 12px;
+display:${referentUiState.openMenuId === id ? "block" : "none"};
+padding:0 12px 8px 12px;
           background:rgba(255,255,255,0.35);
         "
       >
@@ -5205,14 +5208,13 @@ const chargeurRows = nextChargeurNames.map(nextName => {
         "
       >
         <span>Voir les remplacements</span>
-        <span id="chevron-${id}" style="font-size:0.75rem;">▼</span>
-      </button>
+<span id="chevron-${id}" style="font-size:0.75rem;">${referentUiState.openMenuId === id ? "▲" : "▼"}</span>      </button>
 
       <div
         id="people-${id}"
         style="
-          display:none;
-          padding:0 12px 8px 12px;
+display:${referentUiState.openMenuId === id ? "block" : "none"};
+padding:0 12px 8px 12px;
           background:rgba(255,255,255,0.35);
         "
       >
@@ -6770,16 +6772,26 @@ function shouldShowHomeFollowingConcerts() {
   location.reload();
 }
 
-  function togglePeopleList(id) {
-  const el = document.getElementById("people-" + id);
-  const chevron = document.getElementById("chevron-" + id);
+ function togglePeopleList(id) {
+  const isAlreadyOpen = referentUiState.openMenuId === id;
 
-  if (!el || !chevron) return;
+  referentUiState.openMenuId = isAlreadyOpen ? "" : id;
 
-  const isHidden = el.style.display === "none";
+  document.querySelectorAll('[id^="people-"]').forEach(el => {
+    el.style.display = "none";
+  });
 
-  el.style.display = isHidden ? "block" : "none";
-  chevron.textContent = isHidden ? "▲" : "▼";
+  document.querySelectorAll('[id^="chevron-"]').forEach(el => {
+    el.textContent = "▼";
+  });
+
+  if (!isAlreadyOpen) {
+    const el = document.getElementById("people-" + id);
+    const chevron = document.getElementById("chevron-" + id);
+
+    if (el) el.style.display = "block";
+    if (chevron) chevron.textContent = "▲";
+  }
 }
 
 function getFullName(person) {
