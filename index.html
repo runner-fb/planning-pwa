@@ -5040,18 +5040,9 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
     if (v) currentByVehicle[v] = p;
   });
 
-  const vehicles = [];
-  const chargeurs = [];
-
-  nextPeople.forEach(p => {
-    const v = String(p.vehicule || "").toUpperCase();
-    if (v.includes("CHARGEUR")) chargeurs.push(p);
-    else vehicles.push(p);
+  const sortedNext = nextPeople.slice().sort((a, b) => {
+    return String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true });
   });
-
-  vehicles.sort((a, b) =>
-    String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true })
-  );
 
   return `
     <div
@@ -5091,44 +5082,27 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
           background:rgba(255,255,255,0.35);
         "
       >
-        ${vehicles.map(p => {
-          const v = String(p.vehicule || "").trim();
-          const prev = currentByVehicle[v];
+        ${sortedNext.map(p => {
+          const vehicule = String(p.vehicule || "").trim();
+          const prev = currentByVehicle[vehicule];
 
           return `
-            <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.45); font-size:0.82rem; line-height:1.15;">
-              <div style="font-weight:900; color:#18443D;">
-                ${escapeHtml(v)} — ${escapeHtml(p.label || p.benevole || "")}
-              </div>
-              <div style="opacity:0.72; font-weight:800;">
-                ${prev ? `remplace ${escapeHtml(prev.label || prev.benevole || "")}` : `nouveau`}
-              </div>
+            <div style="
+              padding:6px 0;
+              border-top:1px solid rgba(222,212,194,0.45);
+              font-size:0.82rem;
+              line-height:1.2;
+              color:#18443D;
+              font-weight:900;
+            ">
+              ${
+                prev
+                  ? `${escapeHtml(prev.label)} est remplacé par ${escapeHtml(p.label)}`
+                  : `${escapeHtml(p.label)} arrive sur ${escapeHtml(vehicule)}`
+              }
             </div>
           `;
         }).join("")}
-
-        ${
-          chargeurs.length
-            ? `
-              <div style="padding-top:8px; border-top:1px solid rgba(222,212,194,0.5); margin-top:6px;">
-                <div style="font-weight:900; color:#18443D; margin-bottom:4px; font-size:0.82rem;">Chargeurs</div>
-
-                ${chargeurs.map(p => {
-                  const prev = currentByVehicle[p.vehicule];
-
-                  return `
-                    <div style="font-size:0.8rem; margin-bottom:4px; color:#18443D; font-weight:850;">
-                      ${escapeHtml(p.label || p.benevole || "")}
-                      <span style="opacity:0.72; font-weight:800;">
-                        ${prev ? ` — remplace ${escapeHtml(prev.label || prev.benevole || "")}` : ` — nouveau`}
-                      </span>
-                    </div>
-                  `;
-                }).join("")}
-              </div>
-            `
-            : ""
-        }
       </div>
     </div>
   `;
@@ -5254,7 +5228,6 @@ const replacementHtml = currentFestivalEntry && nextFestivalEntry
         <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
 
         ${replacementHtml}
-        ${nextPeopleHtml}
       `
       : `
         <div class="home-subline">Aucun créneau suivant</div>
