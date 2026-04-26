@@ -4332,10 +4332,20 @@ function loadVehicules() {
           isOpen
             ? `
               <div style="margin-top:10px;">
-                <div class="subtle-text">
-                  Immatriculation : ${escapeHtml(v.immat || "—")}
-                </div>
-              </div>
+  <div class="subtle-text">
+    Immatriculation : ${escapeHtml(v.immat || "—")}
+  </div>
+
+  <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
+    <input type="checkbox" ${v.desactive ? "checked" : ""}>
+    Véhicule désactivé
+  </label>
+
+  <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
+    <input type="checkbox" ${v.pleinAFaire ? "checked" : ""}>
+    Plein à faire
+  </label>
+</div>
             `
             : ""
         }
