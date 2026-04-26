@@ -5139,27 +5139,35 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
   const currentChargeurNames = currentChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
   const nextChargeurNames = nextChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
 
-  const chargeurRows = nextChargeurNames.map((nextName, index) => {
-    const prevName = currentChargeurNames[index] || "";
+  let usedCurrentChargeurs = [];
 
-    if (prevName && prevName === nextName) return "";
+const chargeurRows = nextChargeurNames.map(nextName => {
+  if (currentChargeurNames.includes(nextName)) {
+    return "";
+  }
 
-    return `
-      <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
-        ${
-          prevName
-            ? `
-              <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
-              <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
-            `
-            : `
-              <span style="font-weight:900;">${escapeHtml(nextName)}</span>
-              <span style="opacity:0.6;"> nouveau</span>
-            `
-        }
-      </div>
-    `;
-  }).join("");
+  const prevName = currentChargeurNames.find(name =>
+    name && !usedCurrentChargeurs.includes(name) && !nextChargeurNames.includes(name)
+  ) || "";
+
+  if (prevName) usedCurrentChargeurs.push(prevName);
+
+  return `
+    <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
+      ${
+        prevName
+          ? `
+            <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
+            <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
+          `
+          : `
+            <span style="font-weight:900;">${escapeHtml(nextName)}</span>
+            <span style="opacity:0.6;"> nouveau</span>
+          `
+      }
+    </div>
+  `;
+}).join("");
 
   const hasContent = vehicleRows.trim() || chargeurRows.trim();
 
