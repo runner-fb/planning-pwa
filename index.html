@@ -5014,6 +5014,70 @@ function renderReferentPeopleList(entry, id = "current") {
     </div>
   `;
 }
+
+  function getNextFestivalEntry() {
+  const entries = Array.isArray(directState.allShifts) ? directState.allShifts : [];
+  const currentIndex = Number(directState.currentIndex);
+
+  if (!entries.length) return null;
+
+  if (currentIndex < 0) {
+    return entries[0] || null;
+  }
+
+  return entries[currentIndex + 1] || null;
+}
+
+  function renderReferentReplacementList(currentEntry, nextEntry) {
+  const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
+  const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
+
+  if (!nextPeople.length) return "";
+
+  const currentByVehicle = {};
+  currentPeople.forEach(p => {
+    const v = String(p.vehicule || "").trim();
+    if (v) currentByVehicle[v] = p;
+  });
+
+  const sortedNext = nextPeople.slice().sort((a, b) => {
+    const va = String(a.vehicule || "").toUpperCase();
+    const vb = String(b.vehicule || "").toUpperCase();
+    return va.localeCompare(vb, "fr", { numeric: true });
+  });
+
+  return `
+    <div style="margin-top:10px;">
+      ${sortedNext.map(nextPerson => {
+        const vehicule = String(nextPerson.vehicule || "-").trim();
+        const previousPerson = currentByVehicle[vehicule];
+
+        const vehiculeLabel = vehicule.toUpperCase().includes("CHARGEUR")
+          ? "Chargeur"
+          : "Véhicule " + vehicule;
+
+        return `
+          <div
+            style="
+              padding:7px 0;
+              border-top:1px solid rgba(222,212,194,0.45);
+              font-size:0.82rem;
+              line-height:1.15;
+              color:#18443D;
+              font-weight:900;
+            "
+          >
+            <div>${escapeHtml(vehiculeLabel)}</div>
+            <div>${escapeHtml(nextPerson.label || nextPerson.benevole || "")}</div>
+            <div style="opacity:0.72; font-weight:800;">
+              remplace ${escapeHtml(previousPerson?.label || previousPerson?.benevole || "—")}
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
   
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
@@ -5025,9 +5089,21 @@ function renderHomeReferent() {
   }
 
   const currentFestivalEntry = getCurrentFestivalEntry();
-  const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
-  const currentPeopleHtml = currentFestivalEntry
+const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
+
+const nextFestivalEntry = getNextFestivalEntry();
+const nextShift = nextFestivalEntry && nextFestivalEntry.shift ? nextFestivalEntry.shift : null;
+
+const currentPeopleHtml = currentFestivalEntry
   ? renderReferentPeopleList(currentFestivalEntry, "current")
+  : "";
+
+const nextPeopleHtml = nextFestivalEntry
+  ? renderReferentPeopleList(nextFestivalEntry, "next")
+  : "";
+
+const replacementHtml = currentFestivalEntry && nextFestivalEntry
+  ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry)
   : "";
 
   el.innerHTML = `
@@ -5112,9 +5188,24 @@ function renderHomeReferent() {
       </div>
 
       <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
-        <div class="home-main-title">Créneau suivant</div>
-        <div class="home-subline">On va construire cette partie à l’étape suivante.</div>
-      </div>
+  <div class="home-main-title">Créneau suivant</div>
+
+  ${
+    nextShift
+      ? `
+        <div class="home-main-line">
+          ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
+        </div>
+        <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
+
+        ${replacementHtml}
+        ${nextPeopleHtml}
+      `
+      : `
+        <div class="home-subline">Aucun créneau suivant</div>
+      `
+  }
+</div>
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
