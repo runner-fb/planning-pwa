@@ -4889,39 +4889,52 @@ function renderHomeStandard(options = {}) {
     </div>
   `;
 }
-function renderReferentPeopleList(entry) {
+function renderReferentPeopleList(entry, id = "current") {
   const benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles : [];
 
   if (!benevoles.length) {
     return `
       <div class="subtle-text" style="margin-top:10px;">
-        Aucun bénévole affecté sur ce créneau.
+        Aucun bénévole affecté.
       </div>
     `;
   }
 
   return `
-    <div style="margin-top:12px;">
-      ${benevoles.map(person => `
-        <div class="person-row" style="border-top:1px solid rgba(222,212,194,0.65); padding:10px 0;">
-          <div class="person-main">
-            <div class="person-left">
-              <div class="person-name">${escapeHtml(person.label || person.benevole || "")}</div>
-              <div class="mini-note">${escapeHtml(person.vehicule || "-")}</div>
-            </div>
+    <div style="margin-top:10px;">
+      <div
+        onclick="togglePeopleList('${id}')"
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          font-weight:700;
+          cursor:pointer;
+          padding:8px 0;
+        "
+      >
+        <span>Voir l’équipe (${benevoles.length})</span>
+        <span id="chevron-${id}">▼</span>
+      </div>
 
-            ${
-              person.tel
-                ? `
-                  <a class="phone-btn" href="tel:${escapeHtml(person.tel)}" title="Appeler">
-                    📞
-                  </a>
-                `
-                : ""
-            }
+      <div id="people-${id}" style="display:none;">
+        ${benevoles.map(person => `
+          <div style="border-top:1px solid rgba(222,212,194,0.65); padding:10px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:600;">${escapeHtml(person.label || "")}</div>
+                <div class="mini-note">${escapeHtml(person.vehicule || "-")}</div>
+              </div>
+
+              ${
+                person.tel
+                  ? `<a href="tel:${escapeHtml(person.tel)}">📞</a>`
+                  : ""
+              }
+            </div>
           </div>
-        </div>
-      `).join("")}
+        `).join("")}
+      </div>
     </div>
   `;
 }
@@ -4938,7 +4951,7 @@ function renderHomeReferent() {
   const currentFestivalEntry = getCurrentFestivalEntry();
   const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
   const currentPeopleHtml = currentFestivalEntry
-  ? renderReferentPeopleList(currentFestivalEntry)
+  ? renderReferentPeopleList(currentFestivalEntry, "current")
   : "";
 
   el.innerHTML = `
@@ -6433,6 +6446,18 @@ function shouldShowHomeFollowingConcerts() {
 
   localStorage.setItem("forced_now", value);
   location.reload();
+}
+
+  function togglePeopleList(id) {
+  const el = document.getElementById("people-" + id);
+  const chevron = document.getElementById("chevron-" + id);
+
+  if (!el || !chevron) return;
+
+  const isHidden = el.style.display === "none";
+
+  el.style.display = isHidden ? "block" : "none";
+  chevron.textContent = isHidden ? "▲" : "▼";
 }
 
 function getFullName(person) {
