@@ -5028,7 +5028,7 @@ function renderReferentPeopleList(entry, id = "current") {
   return entries[currentIndex + 1] || null;
 }
 
-  function renderReferentReplacementList(currentEntry, nextEntry) {
+function renderReferentReplacementList(currentEntry, nextEntry, id = "replacement") {
   const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
   const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
 
@@ -5040,41 +5040,96 @@ function renderReferentPeopleList(entry, id = "current") {
     if (v) currentByVehicle[v] = p;
   });
 
-  const sortedNext = nextPeople.slice().sort((a, b) => {
-    const va = String(a.vehicule || "").toUpperCase();
-    const vb = String(b.vehicule || "").toUpperCase();
-    return va.localeCompare(vb, "fr", { numeric: true });
+  const vehicles = [];
+  const chargeurs = [];
+
+  nextPeople.forEach(p => {
+    const v = String(p.vehicule || "").toUpperCase();
+    if (v.includes("CHARGEUR")) chargeurs.push(p);
+    else vehicles.push(p);
   });
 
+  vehicles.sort((a, b) =>
+    String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true })
+  );
+
   return `
-    <div style="margin-top:10px;">
-      ${sortedNext.map(nextPerson => {
-        const vehicule = String(nextPerson.vehicule || "-").trim();
-        const previousPerson = currentByVehicle[vehicule];
+    <div
+      style="
+        margin-top:10px;
+        background:rgba(255,255,255,0.55);
+        border-radius:16px;
+        overflow:hidden;
+      "
+    >
+      <button
+        type="button"
+        onclick="togglePeopleList('${id}')"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          color:#18443D;
+          padding:8px 12px;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          font-size:0.82rem;
+          font-weight:900;
+          cursor:pointer;
+        "
+      >
+        <span>Voir les remplacements</span>
+        <span id="chevron-${id}" style="font-size:0.75rem;">▼</span>
+      </button>
 
-        const vehiculeLabel = vehicule.toUpperCase().includes("CHARGEUR")
-          ? "Chargeur"
-          : "Véhicule " + vehicule;
+      <div
+        id="people-${id}"
+        style="
+          display:none;
+          padding:0 12px 8px 12px;
+          background:rgba(255,255,255,0.35);
+        "
+      >
+        ${vehicles.map(p => {
+          const v = String(p.vehicule || "").trim();
+          const prev = currentByVehicle[v];
 
-        return `
-          <div
-            style="
-              padding:7px 0;
-              border-top:1px solid rgba(222,212,194,0.45);
-              font-size:0.82rem;
-              line-height:1.15;
-              color:#18443D;
-              font-weight:900;
-            "
-          >
-            <div>${escapeHtml(vehiculeLabel)}</div>
-            <div>${escapeHtml(nextPerson.label || nextPerson.benevole || "")}</div>
-            <div style="opacity:0.72; font-weight:800;">
-              remplace ${escapeHtml(previousPerson?.label || previousPerson?.benevole || "—")}
+          return `
+            <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.45); font-size:0.82rem; line-height:1.15;">
+              <div style="font-weight:900; color:#18443D;">
+                ${escapeHtml(v)} — ${escapeHtml(p.label || p.benevole || "")}
+              </div>
+              <div style="opacity:0.72; font-weight:800;">
+                ${prev ? `remplace ${escapeHtml(prev.label || prev.benevole || "")}` : `nouveau`}
+              </div>
             </div>
-          </div>
-        `;
-      }).join("")}
+          `;
+        }).join("")}
+
+        ${
+          chargeurs.length
+            ? `
+              <div style="padding-top:8px; border-top:1px solid rgba(222,212,194,0.5); margin-top:6px;">
+                <div style="font-weight:900; color:#18443D; margin-bottom:4px; font-size:0.82rem;">Chargeurs</div>
+
+                ${chargeurs.map(p => {
+                  const prev = currentByVehicle[p.vehicule];
+
+                  return `
+                    <div style="font-size:0.8rem; margin-bottom:4px; color:#18443D; font-weight:850;">
+                      ${escapeHtml(p.label || p.benevole || "")}
+                      <span style="opacity:0.72; font-weight:800;">
+                        ${prev ? ` — remplace ${escapeHtml(prev.label || prev.benevole || "")}` : ` — nouveau`}
+                      </span>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            `
+            : ""
+        }
+      </div>
     </div>
   `;
 }
@@ -5103,7 +5158,7 @@ const nextPeopleHtml = nextFestivalEntry
   : "";
 
 const replacementHtml = currentFestivalEntry && nextFestivalEntry
-  ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry)
+  ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
   : "";
 
   el.innerHTML = `
