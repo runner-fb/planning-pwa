@@ -9,7 +9,7 @@
 /* =========================================================
    FESTIVAL APP — CSS NETTOYÉ & DOCUMENTÉ
    ========================================================= */
-
+renderReferentPeopleList
 :root {
   --bg: #F6F2E9;
   --bg-soft: #EFE8DB;
@@ -4957,19 +4957,9 @@ function renderReferentPeopleList(entry, id = "current") {
                 flex:1;
                 display:flex;
                 align-items:center;
-                gap:8px;
+                gap:4px;
               "
             >
-              <span
-                style="
-                  min-width:42px;
-                  font-weight:1000;
-                  color:#0F5A4F;
-                "
-              >
-                ${escapeHtml(person.vehicule || "-")}
-              </span>
-
               <span
                 style="
                   font-weight:850;
@@ -4980,6 +4970,20 @@ function renderReferentPeopleList(entry, id = "current") {
                 "
               >
                 ${escapeHtml(person.label || person.benevole || "")}
+              </span>
+
+              <span
+                style="
+                  flex-shrink:0;
+                  font-weight:700;
+                  color:#6F7364;
+                "
+              >
+                ${
+                  String(person.vehicule || "").toUpperCase().includes("CHARGEUR")
+                    ? "— chargeur"
+                    : "— véhicule " + escapeHtml(person.vehicule || "-")
+                }
               </span>
             </div>
 
