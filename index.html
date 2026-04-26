@@ -4889,7 +4889,43 @@ function renderHomeStandard(options = {}) {
     </div>
   `;
 }
+function renderReferentPeopleList(entry) {
+  const benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles : [];
 
+  if (!benevoles.length) {
+    return `
+      <div class="subtle-text" style="margin-top:10px;">
+        Aucun bénévole affecté sur ce créneau.
+      </div>
+    `;
+  }
+
+  return `
+    <div style="margin-top:12px;">
+      ${benevoles.map(person => `
+        <div class="person-row" style="border-top:1px solid rgba(222,212,194,0.65); padding:10px 0;">
+          <div class="person-main">
+            <div class="person-left">
+              <div class="person-name">${escapeHtml(person.label || person.benevole || "")}</div>
+              <div class="mini-note">${escapeHtml(person.vehicule || "-")}</div>
+            </div>
+
+            ${
+              person.tel
+                ? `
+                  <a class="phone-btn" href="tel:${escapeHtml(person.tel)}" title="Appeler">
+                    📞
+                  </a>
+                `
+                : ""
+            }
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+  
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
   if (!el) return;
@@ -4901,6 +4937,9 @@ function renderHomeReferent() {
 
   const currentFestivalEntry = getCurrentFestivalEntry();
   const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
+  const currentPeopleHtml = currentFestivalEntry
+  ? renderReferentPeopleList(currentFestivalEntry)
+  : "";
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
@@ -4975,6 +5014,7 @@ function renderHomeReferent() {
             ? `
               <div class="home-main-line">${escapeHtml(currentShift.jour)} • ${escapeHtml(currentShift.debut)} – ${escapeHtml(currentShift.fin)}</div>
               <div class="home-subline">${escapeHtml(currentShift.libelle || "")}</div>
+              ${currentPeopleHtml}
             `
             : `
               <div class="home-main-line">Aucun créneau en cours</div>
