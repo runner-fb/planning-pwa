@@ -5326,34 +5326,6 @@ function renderReferentMessageEditor() {
   `;
 }
 
-async function saveReferentMessageFront() {
-  const input = document.getElementById("referentMessageInput");
-  if (!input) return;
-
-  const message = input.value.trim();
-
-  try {
-    const res = await apiGet_({
-      api: "setReferentMessage",
-      pwd: state.password,
-      message: message
-    });
-
-    if (!res || !res.ok) {
-      throw new Error((res && res.error) || "MESSAGE_SAVE_ERROR");
-    }
-
-    if (!APP_DATA) APP_DATA = {};
-    APP_DATA.referentMessage = res.data;
-
-    await loadAppData(true);
-    renderHomeReferent();
-
-  } catch (err) {
-    alert("Impossible d’enregistrer le message : " + (err.message || err));
-  }
-}
-
 function getReferentMessageData() {
   return APP_DATA?.referentMessage || {
     message: "",
@@ -5457,11 +5429,12 @@ async function saveReferentMessageFront() {
   if (!input) return;
 
   const message = input.value.trim();
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
 
   try {
     const res = await apiGet_({
       api: "setReferentMessage",
-      pwd: state.password,
+      pwd: pwd,
       message: message
     });
 
