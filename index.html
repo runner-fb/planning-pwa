@@ -5281,9 +5281,15 @@ padding:0 12px 8px 12px;
 }
 
 function renderMessagesBox() {
-  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
+  let messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
   if (!messages.length && !state.isRefMode) return "";
+
+  messages = messages.slice().sort((a, b) => {
+    const pa = a.priorite === "important" ? 1 : 0;
+    const pb = b.priorite === "important" ? 1 : 0;
+    return pb - pa;
+  }).slice(0, 3);
 
   const importants = messages.filter(m => m.priorite === "important");
   const standards = messages.filter(m => m.priorite !== "important");
@@ -5317,35 +5323,27 @@ function renderMessagesBox() {
         }
       </div>
 
-      ${
-        importants.length
-          ? `
-            <div style="margin-top:8px;">
-              <div style="font-weight:1000; color:#9b1c1c;">⚠️ Important</div>
-              ${importants.map(m => `
-                <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.5);">
-                  ${escapeHtml(m.message || "")}
-                </div>
-              `).join("")}
+      ${importants.length ? `
+        <div style="margin-top:8px;">
+          <div style="font-weight:1000; color:#9b1c1c;">⚠️ Important</div>
+          ${importants.map(m => `
+            <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.5); font-weight:850;">
+              ${escapeHtml(m.message || "")}
             </div>
-          `
-          : ""
-      }
+          `).join("")}
+        </div>
+      ` : ""}
 
-      ${
-        standards.length
-          ? `
-            <div style="margin-top:10px;">
-              <div style="font-weight:1000;">ℹ️ Standard</div>
-              ${standards.map(m => `
-                <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.5);">
-                  ${escapeHtml(m.message || "")}
-                </div>
-              `).join("")}
+      ${standards.length ? `
+        <div style="margin-top:10px;">
+          <div style="font-weight:1000;">ℹ️ Standard</div>
+          ${standards.map(m => `
+            <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.5); font-weight:850;">
+              ${escapeHtml(m.message || "")}
             </div>
-          `
-          : ""
-      }
+          `).join("")}
+        </div>
+      ` : ""}
 
       ${
         !messages.length && state.isRefMode
@@ -5448,6 +5446,21 @@ function renderMessagesBox() {
         >
           Enregistrer
         </button>
+        <button
+  onclick="deleteMessageAdminForm()"
+  style="
+    width:100%;
+    margin-top:8px;
+    padding:10px;
+    border:none;
+    border-radius:14px;
+    background:#b00000;
+    color:white;
+    font-weight:900;
+  "
+>
+  Supprimer le message
+</button>
       </div>
     </div>
   `;
@@ -5458,6 +5471,37 @@ function renderMessagesBox() {
 function closeMessagesAdminModal() {
   const modal = document.getElementById("messagesAdminModal");
   if (modal) modal.remove();
+}
+  async function deleteMessageAdminForm() {
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const id = document.getElementById("adminMessageId").value.trim();
+
+  if (!id) {
+    alert("Sélectionne un message à supprimer.");
+    return;
+  }
+
+  if (!confirm("Supprimer ce message ?")) return;
+
+  try {
+    const res = await apiGet_({
+      api: "saveMessage",
+      pwd: pwd,
+      id: id,
+      actif: "false"
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "DELETE_ERROR");
+    }
+
+    closeMessagesAdminModal();
+    await loadAppData(true);
+    renderHomeReferent();
+
+  } catch (err) {
+    alert("Erreur suppression : " + (err.message || err));
+  }
 }
 
 function fillMessageAdminForm() {
