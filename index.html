@@ -5332,27 +5332,42 @@ function renderMessagesBox() {
         }
       </div>
 
-      ${importants.length ? `
-        <div style="margin-top:8px;">
-          <div style="font-weight:1000; color:#9b1c1c;">⚠️ Important</div>
-          ${importants.map(m => `
-            <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.5); font-weight:850;">
-              ${escapeHtml(m.message || "")}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
+     ${importants.length ? `
+  <div style="margin-top:8px;">
+    ${importants.map(m => `
+      <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:8px;
+        padding:6px 0;
+        border-top:1px solid rgba(222,212,194,0.5);
+        font-weight:900;
+        color:#9b1c1c;
+      ">
+        <div style="font-size:14px; margin-top:2px;">⚠️</div>
+        <div>${escapeHtml(m.message || "")}</div>
+      </div>
+    `).join("")}
+  </div>
+` : ""}
 
-      ${standards.length ? `
-        <div style="margin-top:10px;">
-          <div style="font-weight:1000;">ℹ️</div>
-          ${standards.map(m => `
-            <div style="padding:6px 0; border-top:1px solid rgba(222,212,194,0.5); font-weight:850;">
-              ${escapeHtml(m.message || "")}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
+${standards.length ? `
+  <div style="margin-top:8px;">
+    ${standards.map(m => `
+      <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:8px;
+        padding:6px 0;
+        border-top:1px solid rgba(222,212,194,0.5);
+        font-weight:850;
+      ">
+        <div style="font-size:14px; margin-top:2px;">ℹ️</div>
+        <div>${escapeHtml(m.message || "")}</div>
+      </div>
+    `).join("")}
+  </div>
+` : ""}
 
       ${
         !messages.length && isReferentMode
