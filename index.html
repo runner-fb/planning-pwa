@@ -4266,55 +4266,41 @@ function refreshCurrentViewOnly() {
 /*********************************
  * VEHICULES
  *********************************/
-async function loadVehicules() {
+function loadVehicules() {
   const el = document.getElementById("vehiculesContent");
   if (!el) return;
 
-  el.innerHTML = `
-    <div class="card">
-      <div class="home-main-title">Véhicules</div>
-      <div class="home-subline">Chargement...</div>
-    </div>
-  `;
+  const vehicules = Array.isArray(APP_DATA?.vehicules)
+    ? APP_DATA.vehicules
+    : [];
 
-  try {
-    const res = await apiGet_({
-      api: "vehicules",
-      pwd: state.password
-    });
-
-    if (!res || !res.ok) {
-      throw new Error((res && res.error) || "VEHICULES_ERROR");
-    }
-
-    const vehicules = Array.isArray(res.data) ? res.data : [];
-
-    el.innerHTML = `
-      <div class="card home-card-raise" style="margin-bottom:8px;">
-        <div class="home-main-title">Véhicules</div>
-        <div class="home-subline">État des véhicules référents</div>
-      </div>
-
-      ${vehicules.map(v => `
-        <div class="card compact" style="margin-bottom:8px;">
-          <div style="font-weight:1000; color:#18443D;">
-            🚗 Véhicule ${escapeHtml(v.id || "")}
-          </div>
-          <div class="subtle-text">
-            Immatriculation : ${escapeHtml(v.immat || "—")}
-          </div>
-        </div>
-      `).join("")}
-    `;
-
-  } catch (e) {
-    console.error("Erreur loadVehicules", e);
+  if (!vehicules.length) {
     el.innerHTML = `
       <div class="card">
-        <div class="error">Impossible de charger les véhicules.</div>
+        <div class="home-main-title">Véhicules</div>
+        <div class="home-subline">Aucun véhicule trouvé.</div>
       </div>
     `;
+    return;
   }
+
+  el.innerHTML = `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Véhicules</div>
+      <div class="home-subline">État des véhicules référents</div>
+    </div>
+
+    ${vehicules.map(v => `
+      <div class="card compact" style="margin-bottom:8px;">
+        <div style="font-weight:1000; color:#18443D;">
+          🚗 Véhicule ${escapeHtml(v.id || "")}
+        </div>
+        <div class="subtle-text">
+          Immatriculation : ${escapeHtml(v.immat || "—")}
+        </div>
+      </div>
+    `).join("")}
+  `;
 }
 /*********************************
  * LOGIN / COMPTE
