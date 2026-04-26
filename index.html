@@ -9,7 +9,6 @@
 /* =========================================================
    FESTIVAL APP — CSS NETTOYÉ & DOCUMENTÉ
    ========================================================= */
-renderReferentPeopleList
 :root {
   --bg: #F6F2E9;
   --bg-soft: #EFE8DB;
@@ -2632,7 +2631,15 @@ body {
     transform: translateX(-50%);
   }
 }
-  
+ #view-login .btn-dark {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: linear-gradient(135deg, #0F5A4F 0%, #18443D 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 8px 18px rgba(15, 90, 79, 0.18) !important;
+} 
 </style>
 </head>
 
@@ -6703,14 +6710,6 @@ function loadPersonDetail() {
     <head>
       <meta charset="UTF-8">
       <title>${escapeHtml(title)}</title>
-
-@keyframes referentMessageScroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
 }
 
       <style>
