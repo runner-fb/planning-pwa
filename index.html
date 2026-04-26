@@ -5106,7 +5106,7 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
             <div
               style="
                 display:grid;
-                grid-template-columns: 76px 1fr;
+                grid-template-columns: 90px 1fr;
                 gap:8px;
                 padding:7px 0;
                 border-top:1px solid rgba(222,212,194,0.45);
@@ -5120,32 +5120,25 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
               </div>
 
               <div style="min-width:0;">
-                <div
-                  style="
-                    font-weight:900;
-                    white-space:nowrap;
-                    overflow:hidden;
-                    text-overflow:ellipsis;
-                  "
-                >
-                  ${escapeHtml(p.label || p.benevole || "")}
-                </div>
-
-                <div
-                  style="
-                    opacity:0.72;
-                    font-weight:800;
-                    white-space:nowrap;
-                    overflow:hidden;
-                    text-overflow:ellipsis;
-                  "
-                >
-                  ${
-                    prev
-                      ? "remplace " + escapeHtml(prev.label || prev.benevole || "")
-                      : "nouveau"
-                  }
-                </div>
+                ${
+                  prev
+                    ? `
+                      <div style="opacity:0.6; font-weight:600;">
+                        ${escapeHtml(prev.label || prev.benevole || "")}
+                      </div>
+                      <div style="font-weight:900;">
+                        → ${escapeHtml(p.label || p.benevole || "")}
+                      </div>
+                    `
+                    : `
+                      <div style="font-weight:900;">
+                        ${escapeHtml(p.label || p.benevole || "")}
+                      </div>
+                      <div style="opacity:0.6;">
+                        nouveau
+                      </div>
+                    `
+                }
               </div>
             </div>
           `;
