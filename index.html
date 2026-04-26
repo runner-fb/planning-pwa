@@ -5041,8 +5041,24 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
   });
 
   const sortedNext = nextPeople.slice().sort((a, b) => {
-    return String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true });
+    const va = String(a.vehicule || "").toUpperCase();
+    const vb = String(b.vehicule || "").toUpperCase();
+
+    const ca = va.includes("CHARGEUR");
+    const cb = vb.includes("CHARGEUR");
+
+    if (ca && !cb) return 1;
+    if (!ca && cb) return -1;
+
+    return va.localeCompare(vb, "fr", { numeric: true });
   });
+
+  function formatVehicleLabel(v) {
+    const txt = String(v || "").trim();
+    if (!txt) return "-";
+    if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
+    return "Véhicule " + txt;
+  }
 
   return `
     <div
@@ -5087,19 +5103,50 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
           const prev = currentByVehicle[vehicule];
 
           return `
-            <div style="
-              padding:6px 0;
-              border-top:1px solid rgba(222,212,194,0.45);
-              font-size:0.82rem;
-              line-height:1.2;
-              color:#18443D;
-              font-weight:900;
-            ">
-              ${
-                prev
-                  ? `${escapeHtml(prev.label)} est remplacé par ${escapeHtml(p.label)}`
-                  : `${escapeHtml(p.label)} arrive sur ${escapeHtml(vehicule)}`
-              }
+            <div
+              style="
+                display:grid;
+                grid-template-columns: 76px 1fr;
+                gap:8px;
+                padding:7px 0;
+                border-top:1px solid rgba(222,212,194,0.45);
+                font-size:0.80rem;
+                line-height:1.15;
+                color:#18443D;
+              "
+            >
+              <div style="font-weight:1000; color:#0F5A4F;">
+                ${escapeHtml(formatVehicleLabel(vehicule))}
+              </div>
+
+              <div style="min-width:0;">
+                <div
+                  style="
+                    font-weight:900;
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                  "
+                >
+                  ${escapeHtml(p.label || p.benevole || "")}
+                </div>
+
+                <div
+                  style="
+                    opacity:0.72;
+                    font-weight:800;
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                  "
+                >
+                  ${
+                    prev
+                      ? "remplace " + escapeHtml(prev.label || prev.benevole || "")
+                      : "nouveau"
+                  }
+                </div>
+              </div>
             </div>
           `;
         }).join("")}
