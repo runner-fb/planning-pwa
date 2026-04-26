@@ -4279,7 +4279,8 @@ function toggleVehicule(id) {
 
   loadVehicules();
 }
-  function loadVehicules() {
+
+function loadVehicules() {
   const el = document.getElementById("vehiculesContent");
   if (!el) return;
 
@@ -4290,59 +4291,60 @@ function toggleVehicule(id) {
   if (!vehicules.length) {
     el.innerHTML = `
       <div class="card">
-        <div class="home-main-title">Véhicules</div>
         <div class="home-subline">Aucun véhicule trouvé.</div>
       </div>
     `;
     return;
   }
 
- el.innerHTML = `
- ${vehicules.map(v => {
-  const id = String(v.id || "");
-  const isOpen = vehiculesState.openId === id;
+  let html = "";
 
-  return `
-    <div class="card compact" style="margin-bottom:8px;">
-      <button
-        type="button"
-        onclick="toggleVehicule('${escapeHtml(id)}')"
-        style="
-          width:100%;
-          border:none;
-          background:transparent;
-          padding:0;
-          text-align:left;
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          cursor:pointer;
-        "
-      >
-        <div style="font-weight:1000; color:#18443D;">
-          🚗 Véhicule ${escapeHtml(id)}
-        </div>
+  vehicules.forEach(v => {
+    const id = String(v.id || "");
+    const isOpen = vehiculesState.openId === id;
 
-        <div style="font-weight:1000;">
-          ${isOpen ? "▲" : "▼"}
-        </div>
-      </button>
+    html += `
+      <div class="card compact" style="margin-bottom:8px;">
+        <button
+          type="button"
+          onclick="toggleVehicule('${escapeHtml(id)}')"
+          style="
+            width:100%;
+            border:none;
+            background:transparent;
+            padding:0;
+            text-align:left;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            cursor:pointer;
+          "
+        >
+          <div style="font-weight:1000; color:#18443D;">
+            🚗 Véhicule ${escapeHtml(id)}
+          </div>
 
-      ${
-        isOpen
-          ? `
-            <div style="margin-top:10px;">
-              <div class="subtle-text">
-                Immatriculation : ${escapeHtml(v.immat || "—")}
+          <div style="font-weight:1000;">
+            ${isOpen ? "▲" : "▼"}
+          </div>
+        </button>
+
+        ${
+          isOpen
+            ? `
+              <div style="margin-top:10px;">
+                <div class="subtle-text">
+                  Immatriculation : ${escapeHtml(v.immat || "—")}
+                </div>
               </div>
-            </div>
-          `
-          : ""
-      }
-    </div>
-  `;
-}).join("")}
-  `;
+            `
+            : ""
+        }
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
 }
 /*********************************
  * LOGIN / COMPTE
