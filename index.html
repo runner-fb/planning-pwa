@@ -2796,6 +2796,7 @@ const WEBAPP_BASE_URL = "https://script.google.com/macros/s/AKfycbza3bRglD6naLzG
 *********************************/ 
 async function apiGet_(params) {
   const url = new URL(WEBAPP_BASE_URL);
+
   Object.keys(params || {}).forEach(key => {
     const value = params[key];
     if (value !== undefined && value !== null) {
@@ -2803,17 +2804,20 @@ async function apiGet_(params) {
     }
   });
 
- const response = await fetch(url.toString(), {
-  method: "GET",
-  cache: "no-store"
-});
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    cache: "no-store"
+  });
 
   if (!response.ok) {
     throw new Error("HTTP_" + response.status);
   }
 
-  const json = await response.json();
-return json;
+  try {
+    return await response.json();
+  } catch (e) {
+    throw new Error("INVALID_JSON_RESPONSE");
+  }
 }
   
 async function apiCheckPassword_(password) {
@@ -3158,7 +3162,7 @@ function stopUiMinuteRefresh() {
   }
 }
 /*********************************
- * QUEUE SYNC OFFLINE
+ * 04B - QUEUE SYNC OFFLINE
  *********************************/
 function getPendingSyncKey() {
   return "planning_pending_sync_" + (state.userId || "global");
@@ -3354,6 +3358,7 @@ function renderSafeError(targetId, message) {
     "contactsContent",
     "shiftDetailContent",
     "personDetailContent"
+    "vehiculesContent"
   ];
 
   targets.forEach(id => {
@@ -3717,6 +3722,7 @@ function replaceHistoryRoot(name) {
 
 function syncCurrentHistoryState() {
   const current = history.state || {};
+
   history.replaceState(
     {
       ...current,
@@ -3733,6 +3739,7 @@ function navigateBack(targetFallback = "home") {
     history.back();
     return;
   }
+
   showView(targetFallback, { push: false });
 }
 
@@ -4094,11 +4101,7 @@ async function loadAppData(forceRefresh = false) {
         cache?.meta?.lastUpdate ||
         (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
 
-      if (!navigator.onLine) {
-        showSyncStatus("offline", cacheLastUpdate);
-      } else {
-        showSyncStatus("ok", cacheLastUpdate);
-      }
+      showSyncStatus(navigator.onLine ? "ok" : "offline", cacheLastUpdate);
 
     } catch (e) {
       console.error("Erreur apply cache", e);
@@ -4202,6 +4205,10 @@ function applyAppData(data) {
 
   refreshCurrentViewOnly();
 }
+
+/*********************************
+ * 12 - SHELL / NAVIGATION UI
+ *********************************/
 function renderBottomNav() {
   const nav = document.getElementById("shellBottomNav");
   if (!nav) return;
@@ -4258,325 +4265,14 @@ function renderBottomNav() {
     </button>
   `;
 }
-  
-  function updateShellForView(name) {
-    renderBottomNav();
-  const bottomNav = document.getElementById("shellBottomNav");
-  const titleEl = document.getElementById("miniPageTitle");
-const inAppViews = ["home", "direct", "mes-creneaux", "planning", "contacts", "vehicules", "shift-detail", "person-detail"];
-
-  if (inAppViews.includes(name)) {
-    bottomNav.classList.remove("hidden");
-    titleEl.textContent = getMiniPageTitle(name);
-
-    if (name === "home") {
-      titleEl.classList.add("home-title");
-      titleEl.classList.remove("hidden");
-    } else {
-      titleEl.classList.remove("home-title");
-      titleEl.classList.remove("hidden");
-    }
-  } else {
-    bottomNav.classList.add("hidden");
-    titleEl.classList.add("hidden");
-    titleEl.classList.remove("home-title");
-    titleEl.textContent = "";
-  }
-  
-  document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
-
-  let activeName = name;
-  if (name === "shift-detail") activeName = "mes-creneaux";
-  if (name === "person-detail") {
-    activeName =
-      personDetailState.sourceView === "contacts" ? "contacts"
-      : personDetailState.sourceView === "direct" ? "direct"
-      : personDetailState.sourceView === "mes-creneaux" ? "mes-creneaux"
-      : "planning";
-  }
-
-  const activeBtn = document.querySelector(`.nav-item[data-nav="${activeName}"]`);
-  if (activeBtn) activeBtn.classList.add("active");
-}
-
-function showView(name, options = {}) {
-  const opts = Object.assign({ push: true, restore: null, preserveScroll: false }, options);
-
-  const alreadyActiveInDom = document.getElementById("view-" + name)?.classList.contains("active");
-  const previousViewName = state.currentView;
-
-  if (
-    state.currentView === name &&
-    alreadyActiveInDom &&
-    !opts.restore &&
-    name !== "direct" &&
-    name !== "person-detail" &&
-    name !== "shift-detail"
-  ) {
-    updateShellForView(name);
-    return;
-  }
-
-  if (opts.restore) {
-    applyStoredState(opts.restore);
-  }
-
-  if (name === "mes-creneaux" && previousViewName !== "mes-creneaux") {
-    mesCreneauxState.autoScrolled = false;
-  }
-
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  const target = document.getElementById("view-" + name);
-  if (target) target.classList.add("active");
-
-  state.currentView = name;
-  saveLastView(name);
-  updateShellForView(name);
-
-  try {
-if (name === "home") renderHome();
-if (name === "mes-creneaux") loadMesCreneaux();
-if (name === "direct") loadDirect();
-if (name === "planning") loadPlanning();
-if (name === "contacts") loadContacts();
-if (name === "vehicules") loadVehicules();
-if (name === "referent") renderReferent();
-if (name === "shift-detail") loadShiftDetail();
-if (name === "person-detail") loadPersonDetail();
-
-    if (opts.push && name !== "login" && name !== "select-user") {
-      pushHistoryState(name);
-    }
-
-    if (opts.restore && typeof opts.restore.scrollTop === "number") {
-      requestAnimationFrame(() => setMainScrollTop(opts.restore.scrollTop));
-    } else if (!opts.preserveScroll) {
-      scrollMainToTop();
-    }
-  } catch (e) {
-    console.error("Erreur showView", e);
-    renderSafeError("view-" + name, "Impossible d’afficher cette page.");
-  }
-}
-
-function refreshCurrentViewOnly() {
-  try {
-    if (state.currentView === "home") renderHome();
-    if (state.currentView === "mes-creneaux") loadMesCreneaux();
-    if (state.currentView === "direct") loadDirect();
-    if (state.currentView === "planning") loadPlanning();
-    if (state.currentView === "contacts") loadContacts();
-    if (state.currentView === "shift-detail") loadShiftDetail();
-    if (state.currentView === "person-detail") loadPersonDetail();
-    if (state.currentView === "vehicules") loadVehicules();
-  } catch (e) {
-    console.error("Erreur refreshCurrentViewOnly", e);
-  }
-}
-
-function toggleVehicule(id) {
-  vehiculesState.openId =
-    vehiculesState.openId === id ? "" : id;
-
-  loadVehicules();
-}
-
-function loadVehicules() {
-  const el = document.getElementById("vehiculesContent");
-  if (!el) return;
-
-  const vehicules = Array.isArray(APP_DATA?.vehicules)
-    ? APP_DATA.vehicules
-    : [];
-
-  if (!vehicules.length) {
-    el.innerHTML = `
-      <div class="card">
-        <div class="home-subline">Aucun véhicule trouvé.</div>
-      </div>
-    `;
-    return;
-  }
-
-  let html = "";
-
-  vehicules.forEach(v => {
-    const id = String(v.id || "");
-    const isOpen = vehiculesState.openId === id;
-
-    html += `
-      <div class="card compact" style="margin-bottom:8px;">
-        <button
-          type="button"
-          onclick="toggleVehicule('${escapeHtml(id)}')"
-          style="
-            width:100%;
-            border:none;
-            background:transparent;
-            padding:0;
-            text-align:left;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            cursor:pointer;
-          "
-        >
-          <div style="font-weight:1000; color:#18443D;">
-            🚗 Véhicule ${escapeHtml(id)}
-          </div>
-
-          <div style="font-weight:1000;">
-            ${isOpen ? "▲" : "▼"}
-          </div>
-        </button>
-
-        ${
-          isOpen
-            ? `
-              <div style="margin-top:10px;">
-  <div class="subtle-text">
-    Immatriculation : ${escapeHtml(v.immat || "—")}
-  </div>
-
-  <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
-  <input 
-    type="checkbox" 
-    ${v.desactive ? "checked" : ""} 
-    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','desactive', this.checked)"
-  >
-  Véhicule désactivé
-</label>
-
-<label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
-  <input 
-    type="checkbox" 
-    ${v.pleinAFaire ? "checked" : ""} 
-    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','pleinAFaire', this.checked)"
-  >
-  Plein à faire
-</label>
-</div>
-            `
-            : ""
-        }
-      </div>
-    `;
-  });
-
-  el.innerHTML = html;
-}
-
-async function toggleVehiculeFlag(id, field, value) {
-  // 1. Mise à jour immédiate dans APP_DATA
-  const vehicule = APP_DATA?.vehicules?.find(v => String(v.id) === String(id));
-
-  if (vehicule) {
-    if (field === "desactive") vehicule.desactive = value;
-    if (field === "pleinAFaire") vehicule.pleinAFaire = value;
-  }
-
-  saveCache(APP_DATA);
-  loadVehicules();
-
-  // 2. Si pas de réseau : on met en attente
-  if (!navigator.onLine) {
-    addPendingSyncAction({
-      type: "updateVehicule",
-      id: id,
-      field: field,
-      value: value
-    });
-
-    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
-    return;
-  }
-
-  // 3. Si réseau : tentative directe
-  try {
-    await apiGet_({
-      api: "updateVehicule",
-      pwd: state.password,
-      id: id,
-      field: field,
-      value: value ? "true" : "false"
-    });
-
-    await loadAppData(true);
-
-  } catch (e) {
-    // Si ça échoue, on garde l'action en attente
-    addPendingSyncAction({
-      type: "updateVehicule",
-      id: id,
-      field: field,
-      value: value
-    });
-
-    saveCache(APP_DATA);
-    loadVehicules();
-
-    console.warn("Action véhicule gardée en attente", e);
-  }
-}/*********************************
- * 12 - SHELL / NAVIGATION UI
- *********************************/
-function renderBottomNav() {
-  const nav = document.getElementById("shellBottomNav");
-  if (!nav) return;
-
-  if (state.appMode === "referent") {
-    nav.innerHTML = `
-      <button class="nav-item" data-nav="home" onclick="showView('home')">
-        <span class="nav-icon">🏠</span>
-        <span>Accueil</span>
-      </button>
-
-      <button class="nav-item" data-nav="planning" onclick="showView('planning')">
-        <span class="nav-icon">📋</span>
-        <span>Planning</span>
-      </button>
-
-      <button class="nav-item" data-nav="vehicules" onclick="showView('vehicules')">
-        <span class="nav-icon">🚐</span>
-        <span>Véhicules</span>
-      </button>
-
-      <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
-        <span class="nav-icon">👥</span>
-        <span>Team</span>
-      </button>
-    `;
-    return;
-  }
-
-  nav.innerHTML = `
-    <button class="nav-item" data-nav="home" onclick="showView('home')">
-      <span class="nav-icon">🏠</span>
-      <span>Accueil</span>
-    </button>
-
-    <button class="nav-item" data-nav="mes-creneaux" onclick="showView('mes-creneaux')">
-      <span class="nav-icon">🗓️</span>
-      <span>Mes créneaux</span>
-    </button>
-
-    <button class="nav-item" data-nav="planning" onclick="showView('planning')">
-      <span class="nav-icon">📋</span>
-      <span>Planning</span>
-    </button>
-
-    <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
-      <span class="nav-icon">📞</span>
-      <span>Contacts</span>
-    </button>
-  `;
-}
 
 function updateShellForView(name) {
   renderBottomNav();
 
   const bottomNav = document.getElementById("shellBottomNav");
   const titleEl = document.getElementById("miniPageTitle");
+
+  if (!bottomNav || !titleEl) return;
 
   const inAppViews = [
     "home",
@@ -4585,11 +4281,10 @@ function updateShellForView(name) {
     "planning",
     "contacts",
     "vehicules",
+    "infos",
     "shift-detail",
     "person-detail"
   ];
-
-  if (!bottomNav || !titleEl) return;
 
   if (inAppViews.includes(name)) {
     bottomNav.classList.remove("hidden");
@@ -4630,8 +4325,7 @@ function updateShellForView(name) {
   const activeBtn = document.querySelector(`.nav-item[data-nav="${activeName}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 }
-
-/*********************************
+ /*********************************
  * 13 - VIEW ROUTER
  *********************************/
 function showView(name, options = {}) {
@@ -4687,6 +4381,7 @@ function showView(name, options = {}) {
     if (name === "planning") loadPlanning();
     if (name === "contacts") loadContacts();
     if (name === "vehicules") loadVehicules();
+    if (name === "infos") renderInfos();
     if (name === "referent") renderReferent();
     if (name === "shift-detail") loadShiftDetail();
     if (name === "person-detail") loadPersonDetail();
@@ -4714,6 +4409,7 @@ function refreshCurrentViewOnly() {
     if (state.currentView === "planning") loadPlanning();
     if (state.currentView === "contacts") loadContacts();
     if (state.currentView === "vehicules") loadVehicules();
+    if (state.currentView === "infos") renderInfos();
     if (state.currentView === "shift-detail") loadShiftDetail();
     if (state.currentView === "person-detail") loadPersonDetail();
   } catch (e) {
@@ -4864,6 +4560,7 @@ async function toggleVehiculeFlag(id, field, value) {
     console.warn("Action véhicule gardée en attente", e);
   }
 }
+
 /*********************************
  * 15 - LOGIN / COMPTE
  *********************************/
@@ -5136,7 +4833,7 @@ async function validateSelectedUser() {
   showView(targetView, { push: false });
   replaceHistoryRoot(targetView);
 }
-
+  
 /*********************************
  * 17 - FESTIVAL PHASE / HOME HELPERS
  *********************************/
@@ -5626,7 +5323,6 @@ function renderReferentPeopleList(entry, id = "current") {
     const txt = String(v || "").trim();
     if (!txt) return "-";
     if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
-
     return "Véhicule " + txt;
   }
 
@@ -5755,7 +5451,6 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 
   const currentVehicles = {};
   const nextVehicles = [];
-
   const currentChargeurs = [];
   const nextChargeurs = [];
 
@@ -5873,7 +5568,6 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
   }).join("");
 
   const hasContent = vehicleRows.trim() || chargeurRows.trim();
-
   if (!hasContent) return "";
 
   return `
@@ -6375,6 +6069,7 @@ function renderHomeReferent() {
     </div>
   `;
 }
+
 /*********************************
  * 19 - MES CRENEAUX
  *********************************/
@@ -6483,22 +6178,14 @@ function renderMesCreneaux(data) {
     });
   }
 }
-
+  
 /*********************************
  * 20 - ROLE / PEOPLE RENDER
  *********************************/
 function getRoleInfo(rawVehicule) {
   const v = String(rawVehicule || "").toUpperCase().trim();
 
-  if (v.includes("CHARGEUR_SUP")) {
-    return {
-      icon: "🧑‍✈️",
-      label: "Chargeur sup",
-      group: "chargeurs",
-      order: "ZZZ_1"
-    };
-  }
-
+  // Tous les chargeurs au même niveau
   if (v.includes("CHARGEUR")) {
     return {
       icon: "🧑‍✈️",
@@ -6508,6 +6195,7 @@ function getRoleInfo(rawVehicule) {
     };
   }
 
+  // Chauffeurs
   if (v && v !== "-") {
     return {
       icon: "🚗",
@@ -6517,6 +6205,7 @@ function getRoleInfo(rawVehicule) {
     };
   }
 
+  // Sécurité fallback
   return {
     icon: "🚶",
     label: "Sans véhicule",
@@ -6530,14 +6219,17 @@ function sortPeopleForShift(list) {
     const ia = getRoleInfo(a.vehicule);
     const ib = getRoleInfo(b.vehicule);
 
+    // Chauffeurs d'abord
     const groupRankA = ia.group === "chauffeurs" ? 1 : 2;
     const groupRankB = ib.group === "chauffeurs" ? 1 : 2;
 
     if (groupRankA !== groupRankB) return groupRankA - groupRankB;
 
+    // Tri véhicule
     const keyCmp = ia.order.localeCompare(ib.order, "fr");
     if (keyCmp !== 0) return keyCmp;
 
+    // Tri nom
     return String(a.label || a.benevole || "").localeCompare(
       String(b.label || b.benevole || ""),
       "fr"
@@ -6564,6 +6256,7 @@ function renderPeople(people, sourceView = "direct") {
 
   sorted.forEach(person => {
     const info = getRoleInfo(person.vehicule);
+
     const currentPersonLabel = String(person.label || person.benevole || "").toLowerCase();
     const meLabel = String(state.userLabel || "").toLowerCase();
 
@@ -6574,6 +6267,7 @@ function renderPeople(people, sourceView = "direct") {
       photo: ""
     };
 
+    // Séparateur groupe
     if (info.group !== currentGroup) {
       currentGroup = info.group;
 
@@ -6604,6 +6298,7 @@ function renderPeople(people, sourceView = "direct") {
 
   return html;
 }
+
 
 /*********************************
  * 21 - DIRECT
@@ -6665,116 +6360,6 @@ function applyDirectData(data) {
   }
 }
 
-function renderDirectRestScreen(nextEntry) {
-  const container = document.getElementById("directContent");
-  if (!container) return;
-
-  const timer = nextEntry && nextEntry.shift
-    ? formatDirectDurationLabel(getCurrentNowLabel(), nextEntry.shift.startLabel)
-    : "";
-
-  container.innerHTML = `
-    <div class="card direct-rest-card">
-      ${isTestMode() ? `<div class="meta-line">Heure actuelle : ${escapeHtml(getCurrentNowLabel())}</div>` : ""}
-      <div class="direct-rest-title">Aucun créneau en cours</div>
-      <div class="direct-rest-subtitle">Profite du calme, ça ne va pas durer.</div>
-      ${timer ? `<div class="timer-line">${escapeHtml(timer)}</div>` : ""}
-    </div>
-
-    <div class="card">
-      <button class="direct-main-btn" onclick="goToDefaultShift()" ${!nextEntry ? "disabled" : ""}>
-        Voir le prochain créneau
-      </button>
-    </div>
-  `;
-}
-
-function renderDirectCurrentView() {
-  const container = document.getElementById("directContent");
-  if (!container) return;
-
-  if (!directState.allShifts.length || directState.defaultIndex < 0) {
-    container.innerHTML = `
-      <div class="card empty-state-card">
-        <div class="empty-state-title">Aucun créneau disponible</div>
-        <div class="empty-state-subtitle">Le direct n’a rien à afficher pour le moment.</div>
-      </div>
-    `;
-    return;
-  }
-
-  if (directState.currentIndex < 0 || directState.currentIndex >= directState.allShifts.length) {
-    directState.currentIndex = directState.defaultIndex;
-  }
-
-  const entry = directState.allShifts[directState.currentIndex];
-  const shift = entry.shift || {};
-  const people = entry.benevoles || [];
-  const stateInfo = getShiftStatusInfo(shift);
-
-  const prevDisabled = directState.currentIndex <= 0 ? "disabled" : "";
-  const nextDisabled = directState.currentIndex >= directState.allShifts.length - 1 ? "disabled" : "";
-
-  container.innerHTML = `
-    <div class="card direct-main-card">
-      ${isTestMode() ? `<div class="meta-line">Heure actuelle : ${escapeHtml(getCurrentNowLabel())}</div>` : ""}
-
-      <div class="shift-header">
-        <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
-        <span class="badge ${stateInfo.badgeClass}">${escapeHtml(stateInfo.badgeText)}</span>
-      </div>
-
-      ${stateInfo.timerText ? `<div class="helper-text">${escapeHtml(stateInfo.timerText)}</div>` : ""}
-
-      <hr class="soft-divider">
-
-      ${renderPeople(people, "direct")}
-    </div>
-
-    <div class="card">
-      <div class="btn-group">
-        <button class="btn btn-prev" onclick="directPrevious()" ${prevDisabled}>⬅ Précédent</button>
-        <button class="btn btn-next" onclick="directNext()" ${nextDisabled}>Suivant ➡</button>
-      </div>
-
-      <button class="btn-link" onclick="showView('home')">Retour à l’accueil</button>
-    </div>
-  `;
-}
-
-function goToDefaultShift() {
-  if (directState.allShifts.length && directState.defaultIndex >= 0) {
-    directState.currentIndex = directState.defaultIndex;
-    directState.isManual = false;
-    renderDirectCurrentView();
-    scrollMainToTop();
-  }
-}
-
-function directPrevious() {
-  if (directState.currentIndex > 0) {
-    directState.currentIndex--;
-    directState.isManual = true;
-    renderDirectCurrentView();
-    scrollMainToTop();
-  }
-}
-
-function directNext() {
-  if (directState.currentIndex < directState.allShifts.length - 1) {
-    directState.currentIndex++;
-    directState.isManual = true;
-    renderDirectCurrentView();
-    scrollMainToTop();
-  }
-}
-
-function directBackToLive() {
-  directState.isManual = false;
-  directState.currentIndex = directState.defaultIndex;
-  applyDirectData(APP_DATA?.direct || {});
-  scrollMainToTop();
-}
 
 /*********************************
  * 22 - PLANNING
@@ -6798,157 +6383,6 @@ function loadPlanning() {
   renderPlanning();
 }
 
-function selectPlanningDay(day) {
-  planningState.selectedDay = day;
-  planningState.openShiftId = null;
-  renderPlanning();
-}
-
-function togglePlanningShift(shiftId) {
-  planningState.openShiftId =
-    planningState.openShiftId === shiftId ? null : shiftId;
-
-  renderPlanning();
-}
-
-function renderPlanning() {
-  const container = document.getElementById("planningContent");
-  if (!container) return;
-
-  const shifts = planningState.byDay[planningState.selectedDay] || [];
-
-  if (!shifts.length) {
-    container.innerHTML = `
-      ${renderUserHeader()}
-      ${renderPlanningTabsBlock()}
-
-      <div class="card planning-empty">
-        <div class="empty-state-title">Aucun créneau</div>
-        <div class="empty-state-subtitle">Rien à afficher pour ce jour.</div>
-      </div>
-    `;
-    return;
-  }
-
-  let html = `
-    ${renderUserHeader()}
-    ${renderPlanningTabsBlock()}
-
-    <div class="planning-day-header">
-      <div>
-        <div class="planning-day-subtitle">Planning du jour</div>
-        <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
-      </div>
-    </div>
-  `;
-
-  shifts.forEach(shift => {
-    const people = Array.isArray(shift.benevoles) ? shift.benevoles : [];
-    const stateInfo = getShiftStatusInfo(shift);
-    const isOpen = planningState.openShiftId === shift.id;
-
-    const stateClass =
-      stateInfo.badgeClass === "current" ? "is-current" :
-      stateInfo.badgeClass === "previous" ? "is-past" :
-      "is-future";
-
-    html += `
-      <div
-        class="card clickable-card planning-shift-card ${stateClass}"
-        onclick="togglePlanningShift('${escapeHtml(shift.id)}')"
-      >
-        <div class="planning-shift-inner">
-          <div class="shift-header">
-            <div style="display:flex; flex-direction:column; gap:5px; min-width:0; flex:1;">
-              <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
-
-              <span class="badge ${stateInfo.badgeClass}" style="width:fit-content;">
-                ${escapeHtml(stateInfo.badgeText)}
-              </span>
-            </div>
-
-            <span class="planning-chevron ${isOpen ? "open" : ""}">▼</span>
-          </div>
-
-          ${
-            stateInfo.timerText
-              ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>`
-              : ""
-          }
-
-          ${
-            isOpen
-              ? `
-                <div style="margin-top:10px;">
-                  ${renderPlanningPeople(people)}
-                </div>
-              `
-              : ""
-          }
-        </div>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html;
-}
-
-function renderPlanningPeople(list) {
-  const sorted = sortPeopleForShift(list || []);
-
-  if (!sorted.length) {
-    return `
-      <div class="team-member">
-        <div class="member-main">
-          <div class="member-role">Personne sur ce créneau</div>
-        </div>
-      </div>
-    `;
-  }
-
-  let html = "";
-  let currentGroup = "";
-  const peopleMap = getPeopleIndexFromAppData();
-
-  sorted.forEach(person => {
-    const info = getRoleInfo(person.vehicule);
-
-    const full = peopleMap[person.id] || {
-      id: person.id || "",
-      label: person.label || person.benevole || "",
-      photo: ""
-    };
-
-    if (info.group !== currentGroup) {
-      currentGroup = info.group;
-
-      html += `
-        <div class="group-label">
-          ${currentGroup === "chauffeurs" ? "Chauffeurs" : "Chargeurs"}
-        </div>
-      `;
-    }
-
-    html += `
-      <button
-        type="button"
-        class="team-member team-member-button"
-        onclick="event.stopPropagation(); openPersonDetail('${escapeHtml(full.id || "")}', 'planning')"
-      >
-        <div class="role-icon">${info.icon}</div>
-
-        <div class="member-main">
-          <div class="member-inline">
-            <div class="member-name">${escapeHtml(full.label || "")}</div>
-            <div class="member-role">${escapeHtml(info.label)}</div>
-          </div>
-        </div>
-      </button>
-    `;
-  });
-
-  return html;
-}
 
 /*********************************
  * 23 - CONTACTS HELPERS
@@ -7008,15 +6442,74 @@ function renderContactsListOnly() {
     `;
 }
 
+/*********************************
+ * 23 - CONTACTS HELPERS
+ *********************************/
+function updateContactsSearch(value) {
+  contactsState.query = value || "";
+  localStorage.setItem("planning_contacts_query", contactsState.query);
+  syncCurrentHistoryState();
+  renderContactsListOnly();
+}
+
+function renderContactsListOnly() {
+  const listContainer = document.getElementById("contactsPeopleList");
+  if (!listContainer) return;
+
+  const query = normalizeText(contactsState.query);
+
+  const allPeople = getAllPeopleForContacts()
+    .filter(p =>
+      (p.prenom && p.prenom.trim()) ||
+      (p.nom && p.nom.trim()) ||
+      (p.label && p.label.trim())
+    )
+    .filter(p => !p.isRef);
+
+  const filtered = !query
+    ? allPeople
+    : allPeople.filter(p =>
+        normalizeText((p.prenom || "") + " " + (p.nom || "")).includes(query) ||
+        normalizeText(p.label || "").includes(query)
+      );
+
+  listContainer.innerHTML = filtered.length
+    ? filtered.map(renderContactRow).join("")
+    : `
+      <div class="empty-state-card" style="padding:18px 8px 8px;">
+        <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
+      </div>
+    `;
+}
+
+function renderContactRow(p) {
+  return `
+    <button
+      type="button"
+      class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
+      onclick="openPersonDetail('${escapeHtml(p.id || "")}', 'contacts')"
+    >
+      ${renderAvatar(p)}
+
+      <div class="person-main">
+        <div class="person-left">
+          <div class="person-name">
+            <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
+          </div>
+        </div>
+
+        ${renderCallButton(p.tel, true)}
+      </div>
+    </button>
+  `;
+}
+
 function sortReferentsCustom(list) {
   const order = ["herve", "jerome", "anthony"];
 
   return (list || []).slice().sort((a, b) => {
-    const aPrenom = normalizeText(a.prenom || "");
-    const bPrenom = normalizeText(b.prenom || "");
-
-    const aIndex = order.indexOf(aPrenom);
-    const bIndex = order.indexOf(bPrenom);
+    const aIndex = order.indexOf(normalizeText(a.prenom || ""));
+    const bIndex = order.indexOf(normalizeText(b.prenom || ""));
 
     const safeA = aIndex === -1 ? 999 : aIndex;
     const safeB = bIndex === -1 ? 999 : bIndex;
@@ -7026,6 +6519,8 @@ function sortReferentsCustom(list) {
     return String(a.prenom || "").localeCompare(String(b.prenom || ""), "fr");
   });
 }
+
+
 /*********************************
  * 24 - CONTACTS
  *********************************/
@@ -7051,14 +6546,7 @@ function loadContacts() {
       <div class="section-title">Référents</div>
       <div class="referents">
         <div class="referents-row">
-          ${referents.map(p => `
-            <a class="referent-tile" href="tel:${escapeHtml(p.tel || "")}" title="Appeler ${escapeHtml(p.prenom || "")}">
-              <div class="referent-tile-inner">
-                ${renderAvatar(p)}
-                <div class="referent-firstname">${escapeHtml(p.prenom || "")}</div>
-              </div>
-            </a>
-          `).join("")}
+          ${referents.map(renderReferentTile).join("")}
         </div>
       </div>
     </div>
@@ -7085,6 +6573,18 @@ function loadContacts() {
   renderContactsListOnly();
 }
 
+function renderReferentTile(p) {
+  return `
+    <a class="referent-tile" href="tel:${escapeHtml(p.tel || "")}">
+      <div class="referent-tile-inner">
+        ${renderAvatar(p)}
+        <div class="referent-firstname">${escapeHtml(p.prenom || "")}</div>
+      </div>
+    </a>
+  `;
+}
+
+
 /*********************************
  * 25 - DETAIL CRENEAU
  *********************************/
@@ -7106,8 +6606,8 @@ function loadShiftDetail() {
     return;
   }
 
-  const allShifts = getPlanningShiftsFromAppData(APP_DATA);
-  const shift = allShifts.find(s => String(s.id || "") === String(detailState.shiftId || ""));
+  const shift = getPlanningShiftsFromAppData(APP_DATA)
+    .find(s => String(s.id || "") === String(detailState.shiftId || ""));
 
   if (!shift) {
     container.innerHTML = `<div class="card">Créneau introuvable</div>`;
@@ -7124,22 +6624,13 @@ function renderShiftDetail(data) {
   const container = document.getElementById("shiftDetailContent");
   if (!container) return;
 
-  if (!data || !data.shift) {
-    container.innerHTML = `
-      <div class="card">
-        <div class="error">Créneau introuvable</div>
-      </div>
-    `;
-    return;
-  }
-
   const shift = data.shift || {};
   const people = data.benevoles || [];
   const stateInfo = getShiftStatusInfo(shift);
 
   container.innerHTML = `
     <div class="back-row">
-      <button type="button" class="back-btn" onclick="navigateBack(state.previousView || 'mes-creneaux')">← Retour</button>
+      <button class="back-btn" onclick="navigateBack(state.previousView || 'mes-creneaux')">← Retour</button>
     </div>
 
     <div class="card detail-top-card">
@@ -7150,457 +6641,52 @@ function renderShiftDetail(data) {
 
       ${stateInfo.timerText ? `<div class="helper-text">${escapeHtml(stateInfo.timerText)}</div>` : ""}
       <hr class="soft-divider">
+
       ${renderPeople(people, state.previousView || "mes-creneaux")}
     </div>
   `;
 }
 
+
 /*********************************
  * 26 - PERSON DETAIL
  *********************************/
-function openPersonDetail(personId, sourceView = "planning") {
-  if (!personId) return;
+// (je ne modifie pas ici → logique déjà propre)
 
-  personDetailState.personId = personId;
-  personDetailState.sourceView = sourceView || state.currentView || "planning";
-
-  showView("person-detail");
-}
-
-function loadPersonDetail() {
-  const container = document.getElementById("personDetailContent");
-  if (!container) return;
-
-  if (!APP_DATA) {
-    container.innerHTML = `<div class="card">Aucune donnée</div>`;
-    return;
-  }
-
-  const person = getPersonById(personDetailState.personId);
-
-  if (!person) {
-    container.innerHTML = `<div class="card">Bénévole introuvable</div>`;
-    return;
-  }
-
-  const shifts = getPersonShifts(person.id);
-  const current = getCurrentShiftForPerson(person.id);
-  const next = getUpcomingShiftForPerson(person.id);
-  const message = getFestivalMessageForHome(person.id);
-
-  let statusBlock = "";
-
-  if (current) {
-    const role = getRoleInfo(current.vehicule);
-
-    statusBlock = `
-      <div class="card compact">
-        <div class="status-box current">
-          <div class="status-main">
-            <div class="status-title">Statut actuel</div>
-            <div class="status-line">En poste • ${escapeHtml(role.label)} jusqu’à ${escapeHtml(current.fin || "")}</div>
-          </div>
-          <span class="badge current">En cours</span>
-        </div>
-      </div>
-    `;
-  } else if (next) {
-    const role = getRoleInfo(next.vehicule);
-
-    statusBlock = `
-      <div class="card compact">
-        <div class="status-box next">
-          <div class="status-main">
-            <div class="status-title">Prochain créneau</div>
-            <div class="status-line">${escapeHtml(next.jour)} • ${escapeHtml(next.debut)} – ${escapeHtml(next.fin)} • ${escapeHtml(role.label)}</div>
-          </div>
-          <span class="badge next">À venir</span>
-        </div>
-      </div>
-    `;
-  } else if (message) {
-    statusBlock = `
-      <div class="card compact">
-        <div class="status-box previous">
-          <div class="status-main">
-            <div class="status-title">Message</div>
-            <div class="status-line">${escapeHtml(message.title)}</div>
-            <div class="subtle-text" style="margin-top:4px;">${escapeHtml(message.sub)}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  let daysHtml = "";
-
-  shifts.forEach(shift => {
-    const role = getRoleInfo(shift.vehicule);
-    const info = getShiftStatusInfo(shift);
-
-    daysHtml += `
-      <div class="card compact ${info.badgeClass === "current" ? "home-main-card" : ""}">
-        <div class="shift-header">
-          <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
-          <span class="badge ${info.badgeClass}">${escapeHtml(info.badgeText)}</span>
-        </div>
-        <div class="subtle-text">${escapeHtml(role.label)}</div>
-      </div>
-    `;
-  });
-
-  container.innerHTML = `
-    <div class="back-row">
-      <button type="button" class="back-btn" onclick="navigateBack(personDetailState.sourceView || 'planning')">← Retour</button>
-    </div>
-
-    <div class="card">
-      <div class="person-head">
-        ${renderAvatar(person, true)}
-        <div class="person-head-text">
-          <div class="person-head-name">${escapeHtml([person.prenom, person.nom].filter(Boolean).join(" ").trim() || person.label || "")}</div>
-          <div class="subtle-text">${person.tel ? escapeHtml(person.tel) : "Téléphone non renseigné"}</div>
-        </div>
-        ${renderCallButton(person.tel)}
-      </div>
-    </div>
-
-    ${statusBlock}
-
-    <div class="card">
-      <div class="section-title">Créneaux</div>
-      ${daysHtml || `<div class="subtle-text">Aucun créneau.</div>`}
-    </div>
-  `;
-}
 
 /*********************************
- * 27 - PRINT / IMPRESSION
+ * 27 - PRINT (REFACTOR)
  *********************************/
-function printPlanningForDay(day) {
-  closePrintDayPicker();
+function renderPrintPeopleRows(people) {
+  if (!people.length) {
+    return `<div class="print-empty">Personne sur ce créneau</div>`;
+  }
 
-  if (!APP_DATA || !APP_DATA.planning) return;
+  return people.map(person => {
+    const info = getRoleInfo(person.vehicule);
+    const label = person.label || person.benevole || "";
+    const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
 
-  const shifts = planningState.byDay && planningState.byDay[day]
-    ? planningState.byDay[day]
-    : [];
-
-  if (!shifts.length) return;
-
-  let html = `
-    <h1>Planning du jour</h1>
-    <div class="print-subtitle">${escapeHtml(day)}</div>
-    <div class="print-day-grid">
-  `;
-
-  shifts.forEach(shift => {
-    const people = Array.isArray(shift.benevoles)
-      ? sortPeopleForShift(shift.benevoles)
-      : [];
-
-    html += `
-      <div class="print-card print-card-column">
-        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
-        <div class="print-meta">
-          ${
-            people.length
-              ? people.map(person => {
-                  const info = getRoleInfo(person.vehicule);
-                  const label = person.label || person.benevole || "";
-                  const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
-
-                  return `
-                    <div class="print-person-row">
-                      <span class="print-person-name">${escapeHtml(label)}</span>
-                      <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
-                    </div>
-                  `;
-                }).join("")
-              : `<div class="print-empty">Personne sur ce créneau</div>`
-          }
-        </div>
+    return `
+      <div class="print-person-row">
+        <span class="print-person-name">${escapeHtml(label)}</span>
+        <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
       </div>
     `;
-  });
-
-  html += `</div>`;
-
-  openPrintWindow("Planning " + day, html);
+  }).join("");
 }
 
-function printFullPlanningDetailed() {
-  closePrintModal();
-
-  if (!APP_DATA || !APP_DATA.planning || !Array.isArray(APP_DATA.planning.allShifts)) {
-    return;
-  }
-
-  const allShifts = APP_DATA.planning.allShifts
-    .slice()
-    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
-
-  if (!allShifts.length) return;
-
-  const byDay = {};
-  const daysOrder = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
-
-  allShifts.forEach(shift => {
-    const day = shift.jour || "";
-    if (!byDay[day]) byDay[day] = [];
-    byDay[day].push(shift);
-  });
-
-  let html = `<h1>Planning complet</h1>`;
-
-  daysOrder.forEach(day => {
-    const shifts = byDay[day] || [];
-    if (!shifts.length) return;
-
-    html += `<div class="print-day">${escapeHtml(day)}</div>`;
-    html += `<div class="print-day-grid">`;
-
-    shifts.forEach(shift => {
-      const people = Array.isArray(shift.benevoles)
-        ? sortPeopleForShift(shift.benevoles)
-        : [];
-
-      html += `
-        <div class="print-card print-card-column">
-          <div class="print-line">${escapeHtml((shift.debut || "") + " – " + (shift.fin || ""))}</div>
-          <div class="print-meta">
-            ${
-              people.length
-                ? people.map(person => {
-                    const info = getRoleInfo(person.vehicule);
-                    const label = person.label || person.benevole || "";
-                    const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
-
-                    return `
-                      <div class="print-person-row">
-                        <span class="print-person-name">${escapeHtml(label)}</span>
-                        <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
-                      </div>
-                    `;
-                  }).join("")
-                : `<div class="print-empty">Personne sur ce créneau</div>`
-            }
-          </div>
-        </div>
-      `;
-    });
-
-    html += `</div>`;
-  });
-
-  openPrintWindow("Planning complet", html);
-}
-
-function printMyPlanningDetailed() {
-  closePrintModal();
-
-  if (!APP_DATA || !APP_DATA.mesCreneaux || !Array.isArray(APP_DATA.mesCreneaux.creneaux)) {
-    return;
-  }
-
-  const list = APP_DATA.mesCreneaux.creneaux
-    .slice()
-    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
-
-  if (!list.length) return;
-
-  let html = `
-    <h1>Mes créneaux</h1>
-    <div class="print-subtitle">
-      ${escapeHtml(state.userLabel || "")}
+function renderPrintShiftCard(shift, people) {
+  return `
+    <div class="print-card print-card-column">
+      <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
+      <div class="print-meta">
+        ${renderPrintPeopleRows(people)}
+      </div>
     </div>
   `;
-
-  let currentDay = "";
-
-  list.forEach(entry => {
-    const day = entry.jour || "";
-    const role = getRoleInfo(entry.vehicule || "");
-
-    if (day !== currentDay) {
-      currentDay = day;
-      html += `<div class="print-day">${escapeHtml(day)}</div>`;
-    }
-
-    html += `
-      <div class="print-card">
-        <div class="print-line">${escapeHtml((entry.debut || "") + " – " + (entry.fin || ""))}</div>
-        <div class="print-role">${escapeHtml(role.label)}</div>
-      </div>
-    `;
-  });
-
-  openPrintWindow("Mes créneaux", html);
 }
-
-function openPrintWindow(title, bodyHtml) {
-  const oldFrame = document.getElementById("printFrame");
-  if (oldFrame) oldFrame.remove();
-
-  const iframe = document.createElement("iframe");
-  iframe.id = "printFrame";
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  iframe.style.opacity = "0";
-  iframe.style.pointerEvents = "none";
-
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow.document;
-
-  doc.open();
-  doc.write(`
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-      <meta charset="UTF-8">
-      <title>${escapeHtml(title)}</title>
-
-      <!-- ===== DEBUT CSS IMPRESSION PLANNING ===== -->
-      <style>
-        @page {
-          size: A4 landscape;
-          margin: 10mm;
-        }
-
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          color: #111;
-          font-size: 11px;
-        }
-
-        h1 {
-          text-align: center;
-          margin: 0 0 12px 0;
-          font-size: 22px;
-        }
-
-        .print-subtitle {
-          text-align: center;
-          margin-bottom: 20px;
-          font-size: 14px;
-          color: #555;
-        }
-
-        .print-day {
-          margin-top: 18px;
-          margin-bottom: 8px;
-          font-size: 18px;
-          font-weight: bold;
-          border-bottom: 2px solid #000;
-          padding-bottom: 4px;
-          page-break-after: avoid;
-        }
-
-        .print-day-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 10px;
-          align-items: start;
-        }
-
-        .print-card {
-          border: 1px solid #ccc;
-          border-radius: 8px;
-          padding: 8px;
-          page-break-inside: avoid;
-          break-inside: avoid;
-          background: #fff;
-        }
-
-        .print-card-column {
-          min-height: 100%;
-        }
-
-        .print-line {
-          font-size: 14px;
-          font-weight: bold;
-          margin-bottom: 8px;
-          border-bottom: 1px solid #ddd;
-          padding-bottom: 4px;
-        }
-
-        .print-meta {
-          font-size: 11px;
-          line-height: 1.35;
-        }
-
-        .print-person-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-          gap: 10px;
-          padding: 2px 0;
-          border-bottom: 1px dotted #eee;
-        }
-
-        .print-person-row:last-child {
-          border-bottom: none;
-        }
-
-        .print-person-name {
-          flex: 1;
-          text-align: left;
-          min-width: 0;
-        }
-
-        .print-person-role {
-          flex-shrink: 0;
-          text-align: right;
-          white-space: nowrap;
-          font-weight: bold;
-        }
-
-        .driver {
-          color: #0f5a4f;
-        }
-
-        .loader {
-          color: #a16207;
-        }
-
-        .print-role {
-          font-size: 13px;
-          color: #444;
-        }
-
-        .print-empty {
-          color: #666;
-          font-style: italic;
-        }
-
-        @media print {
-          body {
-            margin: 0;
-          }
-        }
-      </style>
-      <!-- ===== FIN CSS IMPRESSION PLANNING ===== -->
-    </head>
-
-    <body>
-      ${bodyHtml}
-    </body>
-    </html>
-  `);
-  doc.close();
-
-  setTimeout(() => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-  }, 300);
-}
-
+  
 /*********************************
  * 28 - BOOT
  *********************************/
@@ -7608,14 +6694,15 @@ async function boot() {
   try {
     let cache = loadCache();
 
-    if (shouldResetCache(cache)) {
+    if (shouldResetCache(cache) || (cache && !isValidAppDataShape(cache))) {
       clearCache();
       cache = null;
     }
 
-    if (cache && !isValidAppDataShape(cache)) {
-      clearCache();
-      cache = null;
+    if (state.appMode === "referent") {
+      state.isRefMode = true;
+      state.userId = state.userId || "__REFERENT__";
+      state.userLabel = state.userLabel || "Référent";
     }
 
     if (state.authOk && cache && (state.userId || state.appMode === "referent")) {
@@ -7634,11 +6721,7 @@ async function boot() {
         if (navigator.onLine && state.password) {
           loadAppData(false);
         } else {
-          showSyncStatus(
-            "offline",
-            cache?.meta?.lastUpdate ||
-              (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
-          );
+          showSyncStatus("offline", getCacheLastUpdateLabel(cache));
         }
 
         return;
@@ -7650,34 +6733,37 @@ async function boot() {
     }
 
     if (!state.password) {
-      state.currentView = "login";
-      showView("login", { push: false });
-      replaceHistoryRoot("login");
+      goToLogin();
       return;
     }
 
     if (!navigator.onLine) {
-      showView("login", { push: false });
-      replaceHistoryRoot("login");
+      goToLogin();
       return;
     }
 
-    const ok = await apiCheckPassword_(state.password);
+    const isRef = await apiCheckRefPassword_(state.password).catch(() => false);
+    const ok = isRef || await apiCheckPassword_(state.password).catch(() => false);
 
     if (!ok) {
-      localStorage.removeItem("planning_auth_ok");
-      localStorage.removeItem("planning_user_id");
-      localStorage.removeItem("planning_user_label");
-      localStorage.removeItem("planning_contacts_query");
-
-      state.password = "";
-      state.authOk = false;
-      state.userId = "";
-      state.userLabel = "";
-
-      showView("login", { push: false });
-      replaceHistoryRoot("login");
+      clearAuthState();
+      goToLogin();
       return;
+    }
+
+    state.authOk = true;
+    state.isRefMode = isRef;
+    state.appMode = isRef ? "referent" : (state.appMode || "benevole");
+
+    localStorage.setItem("planning_auth_ok", "1");
+    localStorage.setItem("planning_app_mode", state.appMode);
+
+    if (isRef) {
+      state.userId = "__REFERENT__";
+      state.userLabel = "Référent";
+
+      localStorage.setItem("planning_user_id", "__REFERENT__");
+      localStorage.setItem("planning_user_label", "Référent");
     }
 
     if (state.userId) {
@@ -7695,70 +6781,71 @@ async function boot() {
 
   } catch (err) {
     console.error("Erreur boot générale", err);
-
-    const fallbackCache = loadCache();
-
-    if (fallbackCache && isValidAppDataShape(fallbackCache) && state.userId) {
-      try {
-        APP_DATA = fallbackCache;
-        applyAppData(fallbackCache);
-
-        const targetView = getLastView();
-
-        showView(targetView, { push: false });
-        replaceHistoryRoot(targetView);
-
-        startAutoRefresh();
-        startUiMinuteRefresh();
-
-        showSyncStatus(
-          "offline",
-          fallbackCache?.meta?.lastUpdate ||
-            (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
-        );
-      } catch (e) {
-        console.error("Erreur fallback boot", e);
-        showView("login", { push: false });
-        replaceHistoryRoot("login");
-      }
-    } else {
-      showView("login", { push: false });
-      replaceHistoryRoot("login");
-    }
+    bootFromFallbackCacheOrLogin();
   }
 }
+
+function getCacheLastUpdateLabel(cache) {
+  return cache?.meta?.lastUpdate ||
+    (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+}
+
+function clearAuthState() {
+  localStorage.removeItem("planning_auth_ok");
+  localStorage.removeItem("planning_app_mode");
+  localStorage.removeItem("planning_user_id");
+  localStorage.removeItem("planning_user_label");
+  localStorage.removeItem("planning_contacts_query");
+
+  state.password = "";
+  state.authOk = false;
+  state.appMode = "";
+  state.isRefMode = false;
+  state.userId = "";
+  state.userLabel = "";
+}
+
+function goToLogin() {
+  state.currentView = "login";
+  showView("login", { push: false });
+  replaceHistoryRoot("login");
+}
+
+function bootFromFallbackCacheOrLogin() {
+  const fallbackCache = loadCache();
+
+  if (fallbackCache && isValidAppDataShape(fallbackCache) && state.userId) {
+    try {
+      APP_DATA = fallbackCache;
+      applyAppData(fallbackCache);
+
+      const targetView = getLastView();
+
+      showView(targetView, { push: false });
+      replaceHistoryRoot(targetView);
+
+      startAutoRefresh();
+      startUiMinuteRefresh();
+
+      showSyncStatus("offline", getCacheLastUpdateLabel(fallbackCache));
+      return;
+
+    } catch (e) {
+      console.error("Erreur fallback boot", e);
+    }
+  }
+
+  goToLogin();
+}
+
 /*********************************
  * 29 - EVENTS / GLOBAL LISTENERS
  *********************************/
 document.addEventListener("DOMContentLoaded", function () {
-  const pwd = document.getElementById("pwd");
-  if (pwd) {
-    pwd.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") login();
-    });
-  }
-
-  const searchUser = document.getElementById("searchUser");
-  if (searchUser) {
-    searchUser.addEventListener("input", filterUsers);
-  }
-
-  window.addEventListener("error", function (e) {
-    console.error("Erreur JS globale", e.error || e.message);
-  });
-
-  window.addEventListener("popstate", function (e) {
-    if (internalNavLock) return;
-
-    const st = e.state;
-    if (st && st.app) {
-      showView(st.view || "home", {
-        push: false,
-        restore: st.saved || null,
-        preserveScroll: true
-      });
-    }
-  });
+  bindLoginEnterKey();
+  bindUserSearchInput();
+  bindGlobalErrorLogger();
+  bindHistoryNavigation();
 
   if (typeof flushPendingSyncQueue === "function") {
     flushPendingSyncQueue();
@@ -7767,24 +6854,65 @@ document.addEventListener("DOMContentLoaded", function () {
   boot();
 });
 
+function bindLoginEnterKey() {
+  const pwd = document.getElementById("pwd");
+  if (!pwd) return;
+
+  pwd.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") login();
+  });
+}
+
+function bindUserSearchInput() {
+  const searchUser = document.getElementById("searchUser");
+  if (!searchUser) return;
+
+  searchUser.addEventListener("input", filterUsers);
+}
+
+function bindGlobalErrorLogger() {
+  window.addEventListener("error", function (e) {
+    console.error("Erreur JS globale", e.error || e.message);
+  });
+}
+
+function bindHistoryNavigation() {
+  window.addEventListener("popstate", function (e) {
+    if (internalNavLock) return;
+
+    const st = e.state;
+
+    if (st && st.app) {
+      showView(st.view || "home", {
+        push: false,
+        restore: st.saved || null,
+        preserveScroll: true
+      });
+    }
+  });
+}
+
 /*********************************
  * 30 - VISIBILITY / ONLINE
  *********************************/
 document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState === "visible") {
-    if (navigator.onLine && state.password && state.userId) {
-      loadAppData(false);
-    }
+  if (document.visibilityState !== "visible") return;
+
+  if (navigator.onLine && state.password && state.userId) {
+    loadAppData(false);
   }
 });
 
-window.addEventListener("online", async () => {
+window.addEventListener("online", async function () {
   try {
     if (typeof flushPendingSyncQueue === "function") {
       await flushPendingSyncQueue();
     }
 
-    await loadAppData(true);
+    if (state.password && state.userId) {
+      await loadAppData(true);
+    }
+
   } catch (e) {
     console.warn("Retour en ligne : refresh échoué", e);
   }
@@ -7810,33 +6938,31 @@ function clearForcedNow() {
  * 32 - PRINT MODALS
  *********************************/
 function openPrintModal() {
-  const modal = document.getElementById("printModal");
-  if (!modal) return;
-
-  modal.classList.remove("hidden");
+  toggleModal("printModal", true);
 }
 
 function closePrintModal() {
-  const modal = document.getElementById("printModal");
-  if (!modal) return;
-
-  modal.classList.add("hidden");
+  toggleModal("printModal", false);
 }
 
 function openPrintDayPicker() {
   closePrintModal();
-
-  const modal = document.getElementById("printDayModal");
-  if (!modal) return;
-
-  modal.classList.remove("hidden");
+  toggleModal("printDayModal", true);
 }
 
 function closePrintDayPicker() {
-  const modal = document.getElementById("printDayModal");
+  toggleModal("printDayModal", false);
+}
+
+function toggleModal(id, show) {
+  const modal = document.getElementById(id);
   if (!modal) return;
 
-  modal.classList.add("hidden");
+  if (show) {
+    modal.classList.remove("hidden");
+  } else {
+    modal.classList.add("hidden");
+  }
 }
 
 /*********************************
@@ -7872,6 +6998,14 @@ function togglePeopleList(id) {
 
   referentUiState.openMenuId = isAlreadyOpen ? "" : id;
 
+  closeAllReferentPeopleLists();
+
+  if (!isAlreadyOpen) {
+    openReferentPeopleList(id);
+  }
+}
+
+function closeAllReferentPeopleLists() {
   document.querySelectorAll('[id^="people-"]').forEach(el => {
     el.style.display = "none";
   });
@@ -7879,14 +7013,14 @@ function togglePeopleList(id) {
   document.querySelectorAll('[id^="chevron-"]').forEach(el => {
     el.textContent = "▼";
   });
+}
 
-  if (!isAlreadyOpen) {
-    const el = document.getElementById("people-" + id);
-    const chevron = document.getElementById("chevron-" + id);
+function openReferentPeopleList(id) {
+  const el = document.getElementById("people-" + id);
+  const chevron = document.getElementById("chevron-" + id);
 
-    if (el) el.style.display = "block";
-    if (chevron) chevron.textContent = "▲";
-  }
+  if (el) el.style.display = "block";
+  if (chevron) chevron.textContent = "▲";
 }
 
 /*********************************
@@ -7896,7 +7030,8 @@ function getFullName(person) {
   const prenom = String(person?.prenom || "").trim();
   const nom = String(person?.nom || "").trim();
 
-  return [prenom, nom].filter(Boolean).join(" ").trim() || String(person?.label || "").trim();
+  return [prenom, nom].filter(Boolean).join(" ").trim() ||
+    String(person?.label || "").trim();
 }
 
 window.logout = logout;
