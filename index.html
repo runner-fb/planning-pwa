@@ -2952,7 +2952,7 @@ let syncHideTimer = null;
 let internalNavLock = false;
 
 /*********************************
- * CACHE HELPERS
+ * 04 - CACHE HELPERS
  *********************************/
 function getCacheKey() {
   if (!state.userId) return null;
@@ -3219,7 +3219,7 @@ async function flushPendingSyncQueue() {
   }
 }
 /*********************************
- * OUTILS
+ * 05 - OUTILS / HELPERS
  *********************************/
 function escapeHtml(value) {
   return String(value ?? "")
@@ -3670,7 +3670,7 @@ function getDefaultPlanningDay() {
 }
   
 /*********************************
- * NAVIGATION STATE / HISTORY
+ * 06 - NAVIGATION STATE / HISTORY
  *********************************/
 function getViewState(name) {
   return {
@@ -3736,7 +3736,7 @@ function navigateBack(targetFallback = "home") {
 }
 
 /*********************************
- * APP DATA HELPERS
+ * 07 - PEOPLE / USERS HELPERS
  *********************************/
 function getPeopleIndexFromAppData() {
   const map = {};
@@ -3748,6 +3748,7 @@ function getPeopleIndexFromAppData() {
 
   sources.forEach(p => {
     if (!p || !p.id) return;
+
     map[p.id] = {
       id: p.id,
       label: p.label || [p.prenom, p.nom].filter(Boolean).join(" ").trim(),
@@ -3764,9 +3765,11 @@ function getPeopleIndexFromAppData() {
 
 function getAllPeopleForContacts() {
   const map = getPeopleIndexFromAppData();
+
   return Object.values(map).sort((a, b) => {
     const p = String(a.prenom || "").localeCompare(String(b.prenom || ""), "fr");
     if (p !== 0) return p;
+
     return String(a.nom || "").localeCompare(String(b.nom || ""), "fr");
   });
 }
@@ -3776,12 +3779,44 @@ function getPersonById(personId) {
   return map[personId] || null;
 }
 
+function getSelectedUserFirstName() {
+  const full = String(state.userLabel || "").trim();
+  if (!full) return "Aucun";
+
+  return full.split(/\s+/)[0] || full;
+}
+
+function getSelectedUserDisplayName() {
+  const selectedId = localStorage.getItem("planning_user_id");
+  const people = Array.isArray(APP_DATA?.people) ? APP_DATA.people : [];
+
+  const user = people.find(p => String(p.id) === String(selectedId));
+  if (!user) return getSelectedUserFirstName() || "";
+
+  return [user.prenom, user.nom].filter(Boolean).join(" ");
+}
+
+function getSelectedUserFullName() {
+  try {
+    const firstName = getSelectedUserFirstName();
+    const user = window.selectedUser || window.currentUser || {};
+
+    return [firstName, user.nom].filter(Boolean).join(" ");
+  } catch (e) {
+    return getSelectedUserFirstName();
+  }
+}
+
+/*********************************
+ * 08 - SHIFT / TIME HELPERS
+ *********************************/
 function getPersonShifts(personId) {
   const shifts = getPlanningShiftsFromAppData(APP_DATA);
   const result = [];
 
   shifts.forEach(shift => {
     const people = Array.isArray(shift.benevoles) ? shift.benevoles : [];
+
     people.forEach(person => {
       if (String(person.id || "") !== String(personId || "")) return;
 
@@ -3879,30 +3914,9 @@ function personHasMondayShift(personId) {
   return getPersonShifts(personId).some(s => String(s.jour || "") === "Lundi");
 }
 
-  function getSelectedUserFirstName() {
-  const full = String(state.userLabel || "").trim();
-  if (!full) return "Aucun";
-  return full.split(/\s+/)[0] || full;
-}
-  function getSelectedUserDisplayName() {
-  const selectedId = localStorage.getItem("planning_user_id");
-  const people = Array.isArray(APP_DATA?.people) ? APP_DATA.people : [];
-
-  const user = people.find(p => String(p.id) === String(selectedId));
-  if (!user) return getSelectedUserFirstName() || "";
-
-  return [user.prenom, user.nom].filter(Boolean).join(" ");
-}
-function getSelectedUserFullName() {
-  try {
-    const firstName = getSelectedUserFirstName();
-    const user = window.selectedUser || window.currentUser || {};
-
-    return [firstName, user.nom].filter(Boolean).join(" ");
-  } catch (e) {
-    return getSelectedUserFirstName();
-  }
-}
+/*********************************
+ * 09 - FESTIVAL STATE / LIVE HELPERS
+ *********************************/
 function getCurrentFestivalEntry() {
   const all = Array.isArray(APP_DATA?.direct?.allShifts) ? APP_DATA.direct.allShifts : [];
   if (!all.length) return null;
@@ -3923,6 +3937,9 @@ function isUserInFestivalEntry(entry) {
   );
 }
 
+/*********************************
+ * 10 - HOME UI HELPERS
+ *********************************/
 function toggleHomeConcertsMore() {
   homeConcertsState.openMore = !homeConcertsState.openMore;
   renderHome();
@@ -3952,13 +3969,13 @@ function renderHomeHeroUserPill() {
         "
       >
         <div style="min-width:0; line-height:1.05;">
-          <div style="font-size:0.56rem; font-weight:900; color:#EDE7DA; display:none;"></div>
           <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
             Hello John, connecté en tant que
           </div>
+
           <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-${escapeHtml(getSelectedUserDisplayName())}
-</div>
+            ${escapeHtml(getSelectedUserDisplayName())}
+          </div>
         </div>
 
         <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
@@ -4038,10 +4055,12 @@ function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
           <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
             ${escapeHtml(concert.artiste || "")}
           </div>
+
           <div class="subtle-text">
             ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
           </div>
         </div>
+
         <span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span>
       </div>
     </div>
@@ -4049,7 +4068,7 @@ function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
 }
 
 /*********************************
- * OFFLINE-FIRST BOOTSTRAP
+ * 11 - OFFLINE-FIRST BOOTSTRAP
  *********************************/
 async function loadAppData(forceRefresh = false) {
   let cache = loadCache();
@@ -4065,26 +4084,28 @@ async function loadAppData(forceRefresh = false) {
     cache = null;
   }
 
-if (cache) {
-  try {
-    APP_DATA = cache;
-    applyAppData(cache);
+  if (cache) {
+    try {
+      APP_DATA = cache;
+      applyAppData(cache);
 
-    const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+      const cacheLastUpdate =
+        cache?.meta?.lastUpdate ||
+        (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
 
-    if (!navigator.onLine) {
-      showSyncStatus("offline", cacheLastUpdate);
-    } else {
-      showSyncStatus("ok", cacheLastUpdate);
+      if (!navigator.onLine) {
+        showSyncStatus("offline", cacheLastUpdate);
+      } else {
+        showSyncStatus("ok", cacheLastUpdate);
+      }
+
+    } catch (e) {
+      console.error("Erreur apply cache", e);
+      clearCache();
+      cache = null;
+      APP_DATA = null;
     }
-
-  } catch (e) {
-    console.error("Erreur apply cache", e);
-    clearCache();
-    cache = null;
-    APP_DATA = null;
   }
-}
 
   let shouldRefresh = forceRefresh;
 
@@ -4101,10 +4122,10 @@ if (cache) {
 
   try {
     const bundleUserId = state.appMode === "referent"
-  ? "__REFERENT__"
-  : state.userId;
+      ? "__REFERENT__"
+      : state.userId;
 
-const data = await apiGetBundle_(state.password, bundleUserId);
+    const data = await apiGetBundle_(state.password, bundleUserId);
 
     if (!isValidAppDataShape(data)) {
       throw new Error("Structure bundle invalide");
@@ -4122,8 +4143,13 @@ const data = await apiGetBundle_(state.password, bundleUserId);
       try {
         APP_DATA = cache;
         applyAppData(cache);
-const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
-showSyncStatus("offline", cacheLastUpdate);
+
+        const cacheLastUpdate =
+          cache?.meta?.lastUpdate ||
+          (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+
+        showSyncStatus("offline", cacheLastUpdate);
+
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
@@ -4145,15 +4171,22 @@ function applyAppData(data) {
 
   APP_DATA = data;
 
-state.userId = data.user?.id || state.userId || "";
-state.userLabel = data.user?.label || state.userLabel || "";
-state.isRef = data.user?.isRef === true;
-  
+  state.userId = data.user?.id || state.userId || "";
+  state.userLabel = data.user?.label || state.userLabel || "";
+  state.isRef = data.user?.isRef === true;
+
   planningState.allShifts = getPlanningShiftsFromAppData(data);
   planningState.byDay = buildPlanningByDay(planningState.allShifts);
 
-  directState.allShifts = Array.isArray(data.direct.allShifts) ? data.direct.allShifts : [];
-  directState.defaultIndex = typeof data.direct.defaultIndex === "number" ? data.direct.defaultIndex : -1;
+  directState.allShifts = Array.isArray(data.direct.allShifts)
+    ? data.direct.allShifts
+    : [];
+
+  directState.defaultIndex =
+    typeof data.direct.defaultIndex === "number"
+      ? data.direct.defaultIndex
+      : -1;
+
   directState.liveState = data.direct.liveState || "next";
 
   if (!directState.isManual) {
@@ -4168,7 +4201,6 @@ state.isRef = data.user?.isRef === true;
 
   refreshCurrentViewOnly();
 }
-
 /*********************************
  * SHELL
  *********************************/
@@ -4492,9 +4524,355 @@ async function toggleVehiculeFlag(id, field, value) {
 
     console.warn("Action véhicule gardée en attente", e);
   }
+}/*********************************
+ * 12 - SHELL / NAVIGATION UI
+ *********************************/
+function renderBottomNav() {
+  const nav = document.getElementById("shellBottomNav");
+  if (!nav) return;
+
+  if (state.appMode === "referent") {
+    nav.innerHTML = `
+      <button class="nav-item" data-nav="home" onclick="showView('home')">
+        <span class="nav-icon">🏠</span>
+        <span>Accueil</span>
+      </button>
+
+      <button class="nav-item" data-nav="planning" onclick="showView('planning')">
+        <span class="nav-icon">📋</span>
+        <span>Planning</span>
+      </button>
+
+      <button class="nav-item" data-nav="vehicules" onclick="showView('vehicules')">
+        <span class="nav-icon">🚐</span>
+        <span>Véhicules</span>
+      </button>
+
+      <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
+        <span class="nav-icon">👥</span>
+        <span>Team</span>
+      </button>
+    `;
+    return;
+  }
+
+  nav.innerHTML = `
+    <button class="nav-item" data-nav="home" onclick="showView('home')">
+      <span class="nav-icon">🏠</span>
+      <span>Accueil</span>
+    </button>
+
+    <button class="nav-item" data-nav="mes-creneaux" onclick="showView('mes-creneaux')">
+      <span class="nav-icon">🗓️</span>
+      <span>Mes créneaux</span>
+    </button>
+
+    <button class="nav-item" data-nav="planning" onclick="showView('planning')">
+      <span class="nav-icon">📋</span>
+      <span>Planning</span>
+    </button>
+
+    <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
+      <span class="nav-icon">📞</span>
+      <span>Contacts</span>
+    </button>
+  `;
+}
+
+function updateShellForView(name) {
+  renderBottomNav();
+
+  const bottomNav = document.getElementById("shellBottomNav");
+  const titleEl = document.getElementById("miniPageTitle");
+
+  const inAppViews = [
+    "home",
+    "direct",
+    "mes-creneaux",
+    "planning",
+    "contacts",
+    "vehicules",
+    "shift-detail",
+    "person-detail"
+  ];
+
+  if (!bottomNav || !titleEl) return;
+
+  if (inAppViews.includes(name)) {
+    bottomNav.classList.remove("hidden");
+    titleEl.textContent = getMiniPageTitle(name);
+
+    if (name === "home") {
+      titleEl.classList.add("home-title");
+    } else {
+      titleEl.classList.remove("home-title");
+    }
+
+    titleEl.classList.remove("hidden");
+  } else {
+    bottomNav.classList.add("hidden");
+    titleEl.classList.add("hidden");
+    titleEl.classList.remove("home-title");
+    titleEl.textContent = "";
+  }
+
+  document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  let activeName = name;
+
+  if (name === "shift-detail") {
+    activeName = "mes-creneaux";
+  }
+
+  if (name === "person-detail") {
+    activeName =
+      personDetailState.sourceView === "contacts" ? "contacts" :
+      personDetailState.sourceView === "direct" ? "direct" :
+      personDetailState.sourceView === "mes-creneaux" ? "mes-creneaux" :
+      "planning";
+  }
+
+  const activeBtn = document.querySelector(`.nav-item[data-nav="${activeName}"]`);
+  if (activeBtn) activeBtn.classList.add("active");
+}
+
+/*********************************
+ * 13 - VIEW ROUTER
+ *********************************/
+function showView(name, options = {}) {
+  const opts = Object.assign(
+    {
+      push: true,
+      restore: null,
+      preserveScroll: false
+    },
+    options
+  );
+
+  const alreadyActiveInDom =
+    document.getElementById("view-" + name)?.classList.contains("active");
+
+  const previousViewName = state.currentView;
+
+  if (
+    state.currentView === name &&
+    alreadyActiveInDom &&
+    !opts.restore &&
+    name !== "direct" &&
+    name !== "person-detail" &&
+    name !== "shift-detail"
+  ) {
+    updateShellForView(name);
+    return;
+  }
+
+  if (opts.restore) {
+    applyStoredState(opts.restore);
+  }
+
+  if (name === "mes-creneaux" && previousViewName !== "mes-creneaux") {
+    mesCreneauxState.autoScrolled = false;
+  }
+
+  document.querySelectorAll(".page").forEach(page => {
+    page.classList.remove("active");
+  });
+
+  const target = document.getElementById("view-" + name);
+  if (target) target.classList.add("active");
+
+  state.currentView = name;
+  saveLastView(name);
+  updateShellForView(name);
+
+  try {
+    if (name === "home") renderHome();
+    if (name === "mes-creneaux") loadMesCreneaux();
+    if (name === "direct") loadDirect();
+    if (name === "planning") loadPlanning();
+    if (name === "contacts") loadContacts();
+    if (name === "vehicules") loadVehicules();
+    if (name === "referent") renderReferent();
+    if (name === "shift-detail") loadShiftDetail();
+    if (name === "person-detail") loadPersonDetail();
+
+    if (opts.push && name !== "login" && name !== "select-user") {
+      pushHistoryState(name);
+    }
+
+    if (opts.restore && typeof opts.restore.scrollTop === "number") {
+      requestAnimationFrame(() => setMainScrollTop(opts.restore.scrollTop));
+    } else if (!opts.preserveScroll) {
+      scrollMainToTop();
+    }
+  } catch (e) {
+    console.error("Erreur showView", e);
+    renderSafeError("view-" + name, "Impossible d’afficher cette page.");
+  }
+}
+
+function refreshCurrentViewOnly() {
+  try {
+    if (state.currentView === "home") renderHome();
+    if (state.currentView === "mes-creneaux") loadMesCreneaux();
+    if (state.currentView === "direct") loadDirect();
+    if (state.currentView === "planning") loadPlanning();
+    if (state.currentView === "contacts") loadContacts();
+    if (state.currentView === "vehicules") loadVehicules();
+    if (state.currentView === "shift-detail") loadShiftDetail();
+    if (state.currentView === "person-detail") loadPersonDetail();
+  } catch (e) {
+    console.error("Erreur refreshCurrentViewOnly", e);
+  }
+}
+
+/*********************************
+ * 14 - VEHICULES
+ *********************************/
+function toggleVehicule(id) {
+  vehiculesState.openId =
+    vehiculesState.openId === id ? "" : id;
+
+  loadVehicules();
+}
+
+function loadVehicules() {
+  const el = document.getElementById("vehiculesContent");
+  if (!el) return;
+
+  const vehicules = Array.isArray(APP_DATA?.vehicules)
+    ? APP_DATA.vehicules
+    : [];
+
+  if (!vehicules.length) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="home-subline">Aucun véhicule trouvé.</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = "";
+
+  vehicules.forEach(v => {
+    const id = String(v.id || "");
+    const isOpen = vehiculesState.openId === id;
+
+    html += `
+      <div class="card compact" style="margin-bottom:8px;">
+        <button
+          type="button"
+          onclick="toggleVehicule('${escapeHtml(id)}')"
+          style="
+            width:100%;
+            border:none;
+            background:transparent;
+            padding:0;
+            text-align:left;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            cursor:pointer;
+          "
+        >
+          <div style="font-weight:1000; color:#18443D;">
+            🚗 Véhicule ${escapeHtml(id)}
+          </div>
+
+          <div style="font-weight:1000;">
+            ${isOpen ? "▲" : "▼"}
+          </div>
+        </button>
+
+        ${
+          isOpen
+            ? `
+              <div style="margin-top:10px;">
+                <div class="subtle-text">
+                  Immatriculation : ${escapeHtml(v.immat || "—")}
+                </div>
+
+                <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
+                  <input
+                    type="checkbox"
+                    ${v.desactive ? "checked" : ""}
+                    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','desactive', this.checked)"
+                  >
+                  Véhicule désactivé
+                </label>
+
+                <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
+                  <input
+                    type="checkbox"
+                    ${v.pleinAFaire ? "checked" : ""}
+                    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','pleinAFaire', this.checked)"
+                  >
+                  Plein à faire
+                </label>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
+}
+
+async function toggleVehiculeFlag(id, field, value) {
+  const vehicule = APP_DATA?.vehicules?.find(v => String(v.id) === String(id));
+
+  if (vehicule) {
+    if (field === "desactive") vehicule.desactive = value;
+    if (field === "pleinAFaire") vehicule.pleinAFaire = value;
+  }
+
+  saveCache(APP_DATA);
+  loadVehicules();
+
+  if (!navigator.onLine) {
+    addPendingSyncAction({
+      type: "updateVehicule",
+      id,
+      field,
+      value
+    });
+
+    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+    return;
+  }
+
+  try {
+    await apiGet_({
+      api: "updateVehicule",
+      pwd: state.password,
+      id,
+      field,
+      value: value ? "true" : "false"
+    });
+
+    await loadAppData(true);
+
+  } catch (e) {
+    addPendingSyncAction({
+      type: "updateVehicule",
+      id,
+      field,
+      value
+    });
+
+    saveCache(APP_DATA);
+    loadVehicules();
+
+    console.warn("Action véhicule gardée en attente", e);
+  }
 }
 /*********************************
- * LOGIN / COMPTE
+ * 15 - LOGIN / COMPTE
  *********************************/
 async function login() {
   const pwdInput = document.getElementById("pwd");
@@ -4507,62 +4885,62 @@ async function login() {
 
   try {
     const isRef = await apiCheckRefPassword_(pwd).catch(() => false);
-const ok = isRef || await apiCheckPassword_(pwd);
+    const ok = isRef || await apiCheckPassword_(pwd);
 
-if (!ok) {
-  loginError.textContent = "Mot de passe incorrect.";
-  return;
-}
+    if (!ok) {
+      loginError.textContent = "Mot de passe incorrect.";
+      return;
+    }
 
-   state.password = pwd;
+    state.password = pwd;
+    state.authOk = true;
+    state.isRefMode = isRef;
+
     localStorage.setItem("planning_password", pwd);
-state.authOk = true;
-state.isRefMode = isRef;
+    localStorage.setItem("planning_auth_ok", "1");
 
-if (isRef) {
-  state.appMode = "referent";
-} else if (pwd === "test26") {
-  state.appMode = "test";
-} else {
-  state.appMode = "benevole";
-}
+    if (isRef) {
+      state.appMode = "referent";
+    } else if (pwd === "test26") {
+      state.appMode = "test";
+    } else {
+      state.appMode = "benevole";
+    }
 
-localStorage.setItem("planning_auth_ok", "1");
-localStorage.setItem("planning_app_mode", state.appMode);
+    localStorage.setItem("planning_app_mode", state.appMode);
 
     loginSuccess.textContent = isRef
       ? "Mot de passe référent correct."
       : "Mot de passe correct.";
 
-   // 👇 CAS REFERENT
-if (state.isRefMode) {
-  state.userId = "__REFERENT__";
-  state.userLabel = "Référent";
+    if (state.isRefMode) {
+      state.userId = "__REFERENT__";
+      state.userLabel = "Référent";
 
-  localStorage.setItem("planning_user_id", "__REFERENT__");
-  localStorage.setItem("planning_user_label", "Référent");
+      localStorage.setItem("planning_user_id", "__REFERENT__");
+      localStorage.setItem("planning_user_label", "Référent");
 
-  await loadAppData(false);
-  startAutoRefresh();
-  startUiMinuteRefresh();
+      await loadAppData(false);
+      startAutoRefresh();
+      startUiMinuteRefresh();
 
-  showView("home", { push: false });
-  replaceHistoryRoot("home");
-  return;
-}
+      showView("home", { push: false });
+      replaceHistoryRoot("home");
+      return;
+    }
 
-// 👇 CAS BENEVOLE
-if (state.userId) {
-  await loadAppData(false);
-  startAutoRefresh();
-  startUiMinuteRefresh();
+    if (state.userId) {
+      await loadAppData(false);
+      startAutoRefresh();
+      startUiMinuteRefresh();
 
-  const targetView = getLastView();
-  showView(targetView, { push: false });
-  replaceHistoryRoot(targetView);
-} else {
-  await loadUsers();
-}
+      const targetView = getLastView();
+      showView(targetView, { push: false });
+      replaceHistoryRoot(targetView);
+    } else {
+      await loadUsers();
+    }
+
   } catch (err) {
     console.error("Erreur login", err);
     loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
@@ -4576,16 +4954,16 @@ function logout() {
   clearCache();
 
   localStorage.removeItem("planning_auth_ok");
-localStorage.removeItem("planning_app_mode");
-localStorage.removeItem("planning_user_id");
-localStorage.removeItem("planning_user_label");
-localStorage.removeItem("planning_contacts_query");
+  localStorage.removeItem("planning_app_mode");
+  localStorage.removeItem("planning_user_id");
+  localStorage.removeItem("planning_user_label");
+  localStorage.removeItem("planning_contacts_query");
   localStorage.removeItem("planning_password");
 
   state.password = "";
   state.authOk = false;
-state.appMode = "";
-state.isRefMode = false;
+  state.appMode = "";
+  state.isRefMode = false;
   state.userId = "";
   state.userLabel = "";
   state.selectedUserId = "";
@@ -4595,6 +4973,7 @@ state.isRefMode = false;
   detailState.shiftId = "";
   personDetailState.personId = "";
   personDetailState.sourceView = "planning";
+
   APP_DATA = null;
   contactsState.query = "";
 
@@ -4622,7 +5001,9 @@ function changeUser() {
 function backToLogin() {
   state.selectedUserId = "";
   state.selectedUserLabel = "";
-  document.getElementById("userError").textContent = "";
+
+  const userError = document.getElementById("userError");
+  if (userError) userError.textContent = "";
 
   if (state.userId) {
     showView(state.returnViewAfterUserChange || "home", { push: false });
@@ -4632,23 +5013,24 @@ function backToLogin() {
 }
 
 /*********************************
- * UTILISATEURS
+ * 16 - UTILISATEURS
  *********************************/
 async function loadUsers() {
   const container = document.getElementById("userList");
   const userError = document.getElementById("userError");
+
+  if (!container || !userError) return;
 
   container.innerHTML = renderSkeletonList(4);
   userError.textContent = "";
 
   try {
     const data = await apiGetUsers_(state.password);
-let users = Array.isArray(data) ? data.slice() : [];
+    let users = Array.isArray(data) ? data.slice() : [];
 
-// En mode bénévole, on ne propose pas les référents dans le choix de profil
-if (!state.isRefMode) {
-  users = users.filter(u => u.isRef !== true);
-}
+    if (!state.isRefMode) {
+      users = users.filter(u => u.isRef !== true);
+    }
 
     users.sort((a, b) => {
       const labelA = String(a.label || "").trim();
@@ -4668,19 +5050,27 @@ if (!state.isRefMode) {
 
     state.allUsers = users;
     state.filteredUsers = users.slice();
+
     renderUserList(state.filteredUsers);
-    document.getElementById("searchUser").value = "";
+
+    const searchUser = document.getElementById("searchUser");
+    if (searchUser) searchUser.value = "";
+
     showView("select-user", { push: false });
 
   } catch (err) {
     console.error("Erreur loadUsers", err);
-    userError.textContent = err && err.message ? err.message : "Impossible de charger les bénévoles.";
+    userError.textContent = err && err.message
+      ? err.message
+      : "Impossible de charger les bénévoles.";
+
     showView("select-user", { push: false });
   }
 }
 
 function renderUserList(list) {
   const container = document.getElementById("userList");
+  if (!container) return;
 
   if (!list.length) {
     container.innerHTML = "Aucun bénévole";
@@ -4691,6 +5081,7 @@ function renderUserList(list) {
 
   list.forEach(u => {
     const active = String(u.id || "") === String(state.selectedUserId || "");
+
     html += `
       <button
         type="button"
@@ -4708,12 +5099,17 @@ function renderUserList(list) {
 function selectUser(id, label) {
   state.selectedUserId = id;
   state.selectedUserLabel = label;
-  document.getElementById("userError").textContent = "";
+
+  const userError = document.getElementById("userError");
+  if (userError) userError.textContent = "";
+
   renderUserList(state.filteredUsers);
 }
 
 function filterUsers() {
-  const q = normalizeText(document.getElementById("searchUser").value);
+  const searchInput = document.getElementById("searchUser");
+  const q = normalizeText(searchInput ? searchInput.value : "");
+
   state.filteredUsers = !q
     ? state.allUsers.slice()
     : state.allUsers.filter(u => normalizeText(u.label || "").includes(q));
@@ -4725,7 +5121,7 @@ async function validateSelectedUser() {
   const userError = document.getElementById("userError");
 
   if (!state.selectedUserId) {
-    userError.textContent = "Choisis un bénévole.";
+    if (userError) userError.textContent = "Choisis un bénévole.";
     return;
   }
 
@@ -4743,10 +5139,14 @@ async function validateSelectedUser() {
   await loadAppData(true);
   startAutoRefresh();
   startUiMinuteRefresh();
+
   showView(targetView, { push: false });
   replaceHistoryRoot(targetView);
 }
 
+/*********************************
+ * 17 - FESTIVAL PHASE / HOME HELPERS
+ *********************************/
 function getFestivalPhase(personId) {
   const now = getCurrentNowDate();
 
@@ -4761,6 +5161,7 @@ function getFestivalPhase(personId) {
 
   if (now < start) return "before";
   if (now > end) return "after";
+
   return "during";
 }
 
@@ -4783,8 +5184,10 @@ function getFestivalMessageForHome(personId) {
 
   return null;
 }
+
 function renderUserHeader(options = {}) {
   if (state.isRefMode) return "";
+
   const {
     showPrint = true,
     extraClass = ""
@@ -4855,7 +5258,8 @@ function renderUserHeader(options = {}) {
     </div>
   `;
 }
-  function renderPlanningTabsBlock() {
+
+function renderPlanningTabsBlock() {
   const days = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
 
   return `
@@ -4872,9 +5276,9 @@ function renderUserHeader(options = {}) {
     </div>
   `;
 }
-  
+
 /*********************************
- * HOME
+ * 18 - HOME / ACCUEIL
  *********************************/
 function renderFullInfoBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
@@ -4923,11 +5327,12 @@ function renderFullInfoBox() {
     </div>
   `;
 }
-  function renderConcertTimelineCard() {
+
+function renderConcertTimelineCard() {
   const timelineState = getConcertTimelineState();
   const concerts = timelineState.concerts || [];
   const now = new Date(getCurrentNowDate());
-  
+
   if (!concerts.length) return "";
 
   const currentIndex = timelineState.currentIndex;
@@ -4944,33 +5349,31 @@ function renderFullInfoBox() {
   } else if (nextIndex !== -1) {
     nextConcert = concerts[nextIndex] || null;
     remainingConcerts = concerts.slice(nextIndex + 1);
-  } else {
-    remainingConcerts = [];
   }
 
   let html = `
     <div class="card concerts-panel" style="margin-bottom:8px;">
       <div class="concerts-panel-head">
-       <div class="home-main-title">CONCERTS</div>
-       </div>
+        <div class="home-main-title">CONCERTS</div>
+      </div>
   `;
 
   if (currentConcert) {
-  html += renderCompactConcertRow(currentConcert, "En cours", "current");
-} else {
-  html += `
-    <div class="concert-empty-line">
-      Aucun concert en cours
-    </div>
-  `;
-}
+    html += renderCompactConcertRow(currentConcert, "En cours", "current");
+  } else {
+    html += `
+      <div class="concert-empty-line">
+        Aucun concert en cours
+      </div>
+    `;
+  }
 
-if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
-  html += renderCompactConcertRow(nextConcert, "Suivant", "next");
-}
+  if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
+    html += renderCompactConcertRow(nextConcert, "Suivant", "next");
+  }
 
-if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
-  html += `
+  if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
+    html += `
       <button class="concerts-more-btn" onclick="toggleHomeConcertsMore()">
         <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
         <span class="planning-chevron ${homeConcertsState.openMore ? "open" : ""}">▼</span>
@@ -4998,7 +5401,8 @@ if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
   html += `</div>`;
   return html;
 }
-  function renderCompactConcertRow(concert, label, statusType) {
+
+function renderCompactConcertRow(concert, label, statusType) {
   if (!concert) return "";
 
   const badgeText = statusType === "current" ? "En cours" : "À venir";
@@ -5015,10 +5419,12 @@ if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
           ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
         </div>
       </div>
+
       <div class="concert-compact-badge ${badgeClass}">${badgeText}</div>
     </div>
   `;
 }
+
 function renderHome() {
   if (state.appMode === "referent") {
     renderHomeReferent();
@@ -5129,7 +5535,10 @@ function renderHomeStandard(options = {}) {
     const daysNumber = Math.max(
       0,
       Math.round(
-        (new Date("2026-07-01T00:00:00").setHours(0,0,0,0) - new Date(getCurrentNowDate()).setHours(0,0,0,0)) / 86400000
+        (
+          new Date("2026-07-01T00:00:00").setHours(0, 0, 0, 0) -
+          new Date(getCurrentNowDate()).setHours(0, 0, 0, 0)
+        ) / 86400000
       )
     );
 
@@ -5185,9 +5594,9 @@ function renderHomeStandard(options = {}) {
       }
 
       ${currentBox}
-${nextBox}
-${renderMessagesBox()}
-${renderConcertTimelineCard()}
+      ${nextBox}
+      ${renderMessagesBox()}
+      ${renderConcertTimelineCard()}
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
@@ -5195,6 +5604,7 @@ ${renderConcertTimelineCard()}
     </div>
   `;
 }
+
 function renderReferentPeopleList(entry, id = "current") {
   let benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
 
@@ -5223,6 +5633,7 @@ function renderReferentPeopleList(entry, id = "current") {
     const txt = String(v || "").trim();
     if (!txt) return "-";
     if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
+
     return "Véhicule " + txt;
   }
 
@@ -5273,7 +5684,7 @@ function renderReferentPeopleList(entry, id = "current") {
             <div
               style="
                 display:grid;
-                grid-template-columns: 90px 1fr;
+                grid-template-columns:90px 1fr;
                 gap:8px;
                 padding:7px 0;
                 border-top:1px solid rgba(222,212,194,0.45);
@@ -5305,7 +5716,7 @@ function renderReferentPeopleList(entry, id = "current") {
   `;
 }
 
- function getNextFestivalEntry() {
+function getNextFestivalEntry() {
   const entries = Array.isArray(directState.allShifts) ? directState.allShifts : [];
   const now = getCurrentNowDate();
 
@@ -5320,6 +5731,7 @@ function renderReferentPeopleList(entry, id = "current") {
   upcoming.sort((a, b) => {
     const da = parseShiftDateFromLabel(a.shift.startLabel);
     const db = parseShiftDateFromLabel(b.shift.startLabel);
+
     return da - db;
   });
 
@@ -5329,6 +5741,7 @@ function renderReferentPeopleList(entry, id = "current") {
 function parseShiftDateFromLabel(label) {
   const txt = String(label || "").trim();
   const match = txt.match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+
   if (!match) return null;
 
   const day = Number(match[1]);
@@ -5338,7 +5751,7 @@ function parseShiftDateFromLabel(label) {
 
   return new Date(2026, month - 1, day, hour, minute);
 }
-  
+
 function renderReferentReplacementList(currentEntry, nextEntry, id = "replacement") {
   const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
   const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
@@ -5355,6 +5768,7 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 
   currentPeople.forEach(p => {
     const v = String(p.vehicule || "").trim();
+
     if (isChargeur(v)) {
       currentChargeurs.push(p);
     } else if (v) {
@@ -5364,6 +5778,7 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 
   nextPeople.forEach(p => {
     const v = String(p.vehicule || "").trim();
+
     if (isChargeur(v)) {
       nextChargeurs.push(p);
     } else {
@@ -5388,7 +5803,7 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
       <div
         style="
           display:grid;
-          grid-template-columns: 90px 1fr;
+          grid-template-columns:90px 1fr;
           gap:8px;
           padding:7px 0;
           border-top:1px solid rgba(222,212,194,0.45);
@@ -5426,44 +5841,47 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
     `;
   }).join("");
 
-  const currentChargeurNames = currentChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
-  const nextChargeurNames = nextChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
+  const currentChargeurNames = currentChargeurs
+    .map(p => String(p.label || p.benevole || "").trim())
+    .filter(Boolean);
 
-  let usedCurrentChargeurs = [];
+  const nextChargeurNames = nextChargeurs
+    .map(p => String(p.label || p.benevole || "").trim())
+    .filter(Boolean);
 
-const chargeurRows = nextChargeurNames.map(nextName => {
-  if (currentChargeurNames.includes(nextName)) {
-    return "";
-  }
+  const usedCurrentChargeurs = [];
 
-  const prevName = currentChargeurNames.find(name =>
-    name && !usedCurrentChargeurs.includes(name) && !nextChargeurNames.includes(name)
-  ) || "";
+  const chargeurRows = nextChargeurNames.map(nextName => {
+    if (currentChargeurNames.includes(nextName)) return "";
 
-  if (prevName) usedCurrentChargeurs.push(prevName);
+    const prevName = currentChargeurNames.find(name =>
+      name &&
+      !usedCurrentChargeurs.includes(name) &&
+      !nextChargeurNames.includes(name)
+    ) || "";
 
-  return `
-    <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
-      ${
-        prevName
-          ? `
-            <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
-            <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
-          `
-          : `
-            <span style="font-weight:900;">${escapeHtml(nextName)}</span>
-            <span style="opacity:0.6;"> nouveau</span>
-          `
-      }
-    </div>
-  `;
-}).join("");
+    if (prevName) usedCurrentChargeurs.push(prevName);
+
+    return `
+      <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
+        ${
+          prevName
+            ? `
+              <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
+              <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
+            `
+            : `
+              <span style="font-weight:900;">${escapeHtml(nextName)}</span>
+              <span style="opacity:0.6;"> nouveau</span>
+            `
+        }
+      </div>
+    `;
+  }).join("");
 
   const hasContent = vehicleRows.trim() || chargeurRows.trim();
 
-  if (!hasContent) {
-    return "";
-  }
+  if (!hasContent) return "";
 
   return `
     <div
@@ -5492,13 +5910,16 @@ const chargeurRows = nextChargeurNames.map(nextName => {
         "
       >
         <span>Voir les remplacements</span>
-<span id="chevron-${id}" style="font-size:0.75rem;">${referentUiState.openMenuId === id ? "▲" : "▼"}</span>      </button>
+        <span id="chevron-${id}" style="font-size:0.75rem;">
+          ${referentUiState.openMenuId === id ? "▲" : "▼"}
+        </span>
+      </button>
 
       <div
         id="people-${id}"
         style="
-display:${referentUiState.openMenuId === id ? "block" : "none"};
-padding:0 12px 8px 12px;
+          display:${referentUiState.openMenuId === id ? "block" : "none"};
+          padding:0 12px 8px 12px;
           background:rgba(255,255,255,0.35);
         "
       >
@@ -5527,6 +5948,7 @@ function renderMessagesBox() {
   messages = messages.slice().sort((a, b) => {
     const pa = a.priorite === "important" ? 1 : 0;
     const pb = b.priorite === "important" ? 1 : 0;
+
     return pb - pa;
   }).slice(0, 3);
 
@@ -5566,42 +5988,42 @@ function renderMessagesBox() {
         }
       </div>
 
-     ${importants.length ? `
-  <div style="margin-top:8px;">
-    ${importants.map(m => `
-      <div style="
-        display:flex;
-        align-items:flex-start;
-        gap:8px;
-        padding:6px 0;
-        border-top:1px solid rgba(222,212,194,0.5);
-        font-weight:900;
-        color:#9b1c1c;
-      ">
-        <div style="font-size:14px; margin-top:2px;">⚠️</div>
-        <div>${escapeHtml(m.message || "")}</div>
-      </div>
-    `).join("")}
-  </div>
-` : ""}
+      ${importants.length ? `
+        <div style="margin-top:8px;">
+          ${importants.map(m => `
+            <div style="
+              display:flex;
+              align-items:flex-start;
+              gap:8px;
+              padding:6px 0;
+              border-top:1px solid rgba(222,212,194,0.5);
+              font-weight:900;
+              color:#9b1c1c;
+            ">
+              <div style="font-size:14px; margin-top:2px;">⚠️</div>
+              <div>${escapeHtml(m.message || "")}</div>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
 
-${standards.length ? `
-  <div style="margin-top:8px;">
-    ${standards.map(m => `
-      <div style="
-        display:flex;
-        align-items:flex-start;
-        gap:8px;
-        padding:6px 0;
-        border-top:1px solid rgba(222,212,194,0.5);
-        font-weight:850;
-      ">
-        <div style="font-size:14px; margin-top:2px;">ℹ️</div>
-        <div>${escapeHtml(m.message || "")}</div>
-      </div>
-    `).join("")}
-  </div>
-` : ""}
+      ${standards.length ? `
+        <div style="margin-top:8px;">
+          ${standards.map(m => `
+            <div style="
+              display:flex;
+              align-items:flex-start;
+              gap:8px;
+              padding:6px 0;
+              border-top:1px solid rgba(222,212,194,0.5);
+              font-weight:850;
+            ">
+              <div style="font-size:14px; margin-top:2px;">ℹ️</div>
+              <div>${escapeHtml(m.message || "")}</div>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
 
       ${
         !messages.length && isReferentMode
@@ -5612,7 +6034,7 @@ ${standards.length ? `
   `;
 }
 
-  function openMessagesAdminModal() {
+function openMessagesAdminModal() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
   const existingOptions = messages.map(m => `
@@ -5704,21 +6126,22 @@ ${standards.length ? `
         >
           Enregistrer
         </button>
+
         <button
-  onclick="deleteMessageAdminForm()"
-  style="
-    width:100%;
-    margin-top:8px;
-    padding:10px;
-    border:none;
-    border-radius:14px;
-    background:#b00000;
-    color:white;
-    font-weight:900;
-  "
->
-  Supprimer le message
-</button>
+          onclick="deleteMessageAdminForm()"
+          style="
+            width:100%;
+            margin-top:8px;
+            padding:10px;
+            border:none;
+            border-radius:14px;
+            background:#b00000;
+            color:white;
+            font-weight:900;
+          "
+        >
+          Supprimer le message
+        </button>
       </div>
     </div>
   `;
@@ -5730,7 +6153,8 @@ function closeMessagesAdminModal() {
   const modal = document.getElementById("messagesAdminModal");
   if (modal) modal.remove();
 }
-  async function deleteMessageAdminForm() {
+
+async function deleteMessageAdminForm() {
   const pwd = state.password || localStorage.getItem("planning_password") || "";
   const id = document.getElementById("adminMessageId").value.trim();
 
@@ -5744,8 +6168,8 @@ function closeMessagesAdminModal() {
   try {
     const res = await apiGet_({
       api: "saveMessage",
-      pwd: pwd,
-      id: id,
+      pwd,
+      id,
       actif: "false"
     });
 
@@ -5795,12 +6219,12 @@ async function saveMessageAdminForm() {
   try {
     const res = await apiGet_({
       api: "saveMessage",
-      pwd: pwd,
-      id: id,
-      titre: titre,
-      message: message,
-      cible: cible,
-      priorite: priorite,
+      pwd,
+      id,
+      titre,
+      message,
+      cible,
+      priorite,
       actif: actif ? "true" : "false"
     });
 
@@ -5816,7 +6240,7 @@ async function saveMessageAdminForm() {
     alert("Impossible d’enregistrer : " + (err.message || err));
   }
 }
-  
+
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
   if (!el) return;
@@ -5827,10 +6251,14 @@ function renderHomeReferent() {
   }
 
   const currentFestivalEntry = getCurrentFestivalEntry();
-  const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
+  const currentShift = currentFestivalEntry && currentFestivalEntry.shift
+    ? currentFestivalEntry.shift
+    : null;
 
   const nextFestivalEntry = getNextFestivalEntry();
-  const nextShift = nextFestivalEntry && nextFestivalEntry.shift ? nextFestivalEntry.shift : null;
+  const nextShift = nextFestivalEntry && nextFestivalEntry.shift
+    ? nextFestivalEntry.shift
+    : null;
 
   const currentPeopleHtml = currentFestivalEntry
     ? renderReferentPeopleList(currentFestivalEntry, "current")
@@ -5911,6 +6339,7 @@ function renderHomeReferent() {
     <div class="home-stack" style="margin-top:-20px;">
       <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
         <div class="home-main-title">Créneau en cours</div>
+
         ${
           currentShift
             ? `
@@ -5934,7 +6363,6 @@ function renderHomeReferent() {
                 ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
               </div>
               <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
-
               ${replacementHtml}
             `
             : `
@@ -5943,8 +6371,8 @@ function renderHomeReferent() {
         }
       </div>
 
-${renderMessagesBox()}
-${renderConcertTimelineCard()}
+      ${renderMessagesBox()}
+      ${renderConcertTimelineCard()}
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">
@@ -5955,7 +6383,7 @@ ${renderConcertTimelineCard()}
   `;
 }
 /*********************************
- * MES CRENEAUX
+ * 19 - MES CRENEAUX
  *********************************/
 function loadMesCreneaux() {
   const container = document.getElementById("mesCreneauxContent");
@@ -5985,11 +6413,13 @@ function renderMesCreneaux(data) {
     return;
   }
 
-  const sorted = list.slice().sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
+  const sorted = list
+    .slice()
+    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
 
   let html = `
-  ${renderUserHeader()}
-`;
+    ${renderUserHeader()}
+  `;
 
   let currentDay = "";
 
@@ -5998,6 +6428,7 @@ function renderMesCreneaux(data) {
     const vehicule = entry.vehicule || "";
     const role = getRoleInfo(vehicule);
     const stateInfo = getShiftStatusInfo(entry);
+
     const visualClass =
       stateInfo.badgeClass === "previous" ? "is-past" :
       stateInfo.badgeClass === "current" ? "is-current" :
@@ -6014,16 +6445,28 @@ function renderMesCreneaux(data) {
     }
 
     html += `
-      <div class="card clickable-card shift-card-soft ${visualClass}" ${focusAttr} onclick="openShiftDetail('${escapeHtml(entry.shiftId || "")}', 'mes-creneaux')">
+      <div
+        class="card clickable-card shift-card-soft ${visualClass}"
+        ${focusAttr}
+        onclick="openShiftDetail('${escapeHtml(entry.shiftId || "")}', 'mes-creneaux')"
+      >
         <div class="shift-header">
           <div class="shift-line">
             ${escapeHtml((entry.jour || "").toUpperCase())} • ${escapeHtml(entry.debut || "")} – ${escapeHtml(entry.fin || "")}
           </div>
-          <span class="badge ${stateInfo.badgeClass}">${escapeHtml(stateInfo.badgeText)}</span>
+
+          <span class="badge ${stateInfo.badgeClass}">
+            ${escapeHtml(stateInfo.badgeText)}
+          </span>
         </div>
 
         <div class="shift-role-line">${escapeHtml(role.label)}</div>
-        ${stateInfo.timerText ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>` : ""}
+
+        ${
+          stateInfo.timerText
+            ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>`
+            : ""
+        }
       </div>
     `;
   });
@@ -6049,21 +6492,44 @@ function renderMesCreneaux(data) {
 }
 
 /*********************************
- * ROLE / PEOPLE RENDER
+ * 20 - ROLE / PEOPLE RENDER
  *********************************/
 function getRoleInfo(rawVehicule) {
   const v = String(rawVehicule || "").toUpperCase().trim();
 
   if (v.includes("CHARGEUR_SUP")) {
-    return { icon: "🧑‍✈️", label: "Chargeur sup", group: "chargeurs", order: "ZZZ_1" };
+    return {
+      icon: "🧑‍✈️",
+      label: "Chargeur sup",
+      group: "chargeurs",
+      order: "ZZZ_1"
+    };
   }
+
   if (v.includes("CHARGEUR")) {
-    return { icon: "🧑‍✈️", label: "Chargeur", group: "chargeurs", order: "ZZZ_2" };
+    return {
+      icon: "🧑‍✈️",
+      label: "Chargeur",
+      group: "chargeurs",
+      order: "ZZZ_2"
+    };
   }
+
   if (v && v !== "-") {
-    return { icon: "🚗", label: "Véhicule " + rawVehicule, group: "chauffeurs", order: v };
+    return {
+      icon: "🚗",
+      label: "Véhicule " + rawVehicule,
+      group: "chauffeurs",
+      order: v
+    };
   }
-  return { icon: "🚶", label: "Sans véhicule", group: "chargeurs", order: "ZZZ_9" };
+
+  return {
+    icon: "🚶",
+    label: "Sans véhicule",
+    group: "chargeurs",
+    order: "ZZZ_9"
+  };
 }
 
 function sortPeopleForShift(list) {
@@ -6079,7 +6545,10 @@ function sortPeopleForShift(list) {
     const keyCmp = ia.order.localeCompare(ib.order, "fr");
     if (keyCmp !== 0) return keyCmp;
 
-    return String(a.label || a.benevole || "").localeCompare(String(b.label || b.benevole || ""), "fr");
+    return String(a.label || a.benevole || "").localeCompare(
+      String(b.label || b.benevole || ""),
+      "fr"
+    );
   });
 }
 
@@ -6087,7 +6556,13 @@ function renderPeople(people, sourceView = "direct") {
   const sorted = sortPeopleForShift(people);
 
   if (!sorted.length) {
-    return `<div class="team-member"><div class="member-main"><div class="member-role">Personne sur ce créneau</div></div></div>`;
+    return `
+      <div class="team-member">
+        <div class="member-main">
+          <div class="member-role">Personne sur ce créneau</div>
+        </div>
+      </div>
+    `;
   }
 
   let html = "";
@@ -6098,6 +6573,7 @@ function renderPeople(people, sourceView = "direct") {
     const info = getRoleInfo(person.vehicule);
     const currentPersonLabel = String(person.label || person.benevole || "").toLowerCase();
     const meLabel = String(state.userLabel || "").toLowerCase();
+
     const full = peopleMap[person.id] || {
       id: person.id || "",
       label: person.label || person.benevole || "",
@@ -6107,6 +6583,7 @@ function renderPeople(people, sourceView = "direct") {
 
     if (info.group !== currentGroup) {
       currentGroup = info.group;
+
       html += `
         <div class="group-label">
           ${currentGroup === "chauffeurs" ? "Chauffeurs" : "Chargeurs"}
@@ -6121,6 +6598,7 @@ function renderPeople(people, sourceView = "direct") {
         onclick="openPersonDetail('${escapeHtml(full.id || "")}', '${escapeHtml(sourceView)}')"
       >
         <div class="role-icon">${info.icon}</div>
+
         <div class="member-main">
           <div class="member-inline">
             <div class="member-name">${escapeHtml(full.label || "")}</div>
@@ -6135,7 +6613,7 @@ function renderPeople(people, sourceView = "direct") {
 }
 
 /*********************************
- * DIRECT
+ * 21 - DIRECT
  *********************************/
 function loadDirect() {
   const container = document.getElementById("directContent");
@@ -6165,15 +6643,15 @@ function applyDirectData(data) {
   directState.defaultIndex = computedDirect.defaultIndex;
   directState.liveState = computedDirect.liveState;
 
- if (!directState.isManual) {
-  directState.currentIndex = directState.defaultIndex;
-} else if (
-  directState.currentIndex < 0 ||
-  directState.currentIndex >= directState.allShifts.length
-) {
-  directState.currentIndex = directState.defaultIndex;
-  directState.isManual = false;
-}
+  if (!directState.isManual) {
+    directState.currentIndex = directState.defaultIndex;
+  } else if (
+    directState.currentIndex < 0 ||
+    directState.currentIndex >= directState.allShifts.length
+  ) {
+    directState.currentIndex = directState.defaultIndex;
+    directState.isManual = false;
+  }
 
   const entryAtDefault =
     directState.defaultIndex >= 0
@@ -6254,7 +6732,9 @@ function renderDirectCurrentView() {
       </div>
 
       ${stateInfo.timerText ? `<div class="helper-text">${escapeHtml(stateInfo.timerText)}</div>` : ""}
+
       <hr class="soft-divider">
+
       ${renderPeople(people, "direct")}
     </div>
 
@@ -6304,7 +6784,7 @@ function directBackToLive() {
 }
 
 /*********************************
- * PLANNING
+ * 22 - PLANNING
  *********************************/
 function loadPlanning() {
   const container = document.getElementById("planningContent");
@@ -6332,11 +6812,8 @@ function selectPlanningDay(day) {
 }
 
 function togglePlanningShift(shiftId) {
-  if (planningState.openShiftId === shiftId) {
-    planningState.openShiftId = null;
-  } else {
-    planningState.openShiftId = shiftId;
-  }
+  planningState.openShiftId =
+    planningState.openShiftId === shiftId ? null : shiftId;
 
   renderPlanning();
 }
@@ -6365,11 +6842,11 @@ function renderPlanning() {
     ${renderPlanningTabsBlock()}
 
     <div class="planning-day-header">
-  <div>
-    <div class="planning-day-subtitle">Planning du jour</div>
-    <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
-  </div>
-</div>
+      <div>
+        <div class="planning-day-subtitle">Planning du jour</div>
+        <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
+      </div>
+    </div>
   `;
 
   shifts.forEach(shift => {
@@ -6383,11 +6860,15 @@ function renderPlanning() {
       "is-future";
 
     html += `
-      <div class="card clickable-card planning-shift-card ${stateClass}" onclick="togglePlanningShift('${escapeHtml(shift.id)}')">
+      <div
+        class="card clickable-card planning-shift-card ${stateClass}"
+        onclick="togglePlanningShift('${escapeHtml(shift.id)}')"
+      >
         <div class="planning-shift-inner">
           <div class="shift-header">
             <div style="display:flex; flex-direction:column; gap:5px; min-width:0; flex:1;">
               <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
+
               <span class="badge ${stateInfo.badgeClass}" style="width:fit-content;">
                 ${escapeHtml(stateInfo.badgeText)}
               </span>
@@ -6396,13 +6877,21 @@ function renderPlanning() {
             <span class="planning-chevron ${isOpen ? "open" : ""}">▼</span>
           </div>
 
-          ${stateInfo.timerText ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>` : ""}
+          ${
+            stateInfo.timerText
+              ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>`
+              : ""
+          }
 
-          ${isOpen ? `
-            <div style="margin-top:10px;">
-              ${renderPlanningPeople(people)}
-            </div>
-          ` : ``}
+          ${
+            isOpen
+              ? `
+                <div style="margin-top:10px;">
+                  ${renderPlanningPeople(people)}
+                </div>
+              `
+              : ""
+          }
         </div>
       </div>
     `;
@@ -6415,7 +6904,13 @@ function renderPlanningPeople(list) {
   const sorted = sortPeopleForShift(list || []);
 
   if (!sorted.length) {
-    return `<div class="team-member"><div class="member-main"><div class="member-role">Personne sur ce créneau</div></div></div>`;
+    return `
+      <div class="team-member">
+        <div class="member-main">
+          <div class="member-role">Personne sur ce créneau</div>
+        </div>
+      </div>
+    `;
   }
 
   let html = "";
@@ -6424,6 +6919,7 @@ function renderPlanningPeople(list) {
 
   sorted.forEach(person => {
     const info = getRoleInfo(person.vehicule);
+
     const full = peopleMap[person.id] || {
       id: person.id || "",
       label: person.label || person.benevole || "",
@@ -6432,6 +6928,7 @@ function renderPlanningPeople(list) {
 
     if (info.group !== currentGroup) {
       currentGroup = info.group;
+
       html += `
         <div class="group-label">
           ${currentGroup === "chauffeurs" ? "Chauffeurs" : "Chargeurs"}
@@ -6446,6 +6943,7 @@ function renderPlanningPeople(list) {
         onclick="event.stopPropagation(); openPersonDetail('${escapeHtml(full.id || "")}', 'planning')"
       >
         <div class="role-icon">${info.icon}</div>
+
         <div class="member-main">
           <div class="member-inline">
             <div class="member-name">${escapeHtml(full.label || "")}</div>
@@ -6459,6 +6957,9 @@ function renderPlanningPeople(list) {
   return html;
 }
 
+/*********************************
+ * 23 - CONTACTS HELPERS
+ *********************************/
 function updateContactsSearch(value) {
   contactsState.query = value || "";
   localStorage.setItem("planning_contacts_query", contactsState.query);
@@ -6472,9 +6973,9 @@ function renderContactsListOnly() {
 
   const allPeople = getAllPeopleForContacts()
     .filter(p =>
-      ((p.prenom && p.prenom.trim()) ||
-       (p.nom && p.nom.trim()) ||
-       (p.label && p.label.trim()))
+      (p.prenom && p.prenom.trim()) ||
+      (p.nom && p.nom.trim()) ||
+      (p.label && p.label.trim())
     )
     .filter(p => !p.isRef);
 
@@ -6487,27 +6988,31 @@ function renderContactsListOnly() {
         normalizeText(p.label || "").includes(query)
       );
 
-  listContainer.innerHTML = filtered.length ? filtered.map(p => `
-    <button
-      type="button"
-      class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
-      onclick="openPersonDetail('${escapeHtml(p.id || "")}', 'contacts')"
-    >
-      ${renderAvatar(p)}
-      <div class="person-main">
-        <div class="person-left">
-          <div class="person-name">
-            <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
+  listContainer.innerHTML = filtered.length
+    ? filtered.map(p => `
+      <button
+        type="button"
+        class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
+        onclick="openPersonDetail('${escapeHtml(p.id || "")}', 'contacts')"
+      >
+        ${renderAvatar(p)}
+
+        <div class="person-main">
+          <div class="person-left">
+            <div class="person-name">
+              <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
+            </div>
           </div>
+
+          ${renderCallButton(p.tel, true)}
         </div>
-        ${renderCallButton(p.tel, true)}
+      </button>
+    `).join("")
+    : `
+      <div class="empty-state-card" style="padding:18px 8px 8px;">
+        <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
       </div>
-    </button>
-  `).join("") : `
-    <div class="empty-state-card" style="padding:18px 8px 8px;">
-      <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
-    </div>
-  `;
+    `;
 }
 
 function sortReferentsCustom(list) {
@@ -6528,9 +7033,8 @@ function sortReferentsCustom(list) {
     return String(a.prenom || "").localeCompare(String(b.prenom || ""), "fr");
   });
 }
-
 /*********************************
- * CONTACTS
+ * 24 - CONTACTS
  *********************************/
 function loadContacts() {
   const container = document.getElementById("contactsContent");
@@ -6552,15 +7056,10 @@ function loadContacts() {
   container.innerHTML = `
     <div class="card contact-section-card">
       <div class="section-title">Référents</div>
-
       <div class="referents">
         <div class="referents-row">
           ${referents.map(p => `
-            <a
-              class="referent-tile"
-              href="tel:${escapeHtml(p.tel || "")}"
-              title="Appeler ${escapeHtml(p.prenom || "")}"
-            >
+            <a class="referent-tile" href="tel:${escapeHtml(p.tel || "")}" title="Appeler ${escapeHtml(p.prenom || "")}">
               <div class="referent-tile-inner">
                 ${renderAvatar(p)}
                 <div class="referent-firstname">${escapeHtml(p.prenom || "")}</div>
@@ -6594,7 +7093,7 @@ function loadContacts() {
 }
 
 /*********************************
- * DETAIL CRENEAU
+ * 25 - DETAIL CRENEAU
  *********************************/
 function openShiftDetail(shiftId, fromView) {
   if (!shiftId) return;
@@ -6623,7 +7122,7 @@ function loadShiftDetail() {
   }
 
   renderShiftDetail({
-    shift: shift,
+    shift,
     benevoles: shift.benevoles || []
   });
 }
@@ -6664,12 +7163,14 @@ function renderShiftDetail(data) {
 }
 
 /*********************************
- * PERSON DETAIL
+ * 26 - PERSON DETAIL
  *********************************/
 function openPersonDetail(personId, sourceView = "planning") {
   if (!personId) return;
+
   personDetailState.personId = personId;
   personDetailState.sourceView = sourceView || state.currentView || "planning";
+
   showView("person-detail");
 }
 
@@ -6683,6 +7184,7 @@ function loadPersonDetail() {
   }
 
   const person = getPersonById(personDetailState.personId);
+
   if (!person) {
     container.innerHTML = `<div class="card">Bénévole introuvable</div>`;
     return;
@@ -6694,8 +7196,10 @@ function loadPersonDetail() {
   const message = getFestivalMessageForHome(person.id);
 
   let statusBlock = "";
+
   if (current) {
     const role = getRoleInfo(current.vehicule);
+
     statusBlock = `
       <div class="card compact">
         <div class="status-box current">
@@ -6709,6 +7213,7 @@ function loadPersonDetail() {
     `;
   } else if (next) {
     const role = getRoleInfo(next.vehicule);
+
     statusBlock = `
       <div class="card compact">
         <div class="status-box next">
@@ -6741,7 +7246,7 @@ function loadPersonDetail() {
     const info = getShiftStatusInfo(shift);
 
     daysHtml += `
-      <div class="card compact ${info.badgeClass === 'current' ? 'home-main-card' : ''}">
+      <div class="card compact ${info.badgeClass === "current" ? "home-main-card" : ""}">
         <div class="shift-header">
           <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
           <span class="badge ${info.badgeClass}">${escapeHtml(info.badgeText)}</span>
@@ -6776,25 +7281,30 @@ function loadPersonDetail() {
   `;
 }
 
- function printPlanningForDay(day) {
+/*********************************
+ * 27 - PRINT / IMPRESSION
+ *********************************/
+function printPlanningForDay(day) {
   closePrintDayPicker();
 
   if (!APP_DATA || !APP_DATA.planning) return;
 
-  const shifts = (planningState.byDay && planningState.byDay[day]) ? planningState.byDay[day] : [];
+  const shifts = planningState.byDay && planningState.byDay[day]
+    ? planningState.byDay[day]
+    : [];
 
   if (!shifts.length) return;
 
   let html = `
     <h1>Planning du jour</h1>
     <div class="print-subtitle">${escapeHtml(day)}</div>
+    <div class="print-day-grid">
   `;
 
-  // 👇 LA DIFF : grille 3 colonnes
-  html += `<div class="print-day-grid">`;
-
   shifts.forEach(shift => {
-    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+    const people = Array.isArray(shift.benevoles)
+      ? sortPeopleForShift(shift.benevoles)
+      : [];
 
     html += `
       <div class="print-card print-card-column">
@@ -6826,7 +7336,7 @@ function loadPersonDetail() {
   openPrintWindow("Planning " + day, html);
 }
 
-  function printFullPlanningDetailed() {
+function printFullPlanningDetailed() {
   closePrintModal();
 
   if (!APP_DATA || !APP_DATA.planning || !Array.isArray(APP_DATA.planning.allShifts)) {
@@ -6858,7 +7368,9 @@ function loadPersonDetail() {
     html += `<div class="print-day-grid">`;
 
     shifts.forEach(shift => {
-      const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+      const people = Array.isArray(shift.benevoles)
+        ? sortPeopleForShift(shift.benevoles)
+        : [];
 
       html += `
         <div class="print-card print-card-column">
@@ -6891,7 +7403,7 @@ function loadPersonDetail() {
   openPrintWindow("Planning complet", html);
 }
 
-  function printMyPlanningDetailed() {
+function printMyPlanningDetailed() {
   closePrintModal();
 
   if (!APP_DATA || !APP_DATA.mesCreneaux || !Array.isArray(APP_DATA.mesCreneaux.creneaux)) {
@@ -6930,10 +7442,10 @@ function loadPersonDetail() {
     `;
   });
 
- openPrintWindow("Mes créneaux", html);
+  openPrintWindow("Mes créneaux", html);
 }
 
-  function openPrintWindow(title, bodyHtml) {
+function openPrintWindow(title, bodyHtml) {
   const oldFrame = document.getElementById("printFrame");
   if (oldFrame) oldFrame.remove();
 
@@ -6959,128 +7471,128 @@ function loadPersonDetail() {
     <head>
       <meta charset="UTF-8">
       <title>${escapeHtml(title)}</title>
-      
-<!-- ===== DEBUT CSS IMPRESSION PLANNING ===== -->
+
+      <!-- ===== DEBUT CSS IMPRESSION PLANNING ===== -->
       <style>
-  @page {
-    size: A4 landscape;
-    margin: 10mm;
-  }
+        @page {
+          size: A4 landscape;
+          margin: 10mm;
+        }
 
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    color: #111;
-    font-size: 11px;
-  }
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          color: #111;
+          font-size: 11px;
+        }
 
-  h1 {
-    text-align: center;
-    margin: 0 0 12px 0;
-    font-size: 22px;
-  }
+        h1 {
+          text-align: center;
+          margin: 0 0 12px 0;
+          font-size: 22px;
+        }
 
-  .print-subtitle {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 14px;
-    color: #555;
-  }
+        .print-subtitle {
+          text-align: center;
+          margin-bottom: 20px;
+          font-size: 14px;
+          color: #555;
+        }
 
-  .print-day {
-    margin-top: 18px;
-    margin-bottom: 8px;
-    font-size: 18px;
-    font-weight: bold;
-    border-bottom: 2px solid #000;
-    padding-bottom: 4px;
-    page-break-after: avoid;
-  }
+        .print-day {
+          margin-top: 18px;
+          margin-bottom: 8px;
+          font-size: 18px;
+          font-weight: bold;
+          border-bottom: 2px solid #000;
+          padding-bottom: 4px;
+          page-break-after: avoid;
+        }
 
-  .print-day-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    align-items: start;
-  }
+        .print-day-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          align-items: start;
+        }
 
-  .print-card {
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 8px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    background: #fff;
-  }
+        .print-card {
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          padding: 8px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+          background: #fff;
+        }
 
-  .print-card-column {
-    min-height: 100%;
-  }
+        .print-card-column {
+          min-height: 100%;
+        }
 
-  .print-line {
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 4px;
-  }
+        .print-line {
+          font-size: 14px;
+          font-weight: bold;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 4px;
+        }
 
-  .print-meta {
-    font-size: 11px;
-    line-height: 1.35;
-  }
+        .print-meta {
+          font-size: 11px;
+          line-height: 1.35;
+        }
 
-  .print-person-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 10px;
-    padding: 2px 0;
-    border-bottom: 1px dotted #eee;
-  }
+        .print-person-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 10px;
+          padding: 2px 0;
+          border-bottom: 1px dotted #eee;
+        }
 
-  .print-person-row:last-child {
-    border-bottom: none;
-  }
+        .print-person-row:last-child {
+          border-bottom: none;
+        }
 
-  .print-person-name {
-    flex: 1;
-    text-align: left;
-    min-width: 0;
-  }
+        .print-person-name {
+          flex: 1;
+          text-align: left;
+          min-width: 0;
+        }
 
-  .print-person-role {
-    flex-shrink: 0;
-    text-align: right;
-    white-space: nowrap;
-    font-weight: bold;
-  }
+        .print-person-role {
+          flex-shrink: 0;
+          text-align: right;
+          white-space: nowrap;
+          font-weight: bold;
+        }
 
-  .driver {
-    color: #0f5a4f;
-  }
+        .driver {
+          color: #0f5a4f;
+        }
 
-  .loader {
-    color: #a16207;
-  }
+        .loader {
+          color: #a16207;
+        }
 
-  .print-role {
-    font-size: 13px;
-    color: #444;
-  }
+        .print-role {
+          font-size: 13px;
+          color: #444;
+        }
 
-  .print-empty {
-    color: #666;
-    font-style: italic;
-  }
+        .print-empty {
+          color: #666;
+          font-style: italic;
+        }
 
-  @media print {
-    body {
-      margin: 0;
-    }
-  }
-</style>
-<!-- ===== FIN CSS IMPRESSION PLANNING ===== -->
+        @media print {
+          body {
+            margin: 0;
+          }
+        }
+      </style>
+      <!-- ===== FIN CSS IMPRESSION PLANNING ===== -->
     </head>
 
     <body>
@@ -7095,9 +7607,9 @@ function loadPersonDetail() {
     iframe.contentWindow.print();
   }, 300);
 }
-  
+
 /*********************************
- * BOOT
+ * 28 - BOOT
  *********************************/
 async function boot() {
   try {
@@ -7119,20 +7631,20 @@ async function boot() {
         applyAppData(cache);
 
         const targetView = getLastView();
+
         showView(targetView, { push: false });
         replaceHistoryRoot(targetView);
 
         startAutoRefresh();
         startUiMinuteRefresh();
 
-        // Si on a encore le mot de passe en mémoire, on peut rafraîchir.
-        // Après un refresh complet, state.password est vide, donc on reste sur cache.
         if (navigator.onLine && state.password) {
           loadAppData(false);
         } else {
           showSyncStatus(
             "offline",
-            cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
+            cache?.meta?.lastUpdate ||
+              (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
           );
         }
 
@@ -7144,8 +7656,6 @@ async function boot() {
       }
     }
 
-    // ❌ Pas de mot de passe en mémoire ET pas de cache utilisable
-    // => on redemande le mot de passe.
     if (!state.password) {
       state.currentView = "login";
       showView("login", { push: false });
@@ -7183,6 +7693,7 @@ async function boot() {
       startUiMinuteRefresh();
 
       const targetView = getLastView();
+
       showView(targetView, { push: false });
       replaceHistoryRoot(targetView);
     } else {
@@ -7200,6 +7711,7 @@ async function boot() {
         applyAppData(fallbackCache);
 
         const targetView = getLastView();
+
         showView(targetView, { push: false });
         replaceHistoryRoot(targetView);
 
@@ -7208,7 +7720,8 @@ async function boot() {
 
         showSyncStatus(
           "offline",
-          fallbackCache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
+          fallbackCache?.meta?.lastUpdate ||
+            (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
         );
       } catch (e) {
         console.error("Erreur fallback boot", e);
@@ -7221,15 +7734,13 @@ async function boot() {
     }
   }
 }
-
 /*********************************
- * EVENTS
+ * 29 - EVENTS / GLOBAL LISTENERS
  *********************************/
-document.addEventListener("DOMContentLoaded", function() {
-
+document.addEventListener("DOMContentLoaded", function () {
   const pwd = document.getElementById("pwd");
   if (pwd) {
-    pwd.addEventListener("keydown", function(e) {
+    pwd.addEventListener("keydown", function (e) {
       if (e.key === "Enter") login();
     });
   }
@@ -7239,12 +7750,13 @@ document.addEventListener("DOMContentLoaded", function() {
     searchUser.addEventListener("input", filterUsers);
   }
 
-  window.addEventListener("error", function(e) {
+  window.addEventListener("error", function (e) {
     console.error("Erreur JS globale", e.error || e.message);
   });
 
-  window.addEventListener("popstate", function(e) {
+  window.addEventListener("popstate", function (e) {
     if (internalNavLock) return;
+
     const st = e.state;
     if (st && st.app) {
       showView(st.view || "home", {
@@ -7255,10 +7767,17 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
+  if (typeof flushPendingSyncQueue === "function") {
+    flushPendingSyncQueue();
+  }
+
   boot();
 });
 
-document.addEventListener("visibilitychange", function() {
+/*********************************
+ * 30 - VISIBILITY / ONLINE
+ *********************************/
+document.addEventListener("visibilitychange", function () {
   if (document.visibilityState === "visible") {
     if (navigator.onLine && state.password && state.userId) {
       loadAppData(false);
@@ -7266,15 +7785,22 @@ document.addEventListener("visibilitychange", function() {
   }
 });
 
-window.addEventListener("online", () => {
-  console.log("Retour en ligne → refresh");
+window.addEventListener("online", async () => {
+  try {
+    if (typeof flushPendingSyncQueue === "function") {
+      await flushPendingSyncQueue();
+    }
 
-  setTimeout(() => {
-    loadAppData(true);
-  }, 1500);
+    await loadAppData(true);
+  } catch (e) {
+    console.warn("Retour en ligne : refresh échoué", e);
+  }
 });
-  
-  function setTestNowPrompt() {
+
+/*********************************
+ * 31 - TEST MODE
+ *********************************/
+function setTestNowPrompt() {
   const value = prompt("Entrer une date au format JJ/MM HH:MM", "02/07 17:01");
   if (!value) return;
 
@@ -7286,39 +7812,54 @@ function clearForcedNow() {
   localStorage.removeItem("forced_now");
   location.reload();
 }
+
+/*********************************
+ * 32 - PRINT MODALS
+ *********************************/
 function openPrintModal() {
   const modal = document.getElementById("printModal");
   if (!modal) return;
+
   modal.classList.remove("hidden");
 }
 
 function closePrintModal() {
   const modal = document.getElementById("printModal");
   if (!modal) return;
+
   modal.classList.add("hidden");
 }
-  function openPrintDayPicker() {
+
+function openPrintDayPicker() {
   closePrintModal();
+
   const modal = document.getElementById("printDayModal");
   if (!modal) return;
+
   modal.classList.remove("hidden");
 }
 
 function closePrintDayPicker() {
   const modal = document.getElementById("printDayModal");
   if (!modal) return;
+
   modal.classList.add("hidden");
 }
 
-  function toggleHomeConcertsDropdown() {
-    const panel = document.getElementById("homeConcertsPanel");
-    const chevron = document.getElementById("homeConcertsChevron");
-    if (!panel || !chevron) return;
-  
-    panel.classList.toggle("hidden");
-    chevron.textContent = panel.classList.contains("hidden") ? "▼" : "▲";
-  }
-  function isBeforeFixedDate(dateString) {
+/*********************************
+ * 33 - HOME HELPERS
+ *********************************/
+function toggleHomeConcertsDropdown() {
+  const panel = document.getElementById("homeConcertsPanel");
+  const chevron = document.getElementById("homeConcertsChevron");
+
+  if (!panel || !chevron) return;
+
+  panel.classList.toggle("hidden");
+  chevron.textContent = panel.classList.contains("hidden") ? "▼" : "▲";
+}
+
+function isBeforeFixedDate(dateString) {
   return new Date() < new Date(dateString);
 }
 
@@ -7329,15 +7870,11 @@ function shouldShowHomeNextShift() {
 function shouldShowHomeFollowingConcerts() {
   return !isBeforeFixedDate("2026-07-01T00:00:00");
 }
-  function setSimulatedNow() {
-  const value = prompt("Entrer une date JJ/MM HH:MM", "02/07 17:01");
-  if (!value) return;
 
-  localStorage.setItem("forced_now", value);
-  location.reload();
-}
-
- function togglePeopleList(id) {
+/*********************************
+ * 34 - REFERENT UI
+ *********************************/
+function togglePeopleList(id) {
   const isAlreadyOpen = referentUiState.openMenuId === id;
 
   referentUiState.openMenuId = isAlreadyOpen ? "" : id;
@@ -7359,28 +7896,18 @@ function shouldShowHomeFollowingConcerts() {
   }
 }
 
+/*********************************
+ * 35 - GLOBAL UTILS / EXPOSURE
+ *********************************/
 function getFullName(person) {
   const prenom = String(person?.prenom || "").trim();
   const nom = String(person?.nom || "").trim();
-  const fullName = [prenom, nom].filter(Boolean).join(" ").trim();
-  return fullName || String(person?.label || "").trim();
+
+  return [prenom, nom].filter(Boolean).join(" ").trim() || String(person?.label || "").trim();
 }
- window.logout = logout;
 
-window.addEventListener("online", async () => {
-  try {
-    if (typeof flushPendingSyncQueue === "function") {
-      await flushPendingSyncQueue();
-    }
+window.logout = logout;
 
-    await loadAppData(true);
-  } catch (e) {
-    console.warn("Retour en ligne : refresh échoué", e);
-  }
-});
-
-// flush au démarrage aussi
-flushPendingSyncQueue();
 </script>
 <!-- ===== FIN SCRIPT PRINCIPAL APPLICATION ===== -->
 </body>
