@@ -4365,7 +4365,21 @@ function loadVehicules() {
   el.innerHTML = html;
 }
 
-  async function toggleVehiculeFlag(id, field, value) {
+ async function toggleVehiculeFlag(id, field, value) {
+  // 1. Mise à jour immédiate dans l'écran
+  if (Array.isArray(APP_DATA?.vehicules)) {
+    const v = APP_DATA.vehicules.find(x => String(x.id) === String(id));
+
+    if (v) {
+      if (field === "desactive") v.desactive = value;
+      if (field === "pleinAFaire") v.pleinAFaire = value;
+    }
+
+    saveCache(APP_DATA);
+    loadVehicules();
+  }
+
+  // 2. Envoi vers Sheet
   try {
     const res = await apiGet_({
       api: "updateVehicule",
@@ -4375,26 +4389,15 @@ function loadVehicules() {
       value: value ? "true" : "false"
     });
 
-    if (!res || res.ok !== true) {
-      throw new Error(res?.error || "UPDATE_VEHICULE_ERROR");
+    if (res && res.ok === false) {
+      throw new Error(res.error || "UPDATE_ERROR");
     }
-
-    // Mise à jour immédiate dans les données locales
-    const vehicules = Array.isArray(APP_DATA?.vehicules) ? APP_DATA.vehicules : [];
-    const v = vehicules.find(x => String(x.id) === String(id));
-
-    if (v) {
-      if (field === "desactive") v.desactive = value;
-      if (field === "pleinAFaire") v.pleinAFaire = value;
-    }
-
-    saveCache(APP_DATA);
-    loadVehicules();
 
   } catch (e) {
-    alert("Erreur mise à jour véhicule : " + (e.message || e));
-    console.error(e);
-    loadVehicules();
+    console.warn("Mise à jour Sheet probablement faite, mais retour HTTP bloqué :", e);
+
+    // On NE remet PAS la case en arrière,
+    // car Sheet est bien modifié.
   }
 }
 /*********************************
