@@ -5,8 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<!-- ===== DEBUT CSS PRINCIPAL APPLICATION ===== -->
-  <style>
+<style>
 /* =========================================================
    FESTIVAL APP — CSS NETTOYÉ & DOCUMENTÉ
    ========================================================= */
@@ -2642,10 +2641,8 @@ body {
   box-shadow: 0 8px 18px rgba(15, 90, 79, 0.18) !important;
 } 
 </style>
-<!-- ===== FIN CSS PRINCIPAL APPLICATION ===== -->
 </head>
 
-<!-- ===== DEBUT BODY ===== -->
 <body>
   <div class="app-shell">
 
@@ -2784,19 +2781,13 @@ body {
     </div>
   </div>
 </div>
-
-<!-- ===== FIN BODY STRUCTURE HTML ===== -->
-
-<!-- ===== DEBUT SCRIPT PRINCIPAL APPLICATION ===== -->  
 <script>
 const WEBAPP_BASE_URL = "https://script.google.com/macros/s/AKfycbza3bRglD6naLzG-0H1-wkMF93DXKiweLzkcXeglwcw8VtNdtsk_8_UrqXXJ7YLwbmv/exec";
-
 /*********************************
-* 01 - CONFIG API
-*********************************/ 
+ * API FETCH
+ *********************************/
 async function apiGet_(params) {
   const url = new URL(WEBAPP_BASE_URL);
-
   Object.keys(params || {}).forEach(key => {
     const value = params[key];
     if (value !== undefined && value !== null) {
@@ -2804,22 +2795,19 @@ async function apiGet_(params) {
     }
   });
 
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    cache: "no-store"
-  });
+ const response = await fetch(url.toString(), {
+  method: "GET",
+  cache: "no-store"
+});
 
   if (!response.ok) {
     throw new Error("HTTP_" + response.status);
   }
 
-  try {
-    return await response.json();
-  } catch (e) {
-    throw new Error("INVALID_JSON_RESPONSE");
-  }
+  const json = await response.json();
+  return { ok: true };
 }
-  
+
 async function apiCheckPassword_(password) {
   const res = await apiGet_({
     api: "checkPassword",
@@ -2874,7 +2862,7 @@ async function apiGetBundle_(password, userId) {
 }
 
 /*********************************
- * 02 - STATE GLOBAL
+ * STATE GLOBAL
  *********************************/
 let state = {
   currentView: "login",
@@ -2944,11 +2932,9 @@ let homeConcertsState = {
 let vehiculesState = {
   openId: ""
 };
-
 /*********************************
- * 03 - CACHE OFFLINE
+ * CACHE OFFLINE
  *********************************/
-  
 const CACHE_VERSION = "v1";
 let APP_DATA = null;
   let autoRefreshTimer = null;
@@ -2957,7 +2943,7 @@ let syncHideTimer = null;
 let internalNavLock = false;
 
 /*********************************
- * 04 - CACHE HELPERS
+ * CACHE HELPERS
  *********************************/
 function getCacheKey() {
   if (!state.userId) return null;
@@ -3162,7 +3148,7 @@ function stopUiMinuteRefresh() {
   }
 }
 /*********************************
- * 04B - QUEUE SYNC OFFLINE
+ * QUEUE SYNC OFFLINE
  *********************************/
 function getPendingSyncKey() {
   return "planning_pending_sync_" + (state.userId || "global");
@@ -3224,7 +3210,7 @@ async function flushPendingSyncQueue() {
   }
 }
 /*********************************
- * 05 - OUTILS / HELPERS
+ * OUTILS
  *********************************/
 function escapeHtml(value) {
   return String(value ?? "")
@@ -3357,8 +3343,7 @@ function renderSafeError(targetId, message) {
     "planningContent",
     "contactsContent",
     "shiftDetailContent",
-    "personDetailContent",
-    "vehiculesContent"
+    "personDetailContent"
   ];
 
   targets.forEach(id => {
@@ -3676,7 +3661,7 @@ function getDefaultPlanningDay() {
 }
   
 /*********************************
- * 06 - NAVIGATION STATE / HISTORY
+ * NAVIGATION STATE / HISTORY
  *********************************/
 function getViewState(name) {
   return {
@@ -3722,7 +3707,6 @@ function replaceHistoryRoot(name) {
 
 function syncCurrentHistoryState() {
   const current = history.state || {};
-
   history.replaceState(
     {
       ...current,
@@ -3739,12 +3723,11 @@ function navigateBack(targetFallback = "home") {
     history.back();
     return;
   }
-
   showView(targetFallback, { push: false });
 }
 
 /*********************************
- * 07 - PEOPLE / USERS HELPERS
+ * APP DATA HELPERS
  *********************************/
 function getPeopleIndexFromAppData() {
   const map = {};
@@ -3756,7 +3739,6 @@ function getPeopleIndexFromAppData() {
 
   sources.forEach(p => {
     if (!p || !p.id) return;
-
     map[p.id] = {
       id: p.id,
       label: p.label || [p.prenom, p.nom].filter(Boolean).join(" ").trim(),
@@ -3773,11 +3755,9 @@ function getPeopleIndexFromAppData() {
 
 function getAllPeopleForContacts() {
   const map = getPeopleIndexFromAppData();
-
   return Object.values(map).sort((a, b) => {
     const p = String(a.prenom || "").localeCompare(String(b.prenom || ""), "fr");
     if (p !== 0) return p;
-
     return String(a.nom || "").localeCompare(String(b.nom || ""), "fr");
   });
 }
@@ -3787,44 +3767,12 @@ function getPersonById(personId) {
   return map[personId] || null;
 }
 
-function getSelectedUserFirstName() {
-  const full = String(state.userLabel || "").trim();
-  if (!full) return "Aucun";
-
-  return full.split(/\s+/)[0] || full;
-}
-
-function getSelectedUserDisplayName() {
-  const selectedId = localStorage.getItem("planning_user_id");
-  const people = Array.isArray(APP_DATA?.people) ? APP_DATA.people : [];
-
-  const user = people.find(p => String(p.id) === String(selectedId));
-  if (!user) return getSelectedUserFirstName() || "";
-
-  return [user.prenom, user.nom].filter(Boolean).join(" ");
-}
-
-function getSelectedUserFullName() {
-  try {
-    const firstName = getSelectedUserFirstName();
-    const user = window.selectedUser || window.currentUser || {};
-
-    return [firstName, user.nom].filter(Boolean).join(" ");
-  } catch (e) {
-    return getSelectedUserFirstName();
-  }
-}
-
-/*********************************
- * 08 - SHIFT / TIME HELPERS
- *********************************/
 function getPersonShifts(personId) {
   const shifts = getPlanningShiftsFromAppData(APP_DATA);
   const result = [];
 
   shifts.forEach(shift => {
     const people = Array.isArray(shift.benevoles) ? shift.benevoles : [];
-
     people.forEach(person => {
       if (String(person.id || "") !== String(personId || "")) return;
 
@@ -3922,9 +3870,30 @@ function personHasMondayShift(personId) {
   return getPersonShifts(personId).some(s => String(s.jour || "") === "Lundi");
 }
 
-/*********************************
- * 09 - FESTIVAL STATE / LIVE HELPERS
- *********************************/
+  function getSelectedUserFirstName() {
+  const full = String(state.userLabel || "").trim();
+  if (!full) return "Aucun";
+  return full.split(/\s+/)[0] || full;
+}
+  function getSelectedUserDisplayName() {
+  const selectedId = localStorage.getItem("planning_user_id");
+  const people = Array.isArray(APP_DATA?.people) ? APP_DATA.people : [];
+
+  const user = people.find(p => String(p.id) === String(selectedId));
+  if (!user) return getSelectedUserFirstName() || "";
+
+  return [user.prenom, user.nom].filter(Boolean).join(" ");
+}
+function getSelectedUserFullName() {
+  try {
+    const firstName = getSelectedUserFirstName();
+    const user = window.selectedUser || window.currentUser || {};
+
+    return [firstName, user.nom].filter(Boolean).join(" ");
+  } catch (e) {
+    return getSelectedUserFirstName();
+  }
+}
 function getCurrentFestivalEntry() {
   const all = Array.isArray(APP_DATA?.direct?.allShifts) ? APP_DATA.direct.allShifts : [];
   if (!all.length) return null;
@@ -3945,9 +3914,6 @@ function isUserInFestivalEntry(entry) {
   );
 }
 
-/*********************************
- * 10 - HOME UI HELPERS
- *********************************/
 function toggleHomeConcertsMore() {
   homeConcertsState.openMore = !homeConcertsState.openMore;
   renderHome();
@@ -3977,13 +3943,13 @@ function renderHomeHeroUserPill() {
         "
       >
         <div style="min-width:0; line-height:1.05;">
+          <div style="font-size:0.56rem; font-weight:900; color:#EDE7DA; display:none;"></div>
           <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
             Hello John, connecté en tant que
           </div>
-
           <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${escapeHtml(getSelectedUserDisplayName())}
-          </div>
+${escapeHtml(getSelectedUserDisplayName())}
+</div>
         </div>
 
         <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
@@ -4063,12 +4029,10 @@ function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
           <div class="shift-line" style="white-space:normal; overflow:visible; text-overflow:unset;">
             ${escapeHtml(concert.artiste || "")}
           </div>
-
           <div class="subtle-text">
             ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
           </div>
         </div>
-
         <span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span>
       </div>
     </div>
@@ -4076,7 +4040,7 @@ function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
 }
 
 /*********************************
- * 11 - OFFLINE-FIRST BOOTSTRAP
+ * OFFLINE-FIRST BOOTSTRAP
  *********************************/
 async function loadAppData(forceRefresh = false) {
   let cache = loadCache();
@@ -4092,24 +4056,26 @@ async function loadAppData(forceRefresh = false) {
     cache = null;
   }
 
-  if (cache) {
-    try {
-      APP_DATA = cache;
-      applyAppData(cache);
+if (cache) {
+  try {
+    APP_DATA = cache;
+    applyAppData(cache);
 
-      const cacheLastUpdate =
-        cache?.meta?.lastUpdate ||
-        (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+    const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
 
-      showSyncStatus(navigator.onLine ? "ok" : "offline", cacheLastUpdate);
-
-    } catch (e) {
-      console.error("Erreur apply cache", e);
-      clearCache();
-      cache = null;
-      APP_DATA = null;
+    if (!navigator.onLine) {
+      showSyncStatus("offline", cacheLastUpdate);
+    } else {
+      showSyncStatus("ok", cacheLastUpdate);
     }
+
+  } catch (e) {
+    console.error("Erreur apply cache", e);
+    clearCache();
+    cache = null;
+    APP_DATA = null;
   }
+}
 
   let shouldRefresh = forceRefresh;
 
@@ -4126,10 +4092,10 @@ async function loadAppData(forceRefresh = false) {
 
   try {
     const bundleUserId = state.appMode === "referent"
-      ? "__REFERENT__"
-      : state.userId;
+  ? "__REFERENT__"
+  : state.userId;
 
-    const data = await apiGetBundle_(state.password, bundleUserId);
+const data = await apiGetBundle_(state.password, bundleUserId);
 
     if (!isValidAppDataShape(data)) {
       throw new Error("Structure bundle invalide");
@@ -4147,13 +4113,8 @@ async function loadAppData(forceRefresh = false) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
-
-        const cacheLastUpdate =
-          cache?.meta?.lastUpdate ||
-          (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
-
-        showSyncStatus("offline", cacheLastUpdate);
-
+const cacheLastUpdate = cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+showSyncStatus("offline", cacheLastUpdate);
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
         APP_DATA = null;
@@ -4175,22 +4136,15 @@ function applyAppData(data) {
 
   APP_DATA = data;
 
-  state.userId = data.user?.id || state.userId || "";
-  state.userLabel = data.user?.label || state.userLabel || "";
-  state.isRef = data.user?.isRef === true;
-
+state.userId = data.user?.id || state.userId || "";
+state.userLabel = data.user?.label || state.userLabel || "";
+state.isRef = data.user?.isRef === true;
+  
   planningState.allShifts = getPlanningShiftsFromAppData(data);
   planningState.byDay = buildPlanningByDay(planningState.allShifts);
 
-  directState.allShifts = Array.isArray(data.direct.allShifts)
-    ? data.direct.allShifts
-    : [];
-
-  directState.defaultIndex =
-    typeof data.direct.defaultIndex === "number"
-      ? data.direct.defaultIndex
-      : -1;
-
+  directState.allShifts = Array.isArray(data.direct.allShifts) ? data.direct.allShifts : [];
+  directState.defaultIndex = typeof data.direct.defaultIndex === "number" ? data.direct.defaultIndex : -1;
   directState.liveState = data.direct.liveState || "next";
 
   if (!directState.isManual) {
@@ -4207,7 +4161,7 @@ function applyAppData(data) {
 }
 
 /*********************************
- * 12 - SHELL / NAVIGATION UI
+ * SHELL
  *********************************/
 function renderBottomNav() {
   const nav = document.getElementById("shellBottomNav");
@@ -4265,26 +4219,12 @@ function renderBottomNav() {
     </button>
   `;
 }
-
-function updateShellForView(name) {
-  renderBottomNav();
-
+  
+  function updateShellForView(name) {
+    renderBottomNav();
   const bottomNav = document.getElementById("shellBottomNav");
   const titleEl = document.getElementById("miniPageTitle");
-
-  if (!bottomNav || !titleEl) return;
-
-  const inAppViews = [
-    "home",
-    "direct",
-    "mes-creneaux",
-    "planning",
-    "contacts",
-    "vehicules",
-    "infos",
-    "shift-detail",
-    "person-detail"
-  ];
+const inAppViews = ["home", "direct", "mes-creneaux", "planning", "contacts", "vehicules", "shift-detail", "person-detail"];
 
   if (inAppViews.includes(name)) {
     bottomNav.classList.remove("hidden");
@@ -4292,55 +4232,41 @@ function updateShellForView(name) {
 
     if (name === "home") {
       titleEl.classList.add("home-title");
+      titleEl.classList.remove("hidden");
     } else {
       titleEl.classList.remove("home-title");
+      titleEl.classList.remove("hidden");
     }
-
-    titleEl.classList.remove("hidden");
   } else {
     bottomNav.classList.add("hidden");
     titleEl.classList.add("hidden");
     titleEl.classList.remove("home-title");
     titleEl.textContent = "";
   }
-
-  document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.classList.remove("active");
-  });
+  
+  document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
 
   let activeName = name;
-
-  if (name === "shift-detail") {
-    activeName = "mes-creneaux";
-  }
-
+  if (name === "shift-detail") activeName = "mes-creneaux";
   if (name === "person-detail") {
     activeName =
-      personDetailState.sourceView === "contacts" ? "contacts" :
-      personDetailState.sourceView === "direct" ? "direct" :
-      personDetailState.sourceView === "mes-creneaux" ? "mes-creneaux" :
-      "planning";
+      personDetailState.sourceView === "contacts" ? "contacts"
+      : personDetailState.sourceView === "direct" ? "direct"
+      : personDetailState.sourceView === "mes-creneaux" ? "mes-creneaux"
+      : "planning";
   }
 
   const activeBtn = document.querySelector(`.nav-item[data-nav="${activeName}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 }
- /*********************************
- * 13 - VIEW ROUTER
+
+/*********************************
+ * NAVIGATION
  *********************************/
 function showView(name, options = {}) {
-  const opts = Object.assign(
-    {
-      push: true,
-      restore: null,
-      preserveScroll: false
-    },
-    options
-  );
+  const opts = Object.assign({ push: true, restore: null, preserveScroll: false }, options);
 
-  const alreadyActiveInDom =
-    document.getElementById("view-" + name)?.classList.contains("active");
-
+  const alreadyActiveInDom = document.getElementById("view-" + name)?.classList.contains("active");
   const previousViewName = state.currentView;
 
   if (
@@ -4363,10 +4289,7 @@ function showView(name, options = {}) {
     mesCreneauxState.autoScrolled = false;
   }
 
-  document.querySelectorAll(".page").forEach(page => {
-    page.classList.remove("active");
-  });
-
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const target = document.getElementById("view-" + name);
   if (target) target.classList.add("active");
 
@@ -4375,16 +4298,15 @@ function showView(name, options = {}) {
   updateShellForView(name);
 
   try {
-    if (name === "home") renderHome();
-    if (name === "mes-creneaux") loadMesCreneaux();
-    if (name === "direct") loadDirect();
-    if (name === "planning") loadPlanning();
-    if (name === "contacts") loadContacts();
-    if (name === "vehicules") loadVehicules();
-    if (name === "infos") renderInfos();
-    if (name === "referent") renderReferent();
-    if (name === "shift-detail") loadShiftDetail();
-    if (name === "person-detail") loadPersonDetail();
+if (name === "home") renderHome();
+if (name === "mes-creneaux") loadMesCreneaux();
+if (name === "direct") loadDirect();
+if (name === "planning") loadPlanning();
+if (name === "contacts") loadContacts();
+if (name === "vehicules") loadVehicules();
+if (name === "referent") renderReferent();
+if (name === "shift-detail") loadShiftDetail();
+if (name === "person-detail") loadPersonDetail();
 
     if (opts.push && name !== "login" && name !== "select-user") {
       pushHistoryState(name);
@@ -4408,17 +4330,15 @@ function refreshCurrentViewOnly() {
     if (state.currentView === "direct") loadDirect();
     if (state.currentView === "planning") loadPlanning();
     if (state.currentView === "contacts") loadContacts();
-    if (state.currentView === "vehicules") loadVehicules();
-    if (state.currentView === "infos") renderInfos();
     if (state.currentView === "shift-detail") loadShiftDetail();
     if (state.currentView === "person-detail") loadPersonDetail();
+    if (state.currentView === "vehicules") loadVehicules();
   } catch (e) {
     console.error("Erreur refreshCurrentViewOnly", e);
   }
 }
-
 /*********************************
- * 14 - VEHICULES
+ * VEHICULES
  *********************************/
 function toggleVehicule(id) {
   vehiculesState.openId =
@@ -4480,28 +4400,28 @@ function loadVehicules() {
           isOpen
             ? `
               <div style="margin-top:10px;">
-                <div class="subtle-text">
-                  Immatriculation : ${escapeHtml(v.immat || "—")}
-                </div>
+  <div class="subtle-text">
+    Immatriculation : ${escapeHtml(v.immat || "—")}
+  </div>
 
-                <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
-                  <input
-                    type="checkbox"
-                    ${v.desactive ? "checked" : ""}
-                    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','desactive', this.checked)"
-                  >
-                  Véhicule désactivé
-                </label>
+  <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
+  <input 
+    type="checkbox" 
+    ${v.desactive ? "checked" : ""} 
+    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','desactive', this.checked)"
+  >
+  Véhicule désactivé
+</label>
 
-                <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
-                  <input
-                    type="checkbox"
-                    ${v.pleinAFaire ? "checked" : ""}
-                    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','pleinAFaire', this.checked)"
-                  >
-                  Plein à faire
-                </label>
-              </div>
+<label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
+  <input 
+    type="checkbox" 
+    ${v.pleinAFaire ? "checked" : ""} 
+    onchange="toggleVehiculeFlag('${escapeHtml(v.id)}','pleinAFaire', this.checked)"
+  >
+  Plein à faire
+</label>
+</div>
             `
             : ""
         }
@@ -4513,6 +4433,7 @@ function loadVehicules() {
 }
 
 async function toggleVehiculeFlag(id, field, value) {
+  // 1. Mise à jour immédiate dans APP_DATA
   const vehicule = APP_DATA?.vehicules?.find(v => String(v.id) === String(id));
 
   if (vehicule) {
@@ -4523,35 +4444,38 @@ async function toggleVehiculeFlag(id, field, value) {
   saveCache(APP_DATA);
   loadVehicules();
 
+  // 2. Si pas de réseau : on met en attente
   if (!navigator.onLine) {
     addPendingSyncAction({
       type: "updateVehicule",
-      id,
-      field,
-      value
+      id: id,
+      field: field,
+      value: value
     });
 
     showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
     return;
   }
 
+  // 3. Si réseau : tentative directe
   try {
     await apiGet_({
       api: "updateVehicule",
       pwd: state.password,
-      id,
-      field,
+      id: id,
+      field: field,
       value: value ? "true" : "false"
     });
 
     await loadAppData(true);
 
   } catch (e) {
+    // Si ça échoue, on garde l'action en attente
     addPendingSyncAction({
       type: "updateVehicule",
-      id,
-      field,
-      value
+      id: id,
+      field: field,
+      value: value
     });
 
     saveCache(APP_DATA);
@@ -4560,9 +4484,8 @@ async function toggleVehiculeFlag(id, field, value) {
     console.warn("Action véhicule gardée en attente", e);
   }
 }
-
 /*********************************
- * 15 - LOGIN / COMPTE
+ * LOGIN / COMPTE
  *********************************/
 async function login() {
   const pwdInput = document.getElementById("pwd");
@@ -4575,68 +4498,67 @@ async function login() {
 
   try {
     const isRef = await apiCheckRefPassword_(pwd).catch(() => false);
-    const ok = isRef || await apiCheckPassword_(pwd);
+const ok = isRef || await apiCheckPassword_(pwd);
 
-    if (!ok) {
-      loginError.textContent = "Mot de passe incorrect.";
-      return;
-    }
+if (!ok) {
+  loginError.textContent = "Mot de passe incorrect.";
+  return;
+}
 
-    state.password = pwd;
-    state.authOk = true;
-    state.isRefMode = isRef;
-
+   state.password = pwd;
     localStorage.setItem("planning_password", pwd);
-    localStorage.setItem("planning_auth_ok", "1");
+state.authOk = true;
+state.isRefMode = isRef;
 
-    if (isRef) {
-      state.appMode = "referent";
-    } else if (pwd === "test26") {
-      state.appMode = "test";
-    } else {
-      state.appMode = "benevole";
-    }
+if (isRef) {
+  state.appMode = "referent";
+} else if (pwd === "test26") {
+  state.appMode = "test";
+} else {
+  state.appMode = "benevole";
+}
 
-    localStorage.setItem("planning_app_mode", state.appMode);
+localStorage.setItem("planning_auth_ok", "1");
+localStorage.setItem("planning_app_mode", state.appMode);
 
     loginSuccess.textContent = isRef
       ? "Mot de passe référent correct."
       : "Mot de passe correct.";
 
-    if (state.isRefMode) {
-      state.userId = "__REFERENT__";
-      state.userLabel = "Référent";
+   // 👇 CAS REFERENT
+if (state.isRefMode) {
+  state.userId = "__REFERENT__";
+  state.userLabel = "Référent";
 
-      localStorage.setItem("planning_user_id", "__REFERENT__");
-      localStorage.setItem("planning_user_label", "Référent");
+  localStorage.setItem("planning_user_id", "__REFERENT__");
+  localStorage.setItem("planning_user_label", "Référent");
 
-      await loadAppData(false);
-      startAutoRefresh();
-      startUiMinuteRefresh();
+  await loadAppData(false);
+  startAutoRefresh();
+  startUiMinuteRefresh();
 
-      showView("home", { push: false });
-      replaceHistoryRoot("home");
-      return;
-    }
+  showView("home", { push: false });
+  replaceHistoryRoot("home");
+  return;
+}
 
-    if (state.userId) {
-      await loadAppData(false);
-      startAutoRefresh();
-      startUiMinuteRefresh();
+// 👇 CAS BENEVOLE
+if (state.userId) {
+  await loadAppData(false);
+  startAutoRefresh();
+  startUiMinuteRefresh();
 
-      const targetView = getLastView();
-      showView(targetView, { push: false });
-      replaceHistoryRoot(targetView);
-    } else {
-      await loadUsers();
-    }
-
+  const targetView = getLastView();
+  showView(targetView, { push: false });
+  replaceHistoryRoot(targetView);
+} else {
+  await loadUsers();
+}
   } catch (err) {
     console.error("Erreur login", err);
     loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
   }
 }
-  window.login = login;
 
 function logout() {
   stopAutoRefresh();
@@ -4645,16 +4567,16 @@ function logout() {
   clearCache();
 
   localStorage.removeItem("planning_auth_ok");
-  localStorage.removeItem("planning_app_mode");
-  localStorage.removeItem("planning_user_id");
-  localStorage.removeItem("planning_user_label");
-  localStorage.removeItem("planning_contacts_query");
+localStorage.removeItem("planning_app_mode");
+localStorage.removeItem("planning_user_id");
+localStorage.removeItem("planning_user_label");
+localStorage.removeItem("planning_contacts_query");
   localStorage.removeItem("planning_password");
 
   state.password = "";
   state.authOk = false;
-  state.appMode = "";
-  state.isRefMode = false;
+state.appMode = "";
+state.isRefMode = false;
   state.userId = "";
   state.userLabel = "";
   state.selectedUserId = "";
@@ -4664,7 +4586,6 @@ function logout() {
   detailState.shiftId = "";
   personDetailState.personId = "";
   personDetailState.sourceView = "planning";
-
   APP_DATA = null;
   contactsState.query = "";
 
@@ -4692,9 +4613,7 @@ function changeUser() {
 function backToLogin() {
   state.selectedUserId = "";
   state.selectedUserLabel = "";
-
-  const userError = document.getElementById("userError");
-  if (userError) userError.textContent = "";
+  document.getElementById("userError").textContent = "";
 
   if (state.userId) {
     showView(state.returnViewAfterUserChange || "home", { push: false });
@@ -4704,24 +4623,23 @@ function backToLogin() {
 }
 
 /*********************************
- * 16 - UTILISATEURS
+ * UTILISATEURS
  *********************************/
 async function loadUsers() {
   const container = document.getElementById("userList");
   const userError = document.getElementById("userError");
-
-  if (!container || !userError) return;
 
   container.innerHTML = renderSkeletonList(4);
   userError.textContent = "";
 
   try {
     const data = await apiGetUsers_(state.password);
-    let users = Array.isArray(data) ? data.slice() : [];
+let users = Array.isArray(data) ? data.slice() : [];
 
-    if (!state.isRefMode) {
-      users = users.filter(u => u.isRef !== true);
-    }
+// En mode bénévole, on ne propose pas les référents dans le choix de profil
+if (!state.isRefMode) {
+  users = users.filter(u => u.isRef !== true);
+}
 
     users.sort((a, b) => {
       const labelA = String(a.label || "").trim();
@@ -4741,27 +4659,19 @@ async function loadUsers() {
 
     state.allUsers = users;
     state.filteredUsers = users.slice();
-
     renderUserList(state.filteredUsers);
-
-    const searchUser = document.getElementById("searchUser");
-    if (searchUser) searchUser.value = "";
-
+    document.getElementById("searchUser").value = "";
     showView("select-user", { push: false });
 
   } catch (err) {
     console.error("Erreur loadUsers", err);
-    userError.textContent = err && err.message
-      ? err.message
-      : "Impossible de charger les bénévoles.";
-
+    userError.textContent = err && err.message ? err.message : "Impossible de charger les bénévoles.";
     showView("select-user", { push: false });
   }
 }
 
 function renderUserList(list) {
   const container = document.getElementById("userList");
-  if (!container) return;
 
   if (!list.length) {
     container.innerHTML = "Aucun bénévole";
@@ -4772,7 +4682,6 @@ function renderUserList(list) {
 
   list.forEach(u => {
     const active = String(u.id || "") === String(state.selectedUserId || "");
-
     html += `
       <button
         type="button"
@@ -4790,17 +4699,12 @@ function renderUserList(list) {
 function selectUser(id, label) {
   state.selectedUserId = id;
   state.selectedUserLabel = label;
-
-  const userError = document.getElementById("userError");
-  if (userError) userError.textContent = "";
-
+  document.getElementById("userError").textContent = "";
   renderUserList(state.filteredUsers);
 }
 
 function filterUsers() {
-  const searchInput = document.getElementById("searchUser");
-  const q = normalizeText(searchInput ? searchInput.value : "");
-
+  const q = normalizeText(document.getElementById("searchUser").value);
   state.filteredUsers = !q
     ? state.allUsers.slice()
     : state.allUsers.filter(u => normalizeText(u.label || "").includes(q));
@@ -4812,7 +4716,7 @@ async function validateSelectedUser() {
   const userError = document.getElementById("userError");
 
   if (!state.selectedUserId) {
-    if (userError) userError.textContent = "Choisis un bénévole.";
+    userError.textContent = "Choisis un bénévole.";
     return;
   }
 
@@ -4830,14 +4734,10 @@ async function validateSelectedUser() {
   await loadAppData(true);
   startAutoRefresh();
   startUiMinuteRefresh();
-
   showView(targetView, { push: false });
   replaceHistoryRoot(targetView);
 }
-  
-/*********************************
- * 17 - FESTIVAL PHASE / HOME HELPERS
- *********************************/
+
 function getFestivalPhase(personId) {
   const now = getCurrentNowDate();
 
@@ -4852,7 +4752,6 @@ function getFestivalPhase(personId) {
 
   if (now < start) return "before";
   if (now > end) return "after";
-
   return "during";
 }
 
@@ -4875,10 +4774,8 @@ function getFestivalMessageForHome(personId) {
 
   return null;
 }
-
 function renderUserHeader(options = {}) {
   if (state.isRefMode) return "";
-
   const {
     showPrint = true,
     extraClass = ""
@@ -4949,8 +4846,7 @@ function renderUserHeader(options = {}) {
     </div>
   `;
 }
-
-function renderPlanningTabsBlock() {
+  function renderPlanningTabsBlock() {
   const days = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
 
   return `
@@ -4967,9 +4863,9 @@ function renderPlanningTabsBlock() {
     </div>
   `;
 }
-
+  
 /*********************************
- * 18 - HOME / ACCUEIL
+ * HOME
  *********************************/
 function renderFullInfoBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
@@ -5018,12 +4914,11 @@ function renderFullInfoBox() {
     </div>
   `;
 }
-
-function renderConcertTimelineCard() {
+  function renderConcertTimelineCard() {
   const timelineState = getConcertTimelineState();
   const concerts = timelineState.concerts || [];
   const now = new Date(getCurrentNowDate());
-
+  
   if (!concerts.length) return "";
 
   const currentIndex = timelineState.currentIndex;
@@ -5040,31 +4935,33 @@ function renderConcertTimelineCard() {
   } else if (nextIndex !== -1) {
     nextConcert = concerts[nextIndex] || null;
     remainingConcerts = concerts.slice(nextIndex + 1);
+  } else {
+    remainingConcerts = [];
   }
 
   let html = `
     <div class="card concerts-panel" style="margin-bottom:8px;">
       <div class="concerts-panel-head">
-        <div class="home-main-title">CONCERTS</div>
-      </div>
+       <div class="home-main-title">CONCERTS</div>
+       </div>
   `;
 
   if (currentConcert) {
-    html += renderCompactConcertRow(currentConcert, "En cours", "current");
-  } else {
-    html += `
-      <div class="concert-empty-line">
-        Aucun concert en cours
-      </div>
-    `;
-  }
+  html += renderCompactConcertRow(currentConcert, "En cours", "current");
+} else {
+  html += `
+    <div class="concert-empty-line">
+      Aucun concert en cours
+    </div>
+  `;
+}
 
-  if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
-    html += renderCompactConcertRow(nextConcert, "Suivant", "next");
-  }
+if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
+  html += renderCompactConcertRow(nextConcert, "Suivant", "next");
+}
 
-  if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
-    html += `
+if (remainingConcerts.length && now >= new Date("2026-07-01T00:00:00")) {
+  html += `
       <button class="concerts-more-btn" onclick="toggleHomeConcertsMore()">
         <span>${homeConcertsState.openMore ? "Masquer les concerts suivants" : "Voir les concerts suivants"}</span>
         <span class="planning-chevron ${homeConcertsState.openMore ? "open" : ""}">▼</span>
@@ -5092,8 +4989,7 @@ function renderConcertTimelineCard() {
   html += `</div>`;
   return html;
 }
-
-function renderCompactConcertRow(concert, label, statusType) {
+  function renderCompactConcertRow(concert, label, statusType) {
   if (!concert) return "";
 
   const badgeText = statusType === "current" ? "En cours" : "À venir";
@@ -5110,12 +5006,10 @@ function renderCompactConcertRow(concert, label, statusType) {
           ${escapeHtml(concert.scene || "")} • ${escapeHtml(concert.debut || "")} – ${escapeHtml(concert.fin || "")}
         </div>
       </div>
-
       <div class="concert-compact-badge ${badgeClass}">${badgeText}</div>
     </div>
   `;
 }
-
 function renderHome() {
   if (state.appMode === "referent") {
     renderHomeReferent();
@@ -5226,10 +5120,7 @@ function renderHomeStandard(options = {}) {
     const daysNumber = Math.max(
       0,
       Math.round(
-        (
-          new Date("2026-07-01T00:00:00").setHours(0, 0, 0, 0) -
-          new Date(getCurrentNowDate()).setHours(0, 0, 0, 0)
-        ) / 86400000
+        (new Date("2026-07-01T00:00:00").setHours(0,0,0,0) - new Date(getCurrentNowDate()).setHours(0,0,0,0)) / 86400000
       )
     );
 
@@ -5285,9 +5176,9 @@ function renderHomeStandard(options = {}) {
       }
 
       ${currentBox}
-      ${nextBox}
-      ${renderMessagesBox()}
-      ${renderConcertTimelineCard()}
+${nextBox}
+${renderMessagesBox()}
+${renderConcertTimelineCard()}
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}</div>
@@ -5295,7 +5186,6 @@ function renderHomeStandard(options = {}) {
     </div>
   `;
 }
-
 function renderReferentPeopleList(entry, id = "current") {
   let benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
 
@@ -5374,7 +5264,7 @@ function renderReferentPeopleList(entry, id = "current") {
             <div
               style="
                 display:grid;
-                grid-template-columns:90px 1fr;
+                grid-template-columns: 90px 1fr;
                 gap:8px;
                 padding:7px 0;
                 border-top:1px solid rgba(222,212,194,0.45);
@@ -5406,7 +5296,7 @@ function renderReferentPeopleList(entry, id = "current") {
   `;
 }
 
-function getNextFestivalEntry() {
+ function getNextFestivalEntry() {
   const entries = Array.isArray(directState.allShifts) ? directState.allShifts : [];
   const now = getCurrentNowDate();
 
@@ -5421,7 +5311,6 @@ function getNextFestivalEntry() {
   upcoming.sort((a, b) => {
     const da = parseShiftDateFromLabel(a.shift.startLabel);
     const db = parseShiftDateFromLabel(b.shift.startLabel);
-
     return da - db;
   });
 
@@ -5431,7 +5320,6 @@ function getNextFestivalEntry() {
 function parseShiftDateFromLabel(label) {
   const txt = String(label || "").trim();
   const match = txt.match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
-
   if (!match) return null;
 
   const day = Number(match[1]);
@@ -5441,7 +5329,7 @@ function parseShiftDateFromLabel(label) {
 
   return new Date(2026, month - 1, day, hour, minute);
 }
-
+  
 function renderReferentReplacementList(currentEntry, nextEntry, id = "replacement") {
   const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
   const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
@@ -5452,12 +5340,12 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 
   const currentVehicles = {};
   const nextVehicles = [];
+
   const currentChargeurs = [];
   const nextChargeurs = [];
 
   currentPeople.forEach(p => {
     const v = String(p.vehicule || "").trim();
-
     if (isChargeur(v)) {
       currentChargeurs.push(p);
     } else if (v) {
@@ -5467,7 +5355,6 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 
   nextPeople.forEach(p => {
     const v = String(p.vehicule || "").trim();
-
     if (isChargeur(v)) {
       nextChargeurs.push(p);
     } else {
@@ -5492,7 +5379,7 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
       <div
         style="
           display:grid;
-          grid-template-columns:90px 1fr;
+          grid-template-columns: 90px 1fr;
           gap:8px;
           padding:7px 0;
           border-top:1px solid rgba(222,212,194,0.45);
@@ -5530,46 +5417,44 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
     `;
   }).join("");
 
-  const currentChargeurNames = currentChargeurs
-    .map(p => String(p.label || p.benevole || "").trim())
-    .filter(Boolean);
+  const currentChargeurNames = currentChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
+  const nextChargeurNames = nextChargeurs.map(p => String(p.label || p.benevole || "").trim()).filter(Boolean);
 
-  const nextChargeurNames = nextChargeurs
-    .map(p => String(p.label || p.benevole || "").trim())
-    .filter(Boolean);
+  let usedCurrentChargeurs = [];
 
-  const usedCurrentChargeurs = [];
+const chargeurRows = nextChargeurNames.map(nextName => {
+  if (currentChargeurNames.includes(nextName)) {
+    return "";
+  }
 
-  const chargeurRows = nextChargeurNames.map(nextName => {
-    if (currentChargeurNames.includes(nextName)) return "";
+  const prevName = currentChargeurNames.find(name =>
+    name && !usedCurrentChargeurs.includes(name) && !nextChargeurNames.includes(name)
+  ) || "";
 
-    const prevName = currentChargeurNames.find(name =>
-      name &&
-      !usedCurrentChargeurs.includes(name) &&
-      !nextChargeurNames.includes(name)
-    ) || "";
+  if (prevName) usedCurrentChargeurs.push(prevName);
 
-    if (prevName) usedCurrentChargeurs.push(prevName);
-
-    return `
-      <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
-        ${
-          prevName
-            ? `
-              <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
-              <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
-            `
-            : `
-              <span style="font-weight:900;">${escapeHtml(nextName)}</span>
-              <span style="opacity:0.6;"> nouveau</span>
-            `
-        }
-      </div>
-    `;
-  }).join("");
+  return `
+    <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
+      ${
+        prevName
+          ? `
+            <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
+            <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
+          `
+          : `
+            <span style="font-weight:900;">${escapeHtml(nextName)}</span>
+            <span style="opacity:0.6;"> nouveau</span>
+          `
+      }
+    </div>
+  `;
+}).join("");
 
   const hasContent = vehicleRows.trim() || chargeurRows.trim();
-  if (!hasContent) return "";
+
+  if (!hasContent) {
+    return "";
+  }
 
   return `
     <div
@@ -5598,16 +5483,13 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
         "
       >
         <span>Voir les remplacements</span>
-        <span id="chevron-${id}" style="font-size:0.75rem;">
-          ${referentUiState.openMenuId === id ? "▲" : "▼"}
-        </span>
-      </button>
+<span id="chevron-${id}" style="font-size:0.75rem;">${referentUiState.openMenuId === id ? "▲" : "▼"}</span>      </button>
 
       <div
         id="people-${id}"
         style="
-          display:${referentUiState.openMenuId === id ? "block" : "none"};
-          padding:0 12px 8px 12px;
+display:${referentUiState.openMenuId === id ? "block" : "none"};
+padding:0 12px 8px 12px;
           background:rgba(255,255,255,0.35);
         "
       >
@@ -5636,7 +5518,6 @@ function renderMessagesBox() {
   messages = messages.slice().sort((a, b) => {
     const pa = a.priorite === "important" ? 1 : 0;
     const pb = b.priorite === "important" ? 1 : 0;
-
     return pb - pa;
   }).slice(0, 3);
 
@@ -5676,42 +5557,42 @@ function renderMessagesBox() {
         }
       </div>
 
-      ${importants.length ? `
-        <div style="margin-top:8px;">
-          ${importants.map(m => `
-            <div style="
-              display:flex;
-              align-items:flex-start;
-              gap:8px;
-              padding:6px 0;
-              border-top:1px solid rgba(222,212,194,0.5);
-              font-weight:900;
-              color:#9b1c1c;
-            ">
-              <div style="font-size:14px; margin-top:2px;">⚠️</div>
-              <div>${escapeHtml(m.message || "")}</div>
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
+     ${importants.length ? `
+  <div style="margin-top:8px;">
+    ${importants.map(m => `
+      <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:8px;
+        padding:6px 0;
+        border-top:1px solid rgba(222,212,194,0.5);
+        font-weight:900;
+        color:#9b1c1c;
+      ">
+        <div style="font-size:14px; margin-top:2px;">⚠️</div>
+        <div>${escapeHtml(m.message || "")}</div>
+      </div>
+    `).join("")}
+  </div>
+` : ""}
 
-      ${standards.length ? `
-        <div style="margin-top:8px;">
-          ${standards.map(m => `
-            <div style="
-              display:flex;
-              align-items:flex-start;
-              gap:8px;
-              padding:6px 0;
-              border-top:1px solid rgba(222,212,194,0.5);
-              font-weight:850;
-            ">
-              <div style="font-size:14px; margin-top:2px;">ℹ️</div>
-              <div>${escapeHtml(m.message || "")}</div>
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
+${standards.length ? `
+  <div style="margin-top:8px;">
+    ${standards.map(m => `
+      <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:8px;
+        padding:6px 0;
+        border-top:1px solid rgba(222,212,194,0.5);
+        font-weight:850;
+      ">
+        <div style="font-size:14px; margin-top:2px;">ℹ️</div>
+        <div>${escapeHtml(m.message || "")}</div>
+      </div>
+    `).join("")}
+  </div>
+` : ""}
 
       ${
         !messages.length && isReferentMode
@@ -5722,7 +5603,7 @@ function renderMessagesBox() {
   `;
 }
 
-function openMessagesAdminModal() {
+  function openMessagesAdminModal() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
   const existingOptions = messages.map(m => `
@@ -5814,22 +5695,21 @@ function openMessagesAdminModal() {
         >
           Enregistrer
         </button>
-
         <button
-          onclick="deleteMessageAdminForm()"
-          style="
-            width:100%;
-            margin-top:8px;
-            padding:10px;
-            border:none;
-            border-radius:14px;
-            background:#b00000;
-            color:white;
-            font-weight:900;
-          "
-        >
-          Supprimer le message
-        </button>
+  onclick="deleteMessageAdminForm()"
+  style="
+    width:100%;
+    margin-top:8px;
+    padding:10px;
+    border:none;
+    border-radius:14px;
+    background:#b00000;
+    color:white;
+    font-weight:900;
+  "
+>
+  Supprimer le message
+</button>
       </div>
     </div>
   `;
@@ -5841,8 +5721,7 @@ function closeMessagesAdminModal() {
   const modal = document.getElementById("messagesAdminModal");
   if (modal) modal.remove();
 }
-
-async function deleteMessageAdminForm() {
+  async function deleteMessageAdminForm() {
   const pwd = state.password || localStorage.getItem("planning_password") || "";
   const id = document.getElementById("adminMessageId").value.trim();
 
@@ -5856,8 +5735,8 @@ async function deleteMessageAdminForm() {
   try {
     const res = await apiGet_({
       api: "saveMessage",
-      pwd,
-      id,
+      pwd: pwd,
+      id: id,
       actif: "false"
     });
 
@@ -5907,12 +5786,12 @@ async function saveMessageAdminForm() {
   try {
     const res = await apiGet_({
       api: "saveMessage",
-      pwd,
-      id,
-      titre,
-      message,
-      cible,
-      priorite,
+      pwd: pwd,
+      id: id,
+      titre: titre,
+      message: message,
+      cible: cible,
+      priorite: priorite,
       actif: actif ? "true" : "false"
     });
 
@@ -5928,7 +5807,7 @@ async function saveMessageAdminForm() {
     alert("Impossible d’enregistrer : " + (err.message || err));
   }
 }
-
+  
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
   if (!el) return;
@@ -5939,14 +5818,10 @@ function renderHomeReferent() {
   }
 
   const currentFestivalEntry = getCurrentFestivalEntry();
-  const currentShift = currentFestivalEntry && currentFestivalEntry.shift
-    ? currentFestivalEntry.shift
-    : null;
+  const currentShift = currentFestivalEntry && currentFestivalEntry.shift ? currentFestivalEntry.shift : null;
 
   const nextFestivalEntry = getNextFestivalEntry();
-  const nextShift = nextFestivalEntry && nextFestivalEntry.shift
-    ? nextFestivalEntry.shift
-    : null;
+  const nextShift = nextFestivalEntry && nextFestivalEntry.shift ? nextFestivalEntry.shift : null;
 
   const currentPeopleHtml = currentFestivalEntry
     ? renderReferentPeopleList(currentFestivalEntry, "current")
@@ -6027,7 +5902,6 @@ function renderHomeReferent() {
     <div class="home-stack" style="margin-top:-20px;">
       <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
         <div class="home-main-title">Créneau en cours</div>
-
         ${
           currentShift
             ? `
@@ -6051,6 +5925,7 @@ function renderHomeReferent() {
                 ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
               </div>
               <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
+
               ${replacementHtml}
             `
             : `
@@ -6059,8 +5934,8 @@ function renderHomeReferent() {
         }
       </div>
 
-      ${renderMessagesBox()}
-      ${renderConcertTimelineCard()}
+${renderMessagesBox()}
+${renderConcertTimelineCard()}
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">
@@ -6070,9 +5945,8 @@ function renderHomeReferent() {
     </div>
   `;
 }
-
 /*********************************
- * 19 - MES CRENEAUX
+ * MES CRENEAUX
  *********************************/
 function loadMesCreneaux() {
   const container = document.getElementById("mesCreneauxContent");
@@ -6102,13 +5976,11 @@ function renderMesCreneaux(data) {
     return;
   }
 
-  const sorted = list
-    .slice()
-    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
+  const sorted = list.slice().sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
 
   let html = `
-    ${renderUserHeader()}
-  `;
+  ${renderUserHeader()}
+`;
 
   let currentDay = "";
 
@@ -6117,7 +5989,6 @@ function renderMesCreneaux(data) {
     const vehicule = entry.vehicule || "";
     const role = getRoleInfo(vehicule);
     const stateInfo = getShiftStatusInfo(entry);
-
     const visualClass =
       stateInfo.badgeClass === "previous" ? "is-past" :
       stateInfo.badgeClass === "current" ? "is-current" :
@@ -6134,28 +6005,16 @@ function renderMesCreneaux(data) {
     }
 
     html += `
-      <div
-        class="card clickable-card shift-card-soft ${visualClass}"
-        ${focusAttr}
-        onclick="openShiftDetail('${escapeHtml(entry.shiftId || "")}', 'mes-creneaux')"
-      >
+      <div class="card clickable-card shift-card-soft ${visualClass}" ${focusAttr} onclick="openShiftDetail('${escapeHtml(entry.shiftId || "")}', 'mes-creneaux')">
         <div class="shift-header">
           <div class="shift-line">
             ${escapeHtml((entry.jour || "").toUpperCase())} • ${escapeHtml(entry.debut || "")} – ${escapeHtml(entry.fin || "")}
           </div>
-
-          <span class="badge ${stateInfo.badgeClass}">
-            ${escapeHtml(stateInfo.badgeText)}
-          </span>
+          <span class="badge ${stateInfo.badgeClass}">${escapeHtml(stateInfo.badgeText)}</span>
         </div>
 
         <div class="shift-role-line">${escapeHtml(role.label)}</div>
-
-        ${
-          stateInfo.timerText
-            ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>`
-            : ""
-        }
+        ${stateInfo.timerText ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>` : ""}
       </div>
     `;
   });
@@ -6179,40 +6038,23 @@ function renderMesCreneaux(data) {
     });
   }
 }
-  
+
 /*********************************
- * 20 - ROLE / PEOPLE RENDER
+ * ROLE / PEOPLE RENDER
  *********************************/
 function getRoleInfo(rawVehicule) {
   const v = String(rawVehicule || "").toUpperCase().trim();
 
-  // Tous les chargeurs au même niveau
+  if (v.includes("CHARGEUR_SUP")) {
+    return { icon: "🧑‍✈️", label: "Chargeur sup", group: "chargeurs", order: "ZZZ_1" };
+  }
   if (v.includes("CHARGEUR")) {
-    return {
-      icon: "🧑‍✈️",
-      label: "Chargeur",
-      group: "chargeurs",
-      order: "ZZZ_2"
-    };
+    return { icon: "🧑‍✈️", label: "Chargeur", group: "chargeurs", order: "ZZZ_2" };
   }
-
-  // Chauffeurs
   if (v && v !== "-") {
-    return {
-      icon: "🚗",
-      label: "Véhicule " + rawVehicule,
-      group: "chauffeurs",
-      order: v
-    };
+    return { icon: "🚗", label: "Véhicule " + rawVehicule, group: "chauffeurs", order: v };
   }
-
-  // Sécurité fallback
-  return {
-    icon: "🚶",
-    label: "Sans véhicule",
-    group: "chargeurs",
-    order: "ZZZ_9"
-  };
+  return { icon: "🚶", label: "Sans véhicule", group: "chargeurs", order: "ZZZ_9" };
 }
 
 function sortPeopleForShift(list) {
@@ -6220,21 +6062,15 @@ function sortPeopleForShift(list) {
     const ia = getRoleInfo(a.vehicule);
     const ib = getRoleInfo(b.vehicule);
 
-    // Chauffeurs d'abord
     const groupRankA = ia.group === "chauffeurs" ? 1 : 2;
     const groupRankB = ib.group === "chauffeurs" ? 1 : 2;
 
     if (groupRankA !== groupRankB) return groupRankA - groupRankB;
 
-    // Tri véhicule
     const keyCmp = ia.order.localeCompare(ib.order, "fr");
     if (keyCmp !== 0) return keyCmp;
 
-    // Tri nom
-    return String(a.label || a.benevole || "").localeCompare(
-      String(b.label || b.benevole || ""),
-      "fr"
-    );
+    return String(a.label || a.benevole || "").localeCompare(String(b.label || b.benevole || ""), "fr");
   });
 }
 
@@ -6242,13 +6078,7 @@ function renderPeople(people, sourceView = "direct") {
   const sorted = sortPeopleForShift(people);
 
   if (!sorted.length) {
-    return `
-      <div class="team-member">
-        <div class="member-main">
-          <div class="member-role">Personne sur ce créneau</div>
-        </div>
-      </div>
-    `;
+    return `<div class="team-member"><div class="member-main"><div class="member-role">Personne sur ce créneau</div></div></div>`;
   }
 
   let html = "";
@@ -6257,10 +6087,8 @@ function renderPeople(people, sourceView = "direct") {
 
   sorted.forEach(person => {
     const info = getRoleInfo(person.vehicule);
-
     const currentPersonLabel = String(person.label || person.benevole || "").toLowerCase();
     const meLabel = String(state.userLabel || "").toLowerCase();
-
     const full = peopleMap[person.id] || {
       id: person.id || "",
       label: person.label || person.benevole || "",
@@ -6268,10 +6096,8 @@ function renderPeople(people, sourceView = "direct") {
       photo: ""
     };
 
-    // Séparateur groupe
     if (info.group !== currentGroup) {
       currentGroup = info.group;
-
       html += `
         <div class="group-label">
           ${currentGroup === "chauffeurs" ? "Chauffeurs" : "Chargeurs"}
@@ -6286,7 +6112,6 @@ function renderPeople(people, sourceView = "direct") {
         onclick="openPersonDetail('${escapeHtml(full.id || "")}', '${escapeHtml(sourceView)}')"
       >
         <div class="role-icon">${info.icon}</div>
-
         <div class="member-main">
           <div class="member-inline">
             <div class="member-name">${escapeHtml(full.label || "")}</div>
@@ -6300,10 +6125,8 @@ function renderPeople(people, sourceView = "direct") {
   return html;
 }
 
-
 /*********************************
-/*********************************
- * 21 - DIRECT
+ * DIRECT
  *********************************/
 function loadDirect() {
   const container = document.getElementById("directContent");
@@ -6472,9 +6295,7 @@ function directBackToLive() {
 }
 
 /*********************************
-
-/*********************************
- * 22 - PLANNING
+ * PLANNING
  *********************************/
 function loadPlanning() {
   const container = document.getElementById("planningContent");
@@ -6629,10 +6450,6 @@ function renderPlanningPeople(list) {
   return html;
 }
 
-
-/*********************************
- * 23 - CONTACTS HELPERS
- *********************************/
 function updateContactsSearch(value) {
   contactsState.query = value || "";
   localStorage.setItem("planning_contacts_query", contactsState.query);
@@ -6644,15 +6461,15 @@ function renderContactsListOnly() {
   const listContainer = document.getElementById("contactsPeopleList");
   if (!listContainer) return;
 
-  const query = normalizeText(contactsState.query);
-
   const allPeople = getAllPeopleForContacts()
     .filter(p =>
-      (p.prenom && p.prenom.trim()) ||
-      (p.nom && p.nom.trim()) ||
-      (p.label && p.label.trim())
+      ((p.prenom && p.prenom.trim()) ||
+       (p.nom && p.nom.trim()) ||
+       (p.label && p.label.trim()))
     )
     .filter(p => !p.isRef);
+
+  const query = normalizeText(contactsState.query);
 
   const filtered = !query
     ? allPeople
@@ -6661,34 +6478,26 @@ function renderContactsListOnly() {
         normalizeText(p.label || "").includes(query)
       );
 
-  listContainer.innerHTML = filtered.length
-    ? filtered.map(renderContactRow).join("")
-    : `
-      <div class="empty-state-card" style="padding:18px 8px 8px;">
-        <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
-      </div>
-    `;
-}
-
-function renderContactRow(p) {
-  return `
+  listContainer.innerHTML = filtered.length ? filtered.map(p => `
     <button
       type="button"
       class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
       onclick="openPersonDetail('${escapeHtml(p.id || "")}', 'contacts')"
     >
       ${renderAvatar(p)}
-
       <div class="person-main">
         <div class="person-left">
           <div class="person-name">
             <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
           </div>
         </div>
-
         ${renderCallButton(p.tel, true)}
       </div>
     </button>
+  `).join("") : `
+    <div class="empty-state-card" style="padding:18px 8px 8px;">
+      <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
+    </div>
   `;
 }
 
@@ -6696,8 +6505,11 @@ function sortReferentsCustom(list) {
   const order = ["herve", "jerome", "anthony"];
 
   return (list || []).slice().sort((a, b) => {
-    const aIndex = order.indexOf(normalizeText(a.prenom || ""));
-    const bIndex = order.indexOf(normalizeText(b.prenom || ""));
+    const aPrenom = normalizeText(a.prenom || "");
+    const bPrenom = normalizeText(b.prenom || "");
+
+    const aIndex = order.indexOf(aPrenom);
+    const bIndex = order.indexOf(bPrenom);
 
     const safeA = aIndex === -1 ? 999 : aIndex;
     const safeB = bIndex === -1 ? 999 : bIndex;
@@ -6708,10 +6520,8 @@ function sortReferentsCustom(list) {
   });
 }
 
-
-
 /*********************************
- * 24 - CONTACTS
+ * CONTACTS
  *********************************/
 function loadContacts() {
   const container = document.getElementById("contactsContent");
@@ -6733,9 +6543,21 @@ function loadContacts() {
   container.innerHTML = `
     <div class="card contact-section-card">
       <div class="section-title">Référents</div>
+
       <div class="referents">
         <div class="referents-row">
-          ${referents.map(renderReferentTile).join("")}
+          ${referents.map(p => `
+            <a
+              class="referent-tile"
+              href="tel:${escapeHtml(p.tel || "")}"
+              title="Appeler ${escapeHtml(p.prenom || "")}"
+            >
+              <div class="referent-tile-inner">
+                ${renderAvatar(p)}
+                <div class="referent-firstname">${escapeHtml(p.prenom || "")}</div>
+              </div>
+            </a>
+          `).join("")}
         </div>
       </div>
     </div>
@@ -6762,21 +6584,8 @@ function loadContacts() {
   renderContactsListOnly();
 }
 
-function renderReferentTile(p) {
-  return `
-    <a class="referent-tile" href="tel:${escapeHtml(p.tel || "")}">
-      <div class="referent-tile-inner">
-        ${renderAvatar(p)}
-        <div class="referent-firstname">${escapeHtml(p.prenom || "")}</div>
-      </div>
-    </a>
-  `;
-}
-
-
-
 /*********************************
- * 25 - DETAIL CRENEAU
+ * DETAIL CRENEAU
  *********************************/
 function openShiftDetail(shiftId, fromView) {
   if (!shiftId) return;
@@ -6796,8 +6605,8 @@ function loadShiftDetail() {
     return;
   }
 
-  const shift = getPlanningShiftsFromAppData(APP_DATA)
-    .find(s => String(s.id || "") === String(detailState.shiftId || ""));
+  const allShifts = getPlanningShiftsFromAppData(APP_DATA);
+  const shift = allShifts.find(s => String(s.id || "") === String(detailState.shiftId || ""));
 
   if (!shift) {
     container.innerHTML = `<div class="card">Créneau introuvable</div>`;
@@ -6805,7 +6614,7 @@ function loadShiftDetail() {
   }
 
   renderShiftDetail({
-    shift,
+    shift: shift,
     benevoles: shift.benevoles || []
   });
 }
@@ -6814,13 +6623,22 @@ function renderShiftDetail(data) {
   const container = document.getElementById("shiftDetailContent");
   if (!container) return;
 
+  if (!data || !data.shift) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="error">Créneau introuvable</div>
+      </div>
+    `;
+    return;
+  }
+
   const shift = data.shift || {};
   const people = data.benevoles || [];
   const stateInfo = getShiftStatusInfo(shift);
 
   container.innerHTML = `
     <div class="back-row">
-      <button class="back-btn" onclick="navigateBack(state.previousView || 'mes-creneaux')">← Retour</button>
+      <button type="button" class="back-btn" onclick="navigateBack(state.previousView || 'mes-creneaux')">← Retour</button>
     </div>
 
     <div class="card detail-top-card">
@@ -6831,16 +6649,13 @@ function renderShiftDetail(data) {
 
       ${stateInfo.timerText ? `<div class="helper-text">${escapeHtml(stateInfo.timerText)}</div>` : ""}
       <hr class="soft-divider">
-
       ${renderPeople(people, state.previousView || "mes-creneaux")}
     </div>
   `;
 }
 
-
-
 /*********************************
- * 26 - PERSON DETAIL
+ * PERSON DETAIL
  *********************************/
 function openPersonDetail(personId, sourceView = "planning") {
   if (!personId) return;
@@ -6952,39 +6767,6 @@ function loadPersonDetail() {
   `;
 }
 
-/*********************************
- * 27 - PRINT / IMPRESSION
- *********************************/
-function renderPrintPeopleRows(people) {
-  if (!people.length) {
-    return `<div class="print-empty">Personne sur ce créneau</div>`;
-  }
-
-  return people.map(person => {
-    const info = getRoleInfo(person.vehicule);
-    const label = person.label || person.benevole || "";
-    const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
-
-    return `
-      <div class="print-person-row">
-        <span class="print-person-name">${escapeHtml(label)}</span>
-        <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderPrintShiftCard(shift, people) {
-  return `
-    <div class="print-card print-card-column">
-      <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
-      <div class="print-meta">
-        ${renderPrintPeopleRows(people)}
-      </div>
-    </div>
-  `;
-}
-  
  function printPlanningForDay(day) {
   closePrintDayPicker();
 
@@ -7305,21 +7087,20 @@ function renderPrintShiftCard(shift, people) {
 }
   
 /*********************************
- * 28 - BOOT
+ * BOOT
  *********************************/
 async function boot() {
   try {
     let cache = loadCache();
 
-    if (shouldResetCache(cache) || (cache && !isValidAppDataShape(cache))) {
+    if (shouldResetCache(cache)) {
       clearCache();
       cache = null;
     }
 
-    if (state.appMode === "referent") {
-      state.isRefMode = true;
-      state.userId = state.userId || "__REFERENT__";
-      state.userLabel = state.userLabel || "Référent";
+    if (cache && !isValidAppDataShape(cache)) {
+      clearCache();
+      cache = null;
     }
 
     if (state.authOk && cache && (state.userId || state.appMode === "referent")) {
@@ -7328,17 +7109,21 @@ async function boot() {
         applyAppData(cache);
 
         const targetView = getLastView();
-
         showView(targetView, { push: false });
         replaceHistoryRoot(targetView);
 
         startAutoRefresh();
         startUiMinuteRefresh();
 
+        // Si on a encore le mot de passe en mémoire, on peut rafraîchir.
+        // Après un refresh complet, state.password est vide, donc on reste sur cache.
         if (navigator.onLine && state.password) {
           loadAppData(false);
         } else {
-          showSyncStatus("offline", getCacheLastUpdateLabel(cache));
+          showSyncStatus(
+            "offline",
+            cache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
+          );
         }
 
         return;
@@ -7349,38 +7134,37 @@ async function boot() {
       }
     }
 
+    // ❌ Pas de mot de passe en mémoire ET pas de cache utilisable
+    // => on redemande le mot de passe.
     if (!state.password) {
-      goToLogin();
+      state.currentView = "login";
+      showView("login", { push: false });
+      replaceHistoryRoot("login");
       return;
     }
 
     if (!navigator.onLine) {
-      goToLogin();
+      showView("login", { push: false });
+      replaceHistoryRoot("login");
       return;
     }
 
-    const isRef = await apiCheckRefPassword_(state.password).catch(() => false);
-    const ok = isRef || await apiCheckPassword_(state.password).catch(() => false);
+    const ok = await apiCheckPassword_(state.password);
 
     if (!ok) {
-      clearAuthState();
-      goToLogin();
+      localStorage.removeItem("planning_auth_ok");
+      localStorage.removeItem("planning_user_id");
+      localStorage.removeItem("planning_user_label");
+      localStorage.removeItem("planning_contacts_query");
+
+      state.password = "";
+      state.authOk = false;
+      state.userId = "";
+      state.userLabel = "";
+
+      showView("login", { push: false });
+      replaceHistoryRoot("login");
       return;
-    }
-
-    state.authOk = true;
-    state.isRefMode = isRef;
-    state.appMode = isRef ? "referent" : (state.appMode || "benevole");
-
-    localStorage.setItem("planning_auth_ok", "1");
-    localStorage.setItem("planning_app_mode", state.appMode);
-
-    if (isRef) {
-      state.userId = "__REFERENT__";
-      state.userLabel = "Référent";
-
-      localStorage.setItem("planning_user_id", "__REFERENT__");
-      localStorage.setItem("planning_user_label", "Référent");
     }
 
     if (state.userId) {
@@ -7389,7 +7173,6 @@ async function boot() {
       startUiMinuteRefresh();
 
       const targetView = getLastView();
-
       showView(targetView, { push: false });
       replaceHistoryRoot(targetView);
     } else {
@@ -7398,107 +7181,61 @@ async function boot() {
 
   } catch (err) {
     console.error("Erreur boot générale", err);
-    bootFromFallbackCacheOrLogin();
-  }
-}
 
-function getCacheLastUpdateLabel(cache) {
-  return cache?.meta?.lastUpdate ||
-    (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
-}
+    const fallbackCache = loadCache();
 
-function clearAuthState() {
-  localStorage.removeItem("planning_auth_ok");
-  localStorage.removeItem("planning_app_mode");
-  localStorage.removeItem("planning_user_id");
-  localStorage.removeItem("planning_user_label");
-  localStorage.removeItem("planning_contacts_query");
+    if (fallbackCache && isValidAppDataShape(fallbackCache) && state.userId) {
+      try {
+        APP_DATA = fallbackCache;
+        applyAppData(fallbackCache);
 
-  state.password = "";
-  state.authOk = false;
-  state.appMode = "";
-  state.isRefMode = false;
-  state.userId = "";
-  state.userLabel = "";
-}
+        const targetView = getLastView();
+        showView(targetView, { push: false });
+        replaceHistoryRoot(targetView);
 
-function goToLogin() {
-  state.currentView = "login";
-  showView("login", { push: false });
-  replaceHistoryRoot("login");
-}
+        startAutoRefresh();
+        startUiMinuteRefresh();
 
-function bootFromFallbackCacheOrLogin() {
-  const fallbackCache = loadCache();
-
-  if (fallbackCache && isValidAppDataShape(fallbackCache) && state.userId) {
-    try {
-      APP_DATA = fallbackCache;
-      applyAppData(fallbackCache);
-
-      const targetView = getLastView();
-
-      showView(targetView, { push: false });
-      replaceHistoryRoot(targetView);
-
-      startAutoRefresh();
-      startUiMinuteRefresh();
-
-      showSyncStatus("offline", getCacheLastUpdateLabel(fallbackCache));
-      return;
-
-    } catch (e) {
-      console.error("Erreur fallback boot", e);
+        showSyncStatus(
+          "offline",
+          fallbackCache?.meta?.lastUpdate || (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null)
+        );
+      } catch (e) {
+        console.error("Erreur fallback boot", e);
+        showView("login", { push: false });
+        replaceHistoryRoot("login");
+      }
+    } else {
+      showView("login", { push: false });
+      replaceHistoryRoot("login");
     }
   }
-
-  goToLogin();
 }
 
 /*********************************
- * 29 - EVENTS / GLOBAL LISTENERS
+ * EVENTS
  *********************************/
-document.addEventListener("DOMContentLoaded", function () {
-  bindLoginEnterKey();
-  bindUserSearchInput();
-  bindGlobalErrorLogger();
-  bindHistoryNavigation();
+document.addEventListener("DOMContentLoaded", function() {
 
-  if (typeof flushPendingSyncQueue === "function") {
-    flushPendingSyncQueue();
+  const pwd = document.getElementById("pwd");
+  if (pwd) {
+    pwd.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") login();
+    });
   }
 
-  boot();
-});
-
-function bindLoginEnterKey() {
-  const pwd = document.getElementById("pwd");
-  if (!pwd) return;
-
-  pwd.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") login();
-  });
-}
-
-function bindUserSearchInput() {
   const searchUser = document.getElementById("searchUser");
-  if (!searchUser) return;
+  if (searchUser) {
+    searchUser.addEventListener("input", filterUsers);
+  }
 
-  searchUser.addEventListener("input", filterUsers);
-}
-
-function bindGlobalErrorLogger() {
-  window.addEventListener("error", function (e) {
+  window.addEventListener("error", function(e) {
     console.error("Erreur JS globale", e.error || e.message);
   });
-}
 
-function bindHistoryNavigation() {
-  window.addEventListener("popstate", function (e) {
+  window.addEventListener("popstate", function(e) {
     if (internalNavLock) return;
-
     const st = e.state;
-
     if (st && st.app) {
       showView(st.view || "home", {
         push: false,
@@ -7507,38 +7244,27 @@ function bindHistoryNavigation() {
       });
     }
   });
-}
 
-/*********************************
- * 30 - VISIBILITY / ONLINE
- *********************************/
-document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState !== "visible") return;
+  boot();
+});
 
-  if (navigator.onLine && state.password && state.userId) {
-    loadAppData(false);
+document.addEventListener("visibilitychange", function() {
+  if (document.visibilityState === "visible") {
+    if (navigator.onLine && state.password && state.userId) {
+      loadAppData(false);
+    }
   }
 });
 
-window.addEventListener("online", async function () {
-  try {
-    if (typeof flushPendingSyncQueue === "function") {
-      await flushPendingSyncQueue();
-    }
+window.addEventListener("online", () => {
+  console.log("Retour en ligne → refresh");
 
-    if (state.password && state.userId) {
-      await loadAppData(true);
-    }
-
-  } catch (e) {
-    console.warn("Retour en ligne : refresh échoué", e);
-  }
+  setTimeout(() => {
+    loadAppData(true);
+  }, 1500);
 });
-
-/*********************************
- * 31 - TEST MODE
- *********************************/
-function setTestNowPrompt() {
+  
+  function setTestNowPrompt() {
   const value = prompt("Entrer une date au format JJ/MM HH:MM", "02/07 17:01");
   if (!value) return;
 
@@ -7546,60 +7272,43 @@ function setTestNowPrompt() {
   location.reload();
 }
 
-function setSimulatedNow() {
-  setTestNowPrompt();
-}
-
 function clearForcedNow() {
   localStorage.removeItem("forced_now");
   location.reload();
 }
-
-/*********************************
- * 32 - PRINT MODALS
- *********************************/
 function openPrintModal() {
-  toggleModal("printModal", true);
+  const modal = document.getElementById("printModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
 }
 
 function closePrintModal() {
-  toggleModal("printModal", false);
+  const modal = document.getElementById("printModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
 }
-
-function openPrintDayPicker() {
+  function openPrintDayPicker() {
   closePrintModal();
-  toggleModal("printDayModal", true);
+  const modal = document.getElementById("printDayModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
 }
 
 function closePrintDayPicker() {
-  toggleModal("printDayModal", false);
-}
-
-function toggleModal(id, show) {
-  const modal = document.getElementById(id);
+  const modal = document.getElementById("printDayModal");
   if (!modal) return;
+  modal.classList.add("hidden");
+}
 
-  if (show) {
-    modal.classList.remove("hidden");
-  } else {
-    modal.classList.add("hidden");
+  function toggleHomeConcertsDropdown() {
+    const panel = document.getElementById("homeConcertsPanel");
+    const chevron = document.getElementById("homeConcertsChevron");
+    if (!panel || !chevron) return;
+  
+    panel.classList.toggle("hidden");
+    chevron.textContent = panel.classList.contains("hidden") ? "▼" : "▲";
   }
-}
-
-/*********************************
- * 33 - HOME HELPERS
- *********************************/
-function toggleHomeConcertsDropdown() {
-  const panel = document.getElementById("homeConcertsPanel");
-  const chevron = document.getElementById("homeConcertsChevron");
-
-  if (!panel || !chevron) return;
-
-  panel.classList.toggle("hidden");
-  chevron.textContent = panel.classList.contains("hidden") ? "▼" : "▲";
-}
-
-function isBeforeFixedDate(dateString) {
+  function isBeforeFixedDate(dateString) {
   return new Date() < new Date(dateString);
 }
 
@@ -7610,23 +7319,19 @@ function shouldShowHomeNextShift() {
 function shouldShowHomeFollowingConcerts() {
   return !isBeforeFixedDate("2026-07-01T00:00:00");
 }
+  function setSimulatedNow() {
+  const value = prompt("Entrer une date JJ/MM HH:MM", "02/07 17:01");
+  if (!value) return;
 
-/*********************************
- * 34 - REFERENT UI
- *********************************/
-function togglePeopleList(id) {
+  localStorage.setItem("forced_now", value);
+  location.reload();
+}
+
+ function togglePeopleList(id) {
   const isAlreadyOpen = referentUiState.openMenuId === id;
 
   referentUiState.openMenuId = isAlreadyOpen ? "" : id;
 
-  closeAllReferentPeopleLists();
-
-  if (!isAlreadyOpen) {
-    openReferentPeopleList(id);
-  }
-}
-
-function closeAllReferentPeopleLists() {
   document.querySelectorAll('[id^="people-"]').forEach(el => {
     el.style.display = "none";
   });
@@ -7634,31 +7339,41 @@ function closeAllReferentPeopleLists() {
   document.querySelectorAll('[id^="chevron-"]').forEach(el => {
     el.textContent = "▼";
   });
+
+  if (!isAlreadyOpen) {
+    const el = document.getElementById("people-" + id);
+    const chevron = document.getElementById("chevron-" + id);
+
+    if (el) el.style.display = "block";
+    if (chevron) chevron.textContent = "▲";
+  }
 }
 
-function openReferentPeopleList(id) {
-  const el = document.getElementById("people-" + id);
-  const chevron = document.getElementById("chevron-" + id);
-
-  if (el) el.style.display = "block";
-  if (chevron) chevron.textContent = "▲";
-}
-
-/*********************************
- * 35 - GLOBAL UTILS / EXPOSURE
- *********************************/
 function getFullName(person) {
   const prenom = String(person?.prenom || "").trim();
   const nom = String(person?.nom || "").trim();
-
-  return [prenom, nom].filter(Boolean).join(" ").trim() ||
-    String(person?.label || "").trim();
+  const fullName = [prenom, nom].filter(Boolean).join(" ").trim();
+  return fullName || String(person?.label || "").trim();
 }
+ window.logout = logout;
 
-window.logout = logout;
+window.addEventListener("online", async () => {
+  try {
+    if (typeof flushPendingSyncQueue === "function") {
+      await flushPendingSyncQueue();
+    }
 
+    await loadAppData(true);
+  } catch (e) {
+    console.warn("Retour en ligne : refresh échoué", e);
+  }
+});
+
+// flush au démarrage aussi
+flushPendingSyncQueue();
 </script>
-<!-- ===== FIN SCRIPT PRINCIPAL APPLICATION ===== -->
+
 </body>
-<!-- ===== FIN BODY ===== -->
 </html>
+
+
