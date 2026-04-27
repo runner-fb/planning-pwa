@@ -4367,7 +4367,7 @@ function loadVehicules() {
 
   async function toggleVehiculeFlag(id, field, value) {
   try {
-    await apiGet_({
+    const res = await apiGet_({
       api: "updateVehicule",
       pwd: state.password,
       id: id,
@@ -4375,11 +4375,26 @@ function loadVehicules() {
       value: value ? "true" : "false"
     });
 
-    await loadAppData(true);
+    if (!res || res.ok !== true) {
+      throw new Error(res?.error || "UPDATE_VEHICULE_ERROR");
+    }
+
+    // Mise à jour immédiate dans les données locales
+    const vehicules = Array.isArray(APP_DATA?.vehicules) ? APP_DATA.vehicules : [];
+    const v = vehicules.find(x => String(x.id) === String(id));
+
+    if (v) {
+      if (field === "desactive") v.desactive = value;
+      if (field === "pleinAFaire") v.pleinAFaire = value;
+    }
+
+    saveCache(APP_DATA);
+    loadVehicules();
 
   } catch (e) {
-    alert("Erreur mise à jour véhicule");
+    alert("Erreur mise à jour véhicule : " + (e.message || e));
     console.error(e);
+    loadVehicules();
   }
 }
 /*********************************
