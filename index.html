@@ -385,6 +385,27 @@ body {
   word-break: break-word;
 }
 
+    .test-inline-controls {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.test-inline-controls button {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,90,79,0.18);
+  background: rgba(255,255,255,0.75);
+  font-size: 12px;
+  padding: 0;
+}
+
+.test-inline-controls button.active {
+  background: #18443D;
+  color: white;
+}
+    
 .action-icon-btn {
   width: 38px;
   height: 38px;
@@ -5161,19 +5182,7 @@ function renderUserHeader(options = {}) {
         <div class="user-info">
           <span class="user-label">Hello John, tu es connecté en tant que</span>
           <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
-
-          ${
-            isTestAppMode()
-              ? `
-                <div style="display:flex; gap:6px; margin-top:6px;">
-                  <button onclick="setTestViewMode('benevole')" style="font-size:14px;">👤</button>
-                  <button onclick="setTestViewMode('referent')" style="font-size:14px;">🦺</button>
-                  <button onclick="setTestNowPrompt()" style="font-size:14px;">🧪</button>
-                  <button onclick="clearForcedNow()" style="font-size:14px;">🕒</button>
-                </div>
-              `
-              : ""
-          }
+          ${renderTestControlsInline()}
         </div>
 
         <div style="display:flex; align-items:center; gap:8px;">
@@ -5224,6 +5233,23 @@ function renderUserHeader(options = {}) {
   `;
 }
 
+function renderTestControlsInline() {
+  if (!isTestAppMode()) return "";
+
+  const isBenevole = state.testViewMode === "benevole";
+  const isReferent = state.testViewMode === "referent";
+  const hasForcedNow = !!localStorage.getItem("forced_now");
+
+  return `
+    <div class="test-inline-controls">
+      <button class="${isBenevole ? "active" : ""}" onclick="setTestViewMode('benevole')">👤</button>
+      <button class="${isReferent ? "active" : ""}" onclick="setTestViewMode('referent')">🦺</button>
+      <button class="${hasForcedNow ? "active" : ""}" onclick="setTestNowPrompt()">🧪</button>
+      <button class="${!hasForcedNow ? "active" : ""}" onclick="clearForcedNow()">🕒</button>
+    </div>
+  `;
+}
+  
 function renderPlanningTabsBlock() {
   const days = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
 
@@ -5436,6 +5462,7 @@ function renderHomeStandard(options = {}) {
   const currentPersonalShift = getCurrentShiftForPerson(state.userId);
   const nextPersonalShift = getUpcomingShiftForPerson(state.userId);
   const currentFestivalEntry = getCurrentFestivalEntry();
+  const finalMessage = getFestivalMessageForHome(state.userId);
 
   let currentBox = "";
   let nextBox = "";
@@ -5445,10 +5472,27 @@ function renderHomeStandard(options = {}) {
       const role = getRoleInfo(currentPersonalShift.vehicule);
 
       currentBox = `
-        <div class="card clickable-card home-main-card home-card-raise current-slot-card" onclick="showView('direct')">
-          <div class="home-main-title">Mon créneau en cours</div>
+        <div class="card clickable-card home-main-card home-card-raise current-slot-card" onclick="showView('direct')" style="margin-bottom:8px;">
+          <div class="home-main-title" style="font-weight:900; font-size:18px;">Mon créneau en cours</div>
           <div class="home-main-line">${escapeHtml(currentPersonalShift.jour)} • ${escapeHtml(currentPersonalShift.debut)} – ${escapeHtml(currentPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
+          <div class="mini-note">${escapeHtml(getShiftStatusInfo(currentPersonalShift).timerText || "")}</div>
+        </div>
+      `;
+    } else if (currentFestivalEntry && currentFestivalEntry.shift) {
+      const shift = currentFestivalEntry.shift;
+
+      currentBox = `
+        <div class="card clickable-card home-main-card home-card-raise current-slot-card" onclick="showView('direct')" style="margin-bottom:8px;">
+          <div class="home-main-title">Créneau en cours</div>
+          <div class="home-main-line">${escapeHtml(shift.jour)} • ${escapeHtml(shift.debut)} – ${escapeHtml(shift.fin)}</div>
+        </div>
+      `;
+    } else {
+      currentBox = `
+        <div class="card clickable-card home-main-card home-card-raise current-slot-card" onclick="showView('direct')" style="margin-bottom:8px;">
+          <div class="home-main-title">Créneau en cours</div>
+          <div class="home-main-line">Aucun créneau en cours</div>
         </div>
       `;
     }
@@ -5457,21 +5501,65 @@ function renderHomeStandard(options = {}) {
       const role = getRoleInfo(nextPersonalShift.vehicule);
 
       nextBox = `
-        <div class="card home-card-raise next-slot-card">
+        <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
+          <div class="home-subline">${escapeHtml(role.label)}</div>
+          <div class="mini-note">${escapeHtml(getShiftStatusInfo(nextPersonalShift).timerText || "")}</div>
+        </div>
+      `;
+    } else {
+      nextBox = `
+        <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+          <div class="home-main-title">Mon prochain créneau</div>
+          <div class="home-subline">Aucun autre créneau prévu</div>
+        </div>
+      `;
+    }
+  } else if (phase === "before") {
+    const daysNumber = Math.max(
+      0,
+      Math.round(
+        (
+          new Date("2026-07-01T00:00:00").setHours(0, 0, 0, 0) -
+          new Date(getCurrentNowDate()).setHours(0, 0, 0, 0)
+        ) / 86400000
+      )
+    );
+
+    currentBox = `
+      <div class="card home-main-card home-card-raise pre-festival-card" style="margin-bottom:8px;">
+        <div class="home-main-title">J-${daysNumber} avant le festival</div>
+      </div>
+    `;
+
+    if (nextPersonalShift && new Date(getCurrentNowDate()) >= new Date("2026-06-30T00:00:00")) {
+      const role = getRoleInfo(nextPersonalShift.vehicule);
+
+      nextBox = `
+        <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
           <div class="home-main-title">Mon prochain créneau</div>
           <div class="home-main-line">${escapeHtml(nextPersonalShift.jour)} • ${escapeHtml(nextPersonalShift.debut)} – ${escapeHtml(nextPersonalShift.fin)}</div>
           <div class="home-subline">${escapeHtml(role.label)}</div>
         </div>
       `;
     }
+  } else if (phase === "after" && finalMessage) {
+    currentBox = `
+      <div class="card home-main-card home-card-raise" style="margin-bottom:8px;">
+        <div class="home-main-line">${escapeHtml(finalMessage.title)}</div>
+        <div class="home-subline">${escapeHtml(finalMessage.sub)}</div>
+      </div>
+    `;
   }
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
-      <div class="home-hero-content" style="padding:12px;">
-        <div class="home-hero-brand">
-          <div class="home-hero-brand-top">Festival</div>
-          <div class="home-hero-brand-main">Beau<br>regard</div>
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Festival</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Beau<br>regard</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">1+2.3.4.5 juillet 2026</div>
         </div>
       </div>
 
@@ -5483,6 +5571,12 @@ function renderHomeStandard(options = {}) {
       ${nextBox}
       ${renderMessagesBox()}
       ${renderConcertTimelineCard()}
+
+      <div class="card compact home-meta-card" style="margin-bottom:0;">
+        <div class="subtle-text">
+          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -6130,69 +6224,96 @@ function renderHomeReferent() {
   }
 
   const currentFestivalEntry = getCurrentFestivalEntry();
-  const currentShift = currentFestivalEntry?.shift || null;
+  const currentShift = currentFestivalEntry && currentFestivalEntry.shift
+    ? currentFestivalEntry.shift
+    : null;
 
   const nextFestivalEntry = getNextFestivalEntry();
-  const nextShift = nextFestivalEntry?.shift || null;
+  const nextShift = nextFestivalEntry && nextFestivalEntry.shift
+    ? nextFestivalEntry.shift
+    : null;
 
   const currentPeopleHtml = currentFestivalEntry
     ? renderReferentPeopleList(currentFestivalEntry, "current")
     : "";
 
-  const replacementHtml = (currentFestivalEntry && nextFestivalEntry)
-    ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry)
+  const replacementHtml = currentFestivalEntry && nextFestivalEntry
+    ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
     : "";
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
-      <button onclick="logout()" style="
-        position:absolute;
-        top:12px;
-        right:12px;
-        background:rgba(0,0,0,0.7);
-        color:white;
-        border:none;
-        border-radius:999px;
-        padding:6px 10px;
-      ">
+      <button
+        onclick="logout()"
+        style="
+          position:absolute;
+          top:12px;
+          right:12px;
+          z-index:50;
+          border:none;
+          border-radius:999px;
+          background:rgba(0,0,0,0.72);
+          color:white;
+          padding:8px 12px;
+          font-weight:900;
+          font-size:12px;
+        "
+      >
         Déconnexion
       </button>
 
-      <div class="home-hero-content" style="padding:12px;">
-        <div class="home-hero-brand">
-          <div class="home-hero-brand-top">Mode référent</div>
-          <div class="home-hero-brand-main">Runner Navette</div>
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
         </div>
       </div>
     </div>
 
     <div class="home-stack" style="margin-top:-20px;">
-      <div class="card home-main-card">
+      <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
         <div class="home-main-title">Créneau en cours</div>
+
         ${
           currentShift
             ? `
-              <div>${escapeHtml(currentShift.jour)} • ${escapeHtml(currentShift.debut)} – ${escapeHtml(currentShift.fin)}</div>
+              <div class="home-main-line">${escapeHtml(currentShift.jour)} • ${escapeHtml(currentShift.debut)} – ${escapeHtml(currentShift.fin)}</div>
+              <div class="home-subline">${escapeHtml(currentShift.libelle || "")}</div>
               ${currentPeopleHtml}
             `
-            : `Aucun`
+            : `
+              <div class="home-main-line">Aucun créneau en cours</div>
+            `
         }
       </div>
 
-      <div class="card">
+      <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
         <div class="home-main-title">Créneau suivant</div>
+
         ${
           nextShift
             ? `
-              <div>${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}</div>
+              <div class="home-main-line">
+                ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
+              </div>
+              <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
               ${replacementHtml}
             `
-            : `Aucun`
+            : `
+              <div class="home-subline">Aucun créneau suivant</div>
+            `
         }
       </div>
 
       ${renderMessagesBox()}
       ${renderConcertTimelineCard()}
+
+      <div class="card compact home-meta-card" style="margin-bottom:0;">
+        <div class="subtle-text">
+          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
+        </div>
+      </div>
     </div>
   `;
 }
