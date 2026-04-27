@@ -3326,7 +3326,7 @@ function hideGlobalLoader() {
   return state.appMode === "test";
 }
 
-function setTestViewMode(mode) {
+async function setTestViewMode(mode) {
   if (!isTestAppMode()) return;
 
   if (mode !== "benevole" && mode !== "referent") return;
@@ -3334,8 +3334,12 @@ function setTestViewMode(mode) {
   state.testViewMode = mode;
   localStorage.setItem("planning_test_view_mode", mode);
 
-  // ⚠️ IMPORTANT → recharge les données backend
-  loadAppData(true);
+  updateShellForView(state.currentView);
+
+  await loadAppData(true);
+
+  updateShellForView(state.currentView);
+  refreshCurrentViewOnly();
 }
   
   function escapeHtml(value) {
