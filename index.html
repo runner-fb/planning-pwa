@@ -5,7 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<style>
+<!-- ===== DEBUT CSS PRINCIPAL APPLICATION ===== -->
+  <style>
 /* =========================================================
    FESTIVAL APP — CSS NETTOYÉ & DOCUMENTÉ
    ========================================================= */
@@ -2641,8 +2642,10 @@ body {
   box-shadow: 0 8px 18px rgba(15, 90, 79, 0.18) !important;
 } 
 </style>
+<!-- ===== FIN CSS PRINCIPAL APPLICATION ===== -->
 </head>
 
+<!-- ===== DEBUT BODY ===== -->
 <body>
   <div class="app-shell">
 
@@ -2781,11 +2784,16 @@ body {
     </div>
   </div>
 </div>
+
+<!-- ===== FIN BODY STRUCTURE HTML ===== -->
+
+<!-- ===== DEBUT SCRIPT PRINCIPAL APPLICATION ===== -->  
 <script>
 const WEBAPP_BASE_URL = "https://script.google.com/macros/s/AKfycbza3bRglD6naLzG-0H1-wkMF93DXKiweLzkcXeglwcw8VtNdtsk_8_UrqXXJ7YLwbmv/exec";
+
 /*********************************
- * API FETCH
- *********************************/
+* 01 - CONFIG API
+*********************************/ 
 async function apiGet_(params) {
   const url = new URL(WEBAPP_BASE_URL);
   Object.keys(params || {}).forEach(key => {
@@ -2805,8 +2813,7 @@ async function apiGet_(params) {
   }
 
   const json = await response.json();
-  return { ok: true };
-}
+return json;
 
 async function apiCheckPassword_(password) {
   const res = await apiGet_({
@@ -2862,7 +2869,7 @@ async function apiGetBundle_(password, userId) {
 }
 
 /*********************************
- * STATE GLOBAL
+ * 02 - STATE GLOBAL
  *********************************/
 let state = {
   currentView: "login",
@@ -2932,9 +2939,11 @@ let homeConcertsState = {
 let vehiculesState = {
   openId: ""
 };
+
 /*********************************
- * CACHE OFFLINE
+ * 03 - CACHE OFFLINE
  *********************************/
+  
 const CACHE_VERSION = "v1";
 let APP_DATA = null;
   let autoRefreshTimer = null;
@@ -6950,8 +6959,8 @@ function loadPersonDetail() {
     <head>
       <meta charset="UTF-8">
       <title>${escapeHtml(title)}</title>
-}
-
+      
+<!-- ===== DEBUT CSS IMPRESSION PLANNING ===== -->
       <style>
   @page {
     size: A4 landscape;
@@ -7071,6 +7080,7 @@ function loadPersonDetail() {
     }
   }
 </style>
+<!-- ===== FIN CSS IMPRESSION PLANNING ===== -->
     </head>
 
     <body>
@@ -7372,6 +7382,7 @@ window.addEventListener("online", async () => {
 // flush au démarrage aussi
 flushPendingSyncQueue();
 </script>
-
+<!-- ===== FIN SCRIPT PRINCIPAL APPLICATION ===== -->
 </body>
+<!-- ===== FIN BODY ===== -->
 </html>
