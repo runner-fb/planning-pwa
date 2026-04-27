@@ -2797,8 +2797,7 @@ async function apiGet_(params) {
 
  const response = await fetch(url.toString(), {
   method: "GET",
-  cache: "no-store",
-  mode: "no-cors"
+  cache: "no-store"
 });
 
   if (!response.ok) {
