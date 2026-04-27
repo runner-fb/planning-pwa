@@ -3117,8 +3117,17 @@ function startAutoRefresh() {
 
   autoRefreshTimer = setInterval(() => {
     if (!navigator.onLine) return;
+
+    flushPendingSyncQueue();
+
+    if (state.appMode === "referent") {
+      loadAppData(true);
+      return;
+    }
+
     loadAppData(false);
-  }, 30000);
+
+  }, state.appMode === "referent" ? 60000 : 300000);
 }
 
 function stopAutoRefresh() {
@@ -3141,7 +3150,68 @@ function stopUiMinuteRefresh() {
     uiMinuteTimer = null;
   }
 }
+/*********************************
+ * QUEUE SYNC OFFLINE
+ *********************************/
+function getPendingSyncKey() {
+  return "planning_pending_sync_" + (state.userId || "global");
+}
 
+function getPendingSyncQueue() {
+  try {
+    const raw = localStorage.getItem(getPendingSyncKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function savePendingSyncQueue(queue) {
+  localStorage.setItem(getPendingSyncKey(), JSON.stringify(queue || []));
+}
+
+function addPendingSyncAction(action) {
+  const queue = getPendingSyncQueue();
+
+  queue.push({
+    ...action,
+    createdAt: Date.now()
+  });
+
+  savePendingSyncQueue(queue);
+}
+
+async function flushPendingSyncQueue() {
+  if (!navigator.onLine) return;
+
+  const queue = getPendingSyncQueue();
+  if (!queue.length) return;
+
+  const remaining = [];
+
+  for (const action of queue) {
+    try {
+      if (action.type === "updateVehicule") {
+        await apiGet_({
+          api: "updateVehicule",
+          pwd: state.password,
+          id: action.id,
+          field: action.field,
+          value: action.value ? "true" : "false"
+        });
+      }
+    } catch (e) {
+      remaining.push(action);
+    }
+  }
+
+  savePendingSyncQueue(remaining);
+
+  if (remaining.length === 0) {
+    await loadAppData(true);
+  }
+}
 /*********************************
  * OUTILS
  *********************************/
@@ -4016,7 +4086,7 @@ if (cache) {
     shouldRefresh = true;
   } else if (!forceRefresh && cacheTime) {
     const diffMin = (Date.now() - cacheTime) / 60000;
-    if (diffMin >= 30) shouldRefresh = true;
+    if (diffMin >= 5) shouldRefresh = true;
   }
 
   if (!shouldRefresh) return;
@@ -4365,23 +4435,34 @@ function loadVehicules() {
   el.innerHTML = html;
 }
 
- async function toggleVehiculeFlag(id, field, value) {
-  // 1. Mise à jour immédiate dans l'écran
-  if (Array.isArray(APP_DATA?.vehicules)) {
-    const v = APP_DATA.vehicules.find(x => String(x.id) === String(id));
+async function toggleVehiculeFlag(id, field, value) {
+  // 1. Mise à jour immédiate dans APP_DATA
+  const vehicule = APP_DATA?.vehicules?.find(v => String(v.id) === String(id));
 
-    if (v) {
-      if (field === "desactive") v.desactive = value;
-      if (field === "pleinAFaire") v.pleinAFaire = value;
-    }
-
-    saveCache(APP_DATA);
-    loadVehicules();
+  if (vehicule) {
+    if (field === "desactive") vehicule.desactive = value;
+    if (field === "pleinAFaire") vehicule.pleinAFaire = value;
   }
 
-  // 2. Envoi vers Sheet
+  saveCache(APP_DATA);
+  loadVehicules();
+
+  // 2. Si pas de réseau : on met en attente
+  if (!navigator.onLine) {
+    addPendingSyncAction({
+      type: "updateVehicule",
+      id: id,
+      field: field,
+      value: value
+    });
+
+    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+    return;
+  }
+
+  // 3. Si réseau : tentative directe
   try {
-    const res = await apiGet_({
+    await apiGet_({
       api: "updateVehicule",
       pwd: state.password,
       id: id,
@@ -4389,15 +4470,21 @@ function loadVehicules() {
       value: value ? "true" : "false"
     });
 
-    if (res && res.ok === false) {
-      throw new Error(res.error || "UPDATE_ERROR");
-    }
+    await loadAppData(true);
 
   } catch (e) {
-    console.warn("Mise à jour Sheet probablement faite, mais retour HTTP bloqué :", e);
+    // Si ça échoue, on garde l'action en attente
+    addPendingSyncAction({
+      type: "updateVehicule",
+      id: id,
+      field: field,
+      value: value
+    });
 
-    // On NE remet PAS la case en arrière,
-    // car Sheet est bien modifié.
+    saveCache(APP_DATA);
+    loadVehicules();
+
+    console.warn("Action véhicule gardée en attente", e);
   }
 }
 /*********************************
@@ -7271,7 +7358,14 @@ function getFullName(person) {
   const fullName = [prenom, nom].filter(Boolean).join(" ").trim();
   return fullName || String(person?.label || "").trim();
 }
-  window.logout = logout;
+ window.logout = logout;
+
+window.addEventListener("online", () => {
+  flushPendingSyncQueue();
+});
+
+// flush au démarrage aussi
+flushPendingSyncQueue();
 </script>
 
 </body>
