@@ -3115,19 +3115,17 @@ function startAutoRefresh() {
     clearInterval(autoRefreshTimer);
   }
 
-  autoRefreshTimer = setInterval(() => {
-    if (!navigator.onLine) return;
+  autoRefreshTimer = setInterval(async () => {
+    try {
+      if (typeof flushPendingSyncQueue === "function") {
+        await flushPendingSyncQueue();
+      }
 
-    flushPendingSyncQueue();
-
-    if (state.appMode === "referent") {
-      loadAppData(true);
-      return;
+      await loadAppData(true);
+    } catch (e) {
+      console.warn("Refresh automatique échoué", e);
     }
-
-    loadAppData(false);
-
-  }, state.appMode === "referent" ? 60000 : 300000);
+  }, 60000);
 }
 
 function stopAutoRefresh() {
@@ -7360,8 +7358,16 @@ function getFullName(person) {
 }
  window.logout = logout;
 
-window.addEventListener("online", () => {
-  flushPendingSyncQueue();
+window.addEventListener("online", async () => {
+  try {
+    if (typeof flushPendingSyncQueue === "function") {
+      await flushPendingSyncQueue();
+    }
+
+    await loadAppData(true);
+  } catch (e) {
+    console.warn("Retour en ligne : refresh échoué", e);
+  }
 });
 
 // flush au démarrage aussi
