@@ -4328,8 +4328,11 @@ function renderBottomNav() {
   const nav = document.getElementById("shellBottomNav");
   if (!nav) return;
 
-  if (state.appMode === "referent") {
-    nav.innerHTML = `
+if (
+  state.appMode === "referent" ||
+  (state.appMode === "test" && state.testViewMode === "referent")
+) {
+  nav.innerHTML = `
       <button class="nav-item" data-nav="home" onclick="showView('home')">
         <span class="nav-icon">🏠</span>
         <span>Accueil</span>
