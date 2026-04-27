@@ -4636,6 +4636,7 @@ async function login() {
     loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
   }
 }
+  window.login = login;
 
 function logout() {
   stopAutoRefresh();
