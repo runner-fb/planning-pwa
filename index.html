@@ -2814,7 +2814,8 @@ async function apiGet_(params) {
 
   const json = await response.json();
 return json;
-
+}
+  
 async function apiCheckPassword_(password) {
   const res = await apiGet_({
     api: "checkPassword",
@@ -4201,9 +4202,6 @@ function applyAppData(data) {
 
   refreshCurrentViewOnly();
 }
-/*********************************
- * SHELL
- *********************************/
 function renderBottomNav() {
   const nav = document.getElementById("shellBottomNav");
   if (!nav) return;
@@ -4301,9 +4299,6 @@ const inAppViews = ["home", "direct", "mes-creneaux", "planning", "contacts", "v
   if (activeBtn) activeBtn.classList.add("active");
 }
 
-/*********************************
- * NAVIGATION
- *********************************/
 function showView(name, options = {}) {
   const opts = Object.assign({ push: true, restore: null, preserveScroll: false }, options);
 
@@ -4378,9 +4373,7 @@ function refreshCurrentViewOnly() {
     console.error("Erreur refreshCurrentViewOnly", e);
   }
 }
-/*********************************
- * VEHICULES
- *********************************/
+
 function toggleVehicule(id) {
   vehiculesState.openId =
     vehiculesState.openId === id ? "" : id;
