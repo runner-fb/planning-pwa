@@ -6302,6 +6302,7 @@ function renderPeople(people, sourceView = "direct") {
 
 
 /*********************************
+/*********************************
  * 21 - DIRECT
  *********************************/
 function loadDirect() {
@@ -6332,15 +6333,15 @@ function applyDirectData(data) {
   directState.defaultIndex = computedDirect.defaultIndex;
   directState.liveState = computedDirect.liveState;
 
-  if (!directState.isManual) {
-    directState.currentIndex = directState.defaultIndex;
-  } else if (
-    directState.currentIndex < 0 ||
-    directState.currentIndex >= directState.allShifts.length
-  ) {
-    directState.currentIndex = directState.defaultIndex;
-    directState.isManual = false;
-  }
+ if (!directState.isManual) {
+  directState.currentIndex = directState.defaultIndex;
+} else if (
+  directState.currentIndex < 0 ||
+  directState.currentIndex >= directState.allShifts.length
+) {
+  directState.currentIndex = directState.defaultIndex;
+  directState.isManual = false;
+}
 
   const entryAtDefault =
     directState.defaultIndex >= 0
@@ -6361,6 +6362,116 @@ function applyDirectData(data) {
   }
 }
 
+function renderDirectRestScreen(nextEntry) {
+  const container = document.getElementById("directContent");
+  if (!container) return;
+
+  const timer = nextEntry && nextEntry.shift
+    ? formatDirectDurationLabel(getCurrentNowLabel(), nextEntry.shift.startLabel)
+    : "";
+
+  container.innerHTML = `
+    <div class="card direct-rest-card">
+      ${isTestMode() ? `<div class="meta-line">Heure actuelle : ${escapeHtml(getCurrentNowLabel())}</div>` : ""}
+      <div class="direct-rest-title">Aucun créneau en cours</div>
+      <div class="direct-rest-subtitle">Profite du calme, ça ne va pas durer.</div>
+      ${timer ? `<div class="timer-line">${escapeHtml(timer)}</div>` : ""}
+    </div>
+
+    <div class="card">
+      <button class="direct-main-btn" onclick="goToDefaultShift()" ${!nextEntry ? "disabled" : ""}>
+        Voir le prochain créneau
+      </button>
+    </div>
+  `;
+}
+
+function renderDirectCurrentView() {
+  const container = document.getElementById("directContent");
+  if (!container) return;
+
+  if (!directState.allShifts.length || directState.defaultIndex < 0) {
+    container.innerHTML = `
+      <div class="card empty-state-card">
+        <div class="empty-state-title">Aucun créneau disponible</div>
+        <div class="empty-state-subtitle">Le direct n’a rien à afficher pour le moment.</div>
+      </div>
+    `;
+    return;
+  }
+
+  if (directState.currentIndex < 0 || directState.currentIndex >= directState.allShifts.length) {
+    directState.currentIndex = directState.defaultIndex;
+  }
+
+  const entry = directState.allShifts[directState.currentIndex];
+  const shift = entry.shift || {};
+  const people = entry.benevoles || [];
+  const stateInfo = getShiftStatusInfo(shift);
+
+  const prevDisabled = directState.currentIndex <= 0 ? "disabled" : "";
+  const nextDisabled = directState.currentIndex >= directState.allShifts.length - 1 ? "disabled" : "";
+
+  container.innerHTML = `
+    <div class="card direct-main-card">
+      ${isTestMode() ? `<div class="meta-line">Heure actuelle : ${escapeHtml(getCurrentNowLabel())}</div>` : ""}
+
+      <div class="shift-header">
+        <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
+        <span class="badge ${stateInfo.badgeClass}">${escapeHtml(stateInfo.badgeText)}</span>
+      </div>
+
+      ${stateInfo.timerText ? `<div class="helper-text">${escapeHtml(stateInfo.timerText)}</div>` : ""}
+      <hr class="soft-divider">
+      ${renderPeople(people, "direct")}
+    </div>
+
+    <div class="card">
+      <div class="btn-group">
+        <button class="btn btn-prev" onclick="directPrevious()" ${prevDisabled}>⬅ Précédent</button>
+        <button class="btn btn-next" onclick="directNext()" ${nextDisabled}>Suivant ➡</button>
+      </div>
+
+      <button class="btn-link" onclick="showView('home')">Retour à l’accueil</button>
+    </div>
+  `;
+}
+
+function goToDefaultShift() {
+  if (directState.allShifts.length && directState.defaultIndex >= 0) {
+    directState.currentIndex = directState.defaultIndex;
+    directState.isManual = false;
+    renderDirectCurrentView();
+    scrollMainToTop();
+  }
+}
+
+function directPrevious() {
+  if (directState.currentIndex > 0) {
+    directState.currentIndex--;
+    directState.isManual = true;
+    renderDirectCurrentView();
+    scrollMainToTop();
+  }
+}
+
+function directNext() {
+  if (directState.currentIndex < directState.allShifts.length - 1) {
+    directState.currentIndex++;
+    directState.isManual = true;
+    renderDirectCurrentView();
+    scrollMainToTop();
+  }
+}
+
+function directBackToLive() {
+  directState.isManual = false;
+  directState.currentIndex = directState.defaultIndex;
+  applyDirectData(APP_DATA?.direct || {});
+  scrollMainToTop();
+}
+
+/*********************************
 
 /*********************************
  * 22 - PLANNING
@@ -6384,64 +6495,140 @@ function loadPlanning() {
   renderPlanning();
 }
 
-
-/*********************************
- * 23 - CONTACTS HELPERS
- *********************************/
-function updateContactsSearch(value) {
-  contactsState.query = value || "";
-  localStorage.setItem("planning_contacts_query", contactsState.query);
-  syncCurrentHistoryState();
-  renderContactsListOnly();
+function selectPlanningDay(day) {
+  planningState.selectedDay = day;
+  planningState.openShiftId = null;
+  renderPlanning();
 }
 
-function renderContactsListOnly() {
-  const listContainer = document.getElementById("contactsPeopleList");
-  if (!listContainer) return;
+function togglePlanningShift(shiftId) {
+  if (planningState.openShiftId === shiftId) {
+    planningState.openShiftId = null;
+  } else {
+    planningState.openShiftId = shiftId;
+  }
 
-  const allPeople = getAllPeopleForContacts()
-    .filter(p =>
-      (p.prenom && p.prenom.trim()) ||
-      (p.nom && p.nom.trim()) ||
-      (p.label && p.label.trim())
-    )
-    .filter(p => !p.isRef);
+  renderPlanning();
+}
 
-  const query = normalizeText(contactsState.query);
+function renderPlanning() {
+  const container = document.getElementById("planningContent");
+  if (!container) return;
 
-  const filtered = !query
-    ? allPeople
-    : allPeople.filter(p =>
-        normalizeText((p.prenom || "") + " " + (p.nom || "")).includes(query) ||
-        normalizeText(p.label || "").includes(query)
-      );
+  const shifts = planningState.byDay[planningState.selectedDay] || [];
 
-  listContainer.innerHTML = filtered.length
-    ? filtered.map(p => `
-      <button
-        type="button"
-        class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
-        onclick="openPersonDetail('${escapeHtml(p.id || "")}', 'contacts')"
-      >
-        ${renderAvatar(p)}
+  if (!shifts.length) {
+    container.innerHTML = `
+      ${renderUserHeader()}
+      ${renderPlanningTabsBlock()}
 
-        <div class="person-main">
-          <div class="person-left">
-            <div class="person-name">
-              <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
-            </div>
-          </div>
-
-          ${renderCallButton(p.tel, true)}
-        </div>
-      </button>
-    `).join("")
-    : `
-      <div class="empty-state-card" style="padding:18px 8px 8px;">
-        <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
+      <div class="card planning-empty">
+        <div class="empty-state-title">Aucun créneau</div>
+        <div class="empty-state-subtitle">Rien à afficher pour ce jour.</div>
       </div>
     `;
+    return;
+  }
+
+  let html = `
+    ${renderUserHeader()}
+    ${renderPlanningTabsBlock()}
+
+    <div class="planning-day-header">
+  <div>
+    <div class="planning-day-subtitle">Planning du jour</div>
+    <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
+  </div>
+</div>
+  `;
+
+  shifts.forEach(shift => {
+    const people = Array.isArray(shift.benevoles) ? shift.benevoles : [];
+    const stateInfo = getShiftStatusInfo(shift);
+    const isOpen = planningState.openShiftId === shift.id;
+
+    const stateClass =
+      stateInfo.badgeClass === "current" ? "is-current" :
+      stateInfo.badgeClass === "previous" ? "is-past" :
+      "is-future";
+
+    html += `
+      <div class="card clickable-card planning-shift-card ${stateClass}" onclick="togglePlanningShift('${escapeHtml(shift.id)}')">
+        <div class="planning-shift-inner">
+          <div class="shift-header">
+            <div style="display:flex; flex-direction:column; gap:5px; min-width:0; flex:1;">
+              <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
+              <span class="badge ${stateInfo.badgeClass}" style="width:fit-content;">
+                ${escapeHtml(stateInfo.badgeText)}
+              </span>
+            </div>
+
+            <span class="planning-chevron ${isOpen ? "open" : ""}">▼</span>
+          </div>
+
+          ${stateInfo.timerText ? `<div class="shift-timer-line">${escapeHtml(stateInfo.timerText)}</div>` : ""}
+
+          ${isOpen ? `
+            <div style="margin-top:10px;">
+              ${renderPlanningPeople(people)}
+            </div>
+          ` : ``}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
 }
+
+function renderPlanningPeople(list) {
+  const sorted = sortPeopleForShift(list || []);
+
+  if (!sorted.length) {
+    return `<div class="team-member"><div class="member-main"><div class="member-role">Personne sur ce créneau</div></div></div>`;
+  }
+
+  let html = "";
+  let currentGroup = "";
+  const peopleMap = getPeopleIndexFromAppData();
+
+  sorted.forEach(person => {
+    const info = getRoleInfo(person.vehicule);
+    const full = peopleMap[person.id] || {
+      id: person.id || "",
+      label: person.label || person.benevole || "",
+      photo: ""
+    };
+
+    if (info.group !== currentGroup) {
+      currentGroup = info.group;
+      html += `
+        <div class="group-label">
+          ${currentGroup === "chauffeurs" ? "Chauffeurs" : "Chargeurs"}
+        </div>
+      `;
+    }
+
+    html += `
+      <button
+        type="button"
+        class="team-member team-member-button"
+        onclick="event.stopPropagation(); openPersonDetail('${escapeHtml(full.id || "")}', 'planning')"
+      >
+        <div class="role-icon">${info.icon}</div>
+        <div class="member-main">
+          <div class="member-inline">
+            <div class="member-name">${escapeHtml(full.label || "")}</div>
+            <div class="member-role">${escapeHtml(info.label)}</div>
+          </div>
+        </div>
+      </button>
+    `;
+  });
+
+  return html;
+}
+
 
 /*********************************
  * 23 - CONTACTS HELPERS
@@ -6522,6 +6709,7 @@ function sortReferentsCustom(list) {
 }
 
 
+
 /*********************************
  * 24 - CONTACTS
  *********************************/
@@ -6584,6 +6772,7 @@ function renderReferentTile(p) {
     </a>
   `;
 }
+
 
 
 /*********************************
@@ -6649,14 +6838,122 @@ function renderShiftDetail(data) {
 }
 
 
+
 /*********************************
  * 26 - PERSON DETAIL
  *********************************/
-// (je ne modifie pas ici → logique déjà propre)
+function openPersonDetail(personId, sourceView = "planning") {
+  if (!personId) return;
+  personDetailState.personId = personId;
+  personDetailState.sourceView = sourceView || state.currentView || "planning";
+  showView("person-detail");
+}
 
+function loadPersonDetail() {
+  const container = document.getElementById("personDetailContent");
+  if (!container) return;
+
+  if (!APP_DATA) {
+    container.innerHTML = `<div class="card">Aucune donnée</div>`;
+    return;
+  }
+
+  const person = getPersonById(personDetailState.personId);
+  if (!person) {
+    container.innerHTML = `<div class="card">Bénévole introuvable</div>`;
+    return;
+  }
+
+  const shifts = getPersonShifts(person.id);
+  const current = getCurrentShiftForPerson(person.id);
+  const next = getUpcomingShiftForPerson(person.id);
+  const message = getFestivalMessageForHome(person.id);
+
+  let statusBlock = "";
+  if (current) {
+    const role = getRoleInfo(current.vehicule);
+    statusBlock = `
+      <div class="card compact">
+        <div class="status-box current">
+          <div class="status-main">
+            <div class="status-title">Statut actuel</div>
+            <div class="status-line">En poste • ${escapeHtml(role.label)} jusqu’à ${escapeHtml(current.fin || "")}</div>
+          </div>
+          <span class="badge current">En cours</span>
+        </div>
+      </div>
+    `;
+  } else if (next) {
+    const role = getRoleInfo(next.vehicule);
+    statusBlock = `
+      <div class="card compact">
+        <div class="status-box next">
+          <div class="status-main">
+            <div class="status-title">Prochain créneau</div>
+            <div class="status-line">${escapeHtml(next.jour)} • ${escapeHtml(next.debut)} – ${escapeHtml(next.fin)} • ${escapeHtml(role.label)}</div>
+          </div>
+          <span class="badge next">À venir</span>
+        </div>
+      </div>
+    `;
+  } else if (message) {
+    statusBlock = `
+      <div class="card compact">
+        <div class="status-box previous">
+          <div class="status-main">
+            <div class="status-title">Message</div>
+            <div class="status-line">${escapeHtml(message.title)}</div>
+            <div class="subtle-text" style="margin-top:4px;">${escapeHtml(message.sub)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  let daysHtml = "";
+
+  shifts.forEach(shift => {
+    const role = getRoleInfo(shift.vehicule);
+    const info = getShiftStatusInfo(shift);
+
+    daysHtml += `
+      <div class="card compact ${info.badgeClass === 'current' ? 'home-main-card' : ''}">
+        <div class="shift-header">
+          <div class="shift-line">${escapeHtml(formatShiftLine(shift))}</div>
+          <span class="badge ${info.badgeClass}">${escapeHtml(info.badgeText)}</span>
+        </div>
+        <div class="subtle-text">${escapeHtml(role.label)}</div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = `
+    <div class="back-row">
+      <button type="button" class="back-btn" onclick="navigateBack(personDetailState.sourceView || 'planning')">← Retour</button>
+    </div>
+
+    <div class="card">
+      <div class="person-head">
+        ${renderAvatar(person, true)}
+        <div class="person-head-text">
+          <div class="person-head-name">${escapeHtml([person.prenom, person.nom].filter(Boolean).join(" ").trim() || person.label || "")}</div>
+          <div class="subtle-text">${person.tel ? escapeHtml(person.tel) : "Téléphone non renseigné"}</div>
+        </div>
+        ${renderCallButton(person.tel)}
+      </div>
+    </div>
+
+    ${statusBlock}
+
+    <div class="card">
+      <div class="section-title">Créneaux</div>
+      ${daysHtml || `<div class="subtle-text">Aucun créneau.</div>`}
+    </div>
+  `;
+}
 
 /*********************************
- * 27 - PRINT (REFACTOR)
+ * 27 - PRINT / IMPRESSION
  *********************************/
 function renderPrintPeopleRows(people) {
   if (!people.length) {
@@ -6686,6 +6983,325 @@ function renderPrintShiftCard(shift, people) {
       </div>
     </div>
   `;
+}
+  
+ function printPlanningForDay(day) {
+  closePrintDayPicker();
+
+  if (!APP_DATA || !APP_DATA.planning) return;
+
+  const shifts = (planningState.byDay && planningState.byDay[day]) ? planningState.byDay[day] : [];
+
+  if (!shifts.length) return;
+
+  let html = `
+    <h1>Planning du jour</h1>
+    <div class="print-subtitle">${escapeHtml(day)}</div>
+  `;
+
+  // 👇 LA DIFF : grille 3 colonnes
+  html += `<div class="print-day-grid">`;
+
+  shifts.forEach(shift => {
+    const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+
+    html += `
+      <div class="print-card print-card-column">
+        <div class="print-line">${escapeHtml(formatShiftLine(shift))}</div>
+        <div class="print-meta">
+          ${
+            people.length
+              ? people.map(person => {
+                  const info = getRoleInfo(person.vehicule);
+                  const label = person.label || person.benevole || "";
+                  const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
+
+                  return `
+                    <div class="print-person-row">
+                      <span class="print-person-name">${escapeHtml(label)}</span>
+                      <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
+                    </div>
+                  `;
+                }).join("")
+              : `<div class="print-empty">Personne sur ce créneau</div>`
+          }
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  openPrintWindow("Planning " + day, html);
+}
+
+  function printFullPlanningDetailed() {
+  closePrintModal();
+
+  if (!APP_DATA || !APP_DATA.planning || !Array.isArray(APP_DATA.planning.allShifts)) {
+    return;
+  }
+
+  const allShifts = APP_DATA.planning.allShifts
+    .slice()
+    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
+
+  if (!allShifts.length) return;
+
+  const byDay = {};
+  const daysOrder = ["Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche", "Lundi"];
+
+  allShifts.forEach(shift => {
+    const day = shift.jour || "";
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(shift);
+  });
+
+  let html = `<h1>Planning complet</h1>`;
+
+  daysOrder.forEach(day => {
+    const shifts = byDay[day] || [];
+    if (!shifts.length) return;
+
+    html += `<div class="print-day">${escapeHtml(day)}</div>`;
+    html += `<div class="print-day-grid">`;
+
+    shifts.forEach(shift => {
+      const people = Array.isArray(shift.benevoles) ? sortPeopleForShift(shift.benevoles) : [];
+
+      html += `
+        <div class="print-card print-card-column">
+          <div class="print-line">${escapeHtml((shift.debut || "") + " – " + (shift.fin || ""))}</div>
+          <div class="print-meta">
+            ${
+              people.length
+                ? people.map(person => {
+                    const info = getRoleInfo(person.vehicule);
+                    const label = person.label || person.benevole || "";
+                    const roleClass = info.group === "chauffeurs" ? "driver" : "loader";
+
+                    return `
+                      <div class="print-person-row">
+                        <span class="print-person-name">${escapeHtml(label)}</span>
+                        <span class="print-person-role ${roleClass}">${escapeHtml(info.label)}</span>
+                      </div>
+                    `;
+                  }).join("")
+                : `<div class="print-empty">Personne sur ce créneau</div>`
+            }
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+
+  openPrintWindow("Planning complet", html);
+}
+
+  function printMyPlanningDetailed() {
+  closePrintModal();
+
+  if (!APP_DATA || !APP_DATA.mesCreneaux || !Array.isArray(APP_DATA.mesCreneaux.creneaux)) {
+    return;
+  }
+
+  const list = APP_DATA.mesCreneaux.creneaux
+    .slice()
+    .sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
+
+  if (!list.length) return;
+
+  let html = `
+    <h1>Mes créneaux</h1>
+    <div class="print-subtitle">
+      ${escapeHtml(state.userLabel || "")}
+    </div>
+  `;
+
+  let currentDay = "";
+
+  list.forEach(entry => {
+    const day = entry.jour || "";
+    const role = getRoleInfo(entry.vehicule || "");
+
+    if (day !== currentDay) {
+      currentDay = day;
+      html += `<div class="print-day">${escapeHtml(day)}</div>`;
+    }
+
+    html += `
+      <div class="print-card">
+        <div class="print-line">${escapeHtml((entry.debut || "") + " – " + (entry.fin || ""))}</div>
+        <div class="print-role">${escapeHtml(role.label)}</div>
+      </div>
+    `;
+  });
+
+ openPrintWindow("Mes créneaux", html);
+}
+
+  function openPrintWindow(title, bodyHtml) {
+  const oldFrame = document.getElementById("printFrame");
+  if (oldFrame) oldFrame.remove();
+
+  const iframe = document.createElement("iframe");
+  iframe.id = "printFrame";
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <title>${escapeHtml(title)}</title>
+}
+
+      <style>
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    color: #111;
+    font-size: 11px;
+  }
+
+  h1 {
+    text-align: center;
+    margin: 0 0 12px 0;
+    font-size: 22px;
+  }
+
+  .print-subtitle {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #555;
+  }
+
+  .print-day {
+    margin-top: 18px;
+    margin-bottom: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4px;
+    page-break-after: avoid;
+  }
+
+  .print-day-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+
+  .print-card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    background: #fff;
+  }
+
+  .print-card-column {
+    min-height: 100%;
+  }
+
+  .print-line {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+  }
+
+  .print-meta {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .print-person-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 2px 0;
+    border-bottom: 1px dotted #eee;
+  }
+
+  .print-person-row:last-child {
+    border-bottom: none;
+  }
+
+  .print-person-name {
+    flex: 1;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .print-person-role {
+    flex-shrink: 0;
+    text-align: right;
+    white-space: nowrap;
+    font-weight: bold;
+  }
+
+  .driver {
+    color: #0f5a4f;
+  }
+
+  .loader {
+    color: #a16207;
+  }
+
+  .print-role {
+    font-size: 13px;
+    color: #444;
+  }
+
+  .print-empty {
+    color: #666;
+    font-style: italic;
+  }
+
+  @media print {
+    body {
+      margin: 0;
+    }
+  }
+</style>
+    </head>
+
+    <body>
+      ${bodyHtml}
+    </body>
+    </html>
+  `);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }, 300);
 }
   
 /*********************************
@@ -6928,6 +7544,10 @@ function setTestNowPrompt() {
 
   localStorage.setItem("forced_now", value);
   location.reload();
+}
+
+function setSimulatedNow() {
+  setTestNowPrompt();
 }
 
 function clearForcedNow() {
