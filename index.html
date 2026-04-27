@@ -2951,8 +2951,11 @@ let state = {
   currentView: "login",
   password: localStorage.getItem("planning_password") || "",
   authOk: localStorage.getItem("planning_auth_ok") === "1",
-appMode: localStorage.getItem("planning_app_mode") || "",
-userId: localStorage.getItem("planning_user_id") || "",
+  appMode: localStorage.getItem("planning_app_mode") || "",
+
+  testViewMode: localStorage.getItem("planning_test_view_mode") || "benevole",
+
+  userId: localStorage.getItem("planning_user_id") || "",
   userLabel: localStorage.getItem("planning_user_label") || "",
   isRef: false,
   isRefMode: false,
@@ -3317,6 +3320,22 @@ function showGlobalLoader() {
 
 function hideGlobalLoader() {
   document.getElementById("syncOverlay")?.classList.add("hidden");
+}
+
+ function isTestAppMode() {
+  return state.appMode === "test";
+}
+
+function setTestViewMode(mode) {
+  if (!isTestAppMode()) return;
+
+  if (mode !== "benevole" && mode !== "referent") return;
+
+  state.testViewMode = mode;
+  localStorage.setItem("planning_test_view_mode", mode);
+
+  // ⚠️ IMPORTANT → recharge les données backend
+  loadAppData(true);
 }
   
   function escapeHtml(value) {
@@ -4219,9 +4238,11 @@ async function loadAppData(forceRefresh = false) {
   showSyncStatus("loading");
 
   try {
-    const bundleUserId = state.appMode === "referent"
-      ? "__REFERENT__"
-      : state.userId;
+    const bundleUserId =
+  state.appMode === "referent" ||
+  (state.appMode === "test" && state.testViewMode === "referent")
+    ? "__REFERENT__"
+    : state.userId;
 
     const data = await apiGetBundle_(state.password, bundleUserId);
 
@@ -5227,16 +5248,25 @@ function renderCompactConcertRow(concert, label, statusType) {
 }
 
 function renderHome() {
-  if (state.appMode === "referent") {
-    renderHomeReferent();
-    return;
-  }
 
   if (state.appMode === "test") {
+
+    if (state.testViewMode === "referent") {
+      renderHomeReferent({
+        showTestButtons: true
+      });
+      return;
+    }
+
     renderHomeStandard({
       showTestButtons: true,
       showUserPill: true
     });
+    return;
+  }
+
+  if (state.appMode === "referent") {
+    renderHomeReferent();
     return;
   }
 
@@ -5385,13 +5415,15 @@ function renderHomeStandard(options = {}) {
     <div class="home-stack" style="margin-top:-20px;">
       ${
         showTestButtons
-          ? `
-            <div style="margin-top:6px; display:flex; gap:8px; margin-bottom:8px;">
-              <button onclick="setTestNowPrompt()">🧪 Test</button>
-              <button onclick="clearForcedNow()">🕒 Réel</button>
-            </div>
-          `
-          : ""
+  ? `
+    <div style="margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+      <button onclick="setTestViewMode('benevole')">👤 Mode bénévole</button>
+      <button onclick="setTestViewMode('referent')">🦺 Mode référent</button>
+      <button onclick="setTestNowPrompt()">🧪 Heure simulée</button>
+      <button onclick="clearForcedNow()">🕒 Heure réelle</button>
+    </div>
+  `
+  : ""
       }
 
       ${currentBox}
@@ -6068,62 +6100,42 @@ function renderHomeReferent() {
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
-      <button
-        onclick="logout()"
-        style="
+
+      ${isTestAppMode() ? `
+        <div style="
           position:absolute;
           top:12px;
           right:12px;
-          z-index:50;
-          border:none;
-          border-radius:999px;
-          background:rgba(0,0,0,0.72);
-          color:white;
-          padding:8px 12px;
-          font-weight:900;
-          font-size:12px;
-        "
-      >
-        Déconnexion
-      </button>
-
-      <button
-        onclick="clearForcedNow()"
-        style="
-          position:absolute;
-          top:52px;
-          right:12px;
-          z-index:50;
-          border:none;
-          border-radius:999px;
-          background:rgba(255,255,255,0.9);
-          color:#18443D;
-          padding:8px 12px;
-          font-weight:900;
-          font-size:12px;
-        "
-      >
-        Heure réelle
-      </button>
-
-      <button
-        onclick="setTestNowPrompt()"
-        style="
-          position:absolute;
-          top:92px;
-          right:12px;
-          z-index:50;
-          border:none;
-          border-radius:999px;
-          background:#18443D;
-          color:white;
-          padding:8px 12px;
-          font-weight:900;
-          font-size:12px;
-        "
-      >
-        Heure simulée
-      </button>
+          z-index:100;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:6px;
+        ">
+          <button onclick="setTestViewMode('benevole')">👤 Bénévole</button>
+          <button onclick="setTestViewMode('referent')">🦺 Référent</button>
+          <button onclick="setTestNowPrompt()">🧪 Simulé</button>
+          <button onclick="clearForcedNow()">🕒 Réel</button>
+        </div>
+      ` : `
+        <button
+          onclick="logout()"
+          style="
+            position:absolute;
+            top:12px;
+            right:12px;
+            z-index:50;
+            border:none;
+            border-radius:999px;
+            background:rgba(0,0,0,0.72);
+            color:white;
+            padding:8px 12px;
+            font-weight:900;
+            font-size:12px;
+          "
+        >
+          Déconnexion
+        </button>
+      `}
 
       <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
@@ -6180,7 +6192,6 @@ function renderHomeReferent() {
     </div>
   `;
 }
-
 /*********************************
  * 19 - MES CRENEAUX
  *********************************/
