@@ -1129,6 +1129,50 @@ body {
   transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
 }
 
+    .sync-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.sync-overlay.hidden {
+  display: none;
+}
+
+.sync-box {
+  background: white;
+  padding: 20px 24px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+.sync-spinner {
+  width: 30px;
+  height: 30px;
+  border: 4px solid #ddd;
+  border-top: 4px solid #0F5A4F;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+.sync-text {
+  font-size: 14px;
+  color: #333;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+    
 .home-stack {
   position: relative;
   z-index: 3;
@@ -7723,10 +7767,30 @@ function getFullName(person) {
 
 window.logout = logout;
 
+  function showLoader(text = "Chargement en cours…") {
+  const overlay = document.getElementById("syncOverlay");
+  if (!overlay) return;
+
+  const txt = overlay.querySelector(".sync-text");
+  if (txt) txt.textContent = text;
+
+  overlay.classList.remove("hidden");
+}
+
+function hideLoader() {
+  const overlay = document.getElementById("syncOverlay");
+  if (!overlay) return;
+
+  overlay.classList.add("hidden");
+}
+
 </script>
 <!-- ===== FIN SCRIPT PRINCIPAL APPLICATION ===== -->
     <div id="syncOverlay" class="sync-overlay hidden">
-  <div class="sync-spinner"></div>
+  <div class="sync-box">
+    <div class="sync-spinner"></div>
+    <div class="sync-text">Chargement en cours…</div>
+  </div>
 </div>
 </body>
 <!-- ===== FIN BODY ===== -->
