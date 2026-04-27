@@ -4593,13 +4593,18 @@ async function login() {
     localStorage.setItem("planning_password", pwd);
     localStorage.setItem("planning_auth_ok", "1");
 
-    if (isRef) {
-      state.appMode = "referent";
-    } else if (pwd === "test26") {
-      state.appMode = "test";
-    } else {
-      state.appMode = "benevole";
-    }
+    if (pwd === "fb26") {
+  state.appMode = "benevole";
+  state.isRefMode = false;
+} else if (pwd === "hjafb26") {
+  state.appMode = "referent";
+  state.isRefMode = true;
+} else if (pwd === "test26") {
+  state.appMode = "test";
+  state.isRefMode = false;
+} else {
+  state.appMode = "";
+}
 
     localStorage.setItem("planning_app_mode", state.appMode);
 
