@@ -4227,83 +4227,84 @@ function renderHomeHeroUserPill() {
     >
       <div
         style="
-          display:flex;
-          align-items:center;
-          gap:8px;
           background:rgba(255,253,247,0.96);
           border:1px solid rgba(255,255,255,0.55);
-          border-radius:999px;
-          padding:4px 6px 4px 8px;
+          border-radius:18px;
+          padding:6px 8px;
           box-shadow:0 8px 18px rgba(15,68,61,0.14);
         "
       >
-        <div style="min-width:0; line-height:1.05;">
-          <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
-            Hello John, connecté en tant que
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="min-width:0; line-height:1.05;">
+            <div style="font-size:0.58rem; font-weight:900; color:#6F7364; white-space:nowrap;">
+              Hello John, connecté en tant que
+            </div>
+
+            <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(getSelectedUserDisplayName())}
+            </div>
+
+            ${renderTestControlsInline()}
           </div>
 
-          <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${escapeHtml(getSelectedUserDisplayName())}
+          <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
+            <button
+              type="button"
+              onclick="changeUser()"
+              title="Changer de personne"
+              aria-label="Changer de personne"
+              style="
+                width:26px;
+                height:26px;
+                border-radius:999px;
+                background:rgba(255,255,255,0.95);
+                border:1px solid rgba(0,0,0,0.08);
+                font-size:13px;
+                cursor:pointer;
+                padding:0;
+              "
+            >
+              👤
+            </button>
+
+            <button
+              type="button"
+              onclick="openPrintModal()"
+              title="Imprimer"
+              aria-label="Imprimer"
+              style="
+                width:30px;
+                height:30px;
+                border-radius:999px;
+                background:rgba(255,255,255,0.95);
+                border:1px solid rgba(0,0,0,0.08);
+                font-size:13px;
+                cursor:pointer;
+                padding:0;
+              "
+            >
+              🖨️
+            </button>
+
+            <button
+              type="button"
+              onclick="logout()"
+              title="Déconnexion"
+              aria-label="Déconnexion"
+              style="
+                width:30px;
+                height:30px;
+                border-radius:999px;
+                background:rgba(255,255,255,0.95);
+                border:1px solid rgba(0,0,0,0.08);
+                font-size:13px;
+                cursor:pointer;
+                padding:0;
+              "
+            >
+              ⎋
+            </button>
           </div>
-        </div>
-
-        <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
-          <button
-            type="button"
-            onclick="changeUser()"
-            title="Changer de personne"
-            aria-label="Changer de personne"
-            style="
-              width:26px;
-              height:26px;
-              border-radius:999px;
-              background:rgba(255,255,255,0.95);
-              border:1px solid rgba(0,0,0,0.08);
-              font-size:13px;
-              cursor:pointer;
-              padding:0;
-            "
-          >
-            👤
-          </button>
-
-          <button
-            type="button"
-            onclick="openPrintModal()"
-            title="Imprimer"
-            aria-label="Imprimer"
-            style="
-              width:30px;
-              height:30px;
-              border-radius:999px;
-              background:rgba(255,255,255,0.95);
-              border:1px solid rgba(0,0,0,0.08);
-              font-size:13px;
-              cursor:pointer;
-              padding:0;
-            "
-          >
-            🖨️
-          </button>
-
-          <button
-            type="button"
-            onclick="logout()"
-            title="Déconnexion"
-            aria-label="Déconnexion"
-            style="
-              width:30px;
-              height:30px;
-              border-radius:999px;
-              background:rgba(255,255,255,0.95);
-              border:1px solid rgba(0,0,0,0.08);
-              font-size:13px;
-              cursor:pointer;
-              padding:0;
-            "
-          >
-            ⎋
-          </button>
         </div>
       </div>
     </div>
