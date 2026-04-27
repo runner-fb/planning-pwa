@@ -4484,6 +4484,10 @@ function loadVehicules() {
                   Immatriculation : ${escapeHtml(v.immat || "—")}
                 </div>
 
+                <div class="subtle-text" style="margin-top:6px;">
+  Conducteur actuel : ${escapeHtml(v.conducteurActuel || "Non défini")}
+</div>
+
                 <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
                   <input
                     type="checkbox"
