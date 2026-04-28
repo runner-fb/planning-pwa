@@ -3046,6 +3046,12 @@ let state = {
   previousView: "home"
 };
 
+// Migration douce : l’ancien mode "test" devient maintenant le vrai mode "admin".
+if (state.appMode === "test") {
+  state.appMode = "admin";
+  localStorage.setItem("planning_app_mode", "admin");
+}
+
   let actionLock = false;
 
   let referentUiState = {
@@ -3115,6 +3121,16 @@ let internalNavLock = false;
  * 04 - CACHE HELPERS
  *********************************/
 function getCacheKey() {
+  // Cache séparé selon le contexte, pour éviter qu'une vue référent/admin
+  // écrase le cache personnel du bénévole sélectionné.
+  if (state.appMode === "referent") {
+    return "planning_cache___REFERENT__";
+  }
+
+  if (state.appMode === "admin" && state.testViewMode === "referent") {
+    return "planning_cache___ADMIN_REFERENT__";
+  }
+
   if (!state.userId) return null;
   return "planning_cache_" + state.userId;
 }
@@ -3402,7 +3418,7 @@ function hideGlobalLoader() {
 }
 
  function isTestAppMode() {
-  return state.appMode === "test";
+  return state.appMode === "admin";
 }
 
 function renderTestControls() {
@@ -3521,7 +3537,7 @@ function buildPlanningByDay(shifts) {
 }
 
 function getCurrentNowDate() {
-  if (state.appMode === "test") {
+  if (state.appMode === "admin") {
     const forced = localStorage.getItem("forced_now");
 
     if (forced) {
@@ -4389,7 +4405,7 @@ async function loadAppData(forceRefresh = false) {
   try {
     const bundleUserId =
   state.appMode === "referent" ||
-  (state.appMode === "test" && state.testViewMode === "referent")
+  (state.appMode === "admin" && state.testViewMode === "referent")
     ? "__REFERENT__"
     : state.userId;
 
@@ -4439,8 +4455,22 @@ function applyAppData(data) {
 
   APP_DATA = data;
 
-  state.userId = data.user?.id || state.userId || "";
-  state.userLabel = data.user?.label || state.userLabel || "";
+  const dataUserId = data.user?.id || "";
+  const dataUserLabel = data.user?.label || "";
+
+  // En admin + simulation référent, le bundle renvoie l'utilisateur technique
+  // "__REFERENT__". On ne doit pas écraser le bénévole réellement sélectionné,
+  // sinon "Connecté en tant que" et les pages bénévoles se désynchronisent.
+  if (!(state.appMode === "admin" && state.testViewMode === "referent" && dataUserId === "__REFERENT__")) {
+    state.userId = dataUserId || state.userId || "";
+    state.userLabel = dataUserLabel || state.userLabel || "";
+
+    if (state.userId && state.userId !== "__REFERENT__") {
+      localStorage.setItem("planning_user_id", state.userId);
+      localStorage.setItem("planning_user_label", state.userLabel);
+    }
+  }
+
   state.isRef = data.user?.isRef === true;
 
   planningState.allShifts = getPlanningShiftsFromAppData(data);
@@ -4479,7 +4509,7 @@ function renderBottomNav() {
 
 if (
   state.appMode === "referent" ||
-  (state.appMode === "test" && state.testViewMode === "referent")
+  (state.appMode === "admin" && state.testViewMode === "referent")
 ) {
   nav.innerHTML = `
       <button class="nav-item" data-nav="home" onclick="showView('home')">
@@ -4868,7 +4898,7 @@ async function login() {
   state.appMode = "referent";
   state.isRefMode = true;
 } else if (pwd === "test26") {
-  state.appMode = "test";
+  state.appMode = "admin";
   state.isRefMode = false;
 } else {
   state.appMode = "";
@@ -5419,7 +5449,7 @@ function renderCompactConcertRow(concert, label, statusType) {
 
 function renderHome() {
 
-  if (state.appMode === "test") {
+  if (state.appMode === "admin") {
 
     if (state.testViewMode === "referent") {
       renderHomeReferent({
@@ -7639,7 +7669,7 @@ async function boot() {
 
     state.authOk = true;
     state.isRefMode = isRef;
-    state.appMode = isRef ? "referent" : (state.appMode || "benevole");
+    state.appMode = isRef ? "referent" : (state.appMode === "admin" ? "admin" : "benevole");
 
     localStorage.setItem("planning_auth_ok", "1");
     localStorage.setItem("planning_app_mode", state.appMode);
