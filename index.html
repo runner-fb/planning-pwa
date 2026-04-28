@@ -7222,23 +7222,6 @@ function loadTeamPerson() {
   `;
 }
 
-  function openTeamPerson(personId) {
-  personDetailState.personId = personId || "";
-  personDetailState.sourceView = "team";
-
-  localStorage.setItem("planning_team_person_id", personDetailState.personId);
-  localStorage.setItem("planning_team_person_source", "team");
-
-  showView("team-person");
-}
-
-  container.innerHTML = `
-    <div class="card">
-      <div class="home-main-title">Fiche Team</div>
-      <div class="home-subline">Fiche à construire.</div>
-    </div>
-  `;
-}
 
 /*********************************
  * 25 - DETAIL CRENEAU
