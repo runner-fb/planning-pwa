@@ -5824,34 +5824,150 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 
   if (!nextPeople.length) return "";
 
+  const isChargeur = v => String(v || "").toUpperCase().includes("CHARGEUR");
+
+  const currentVehicles = {};
+  const nextVehicles = [];
+  const nextChargeurs = [];
+
+  currentPeople.forEach(p => {
+    const v = String(p.vehicule || "").trim();
+    if (v && !isChargeur(v)) currentVehicles[v] = p;
+  });
+
+  nextPeople.forEach(p => {
+    const v = String(p.vehicule || "").trim();
+
+    if (isChargeur(v)) {
+      nextChargeurs.push(p);
+    } else {
+      nextVehicles.push(p);
+    }
+  });
+
+  nextVehicles.sort((a, b) =>
+    String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true })
+  );
+
+  const rows = nextVehicles.map(p => {
+    const v = String(p.vehicule || "").trim();
+    const prev = currentVehicles[v];
+
+    const prevName = String(prev?.label || prev?.benevole || "").trim();
+    const nextName = String(p.label || p.benevole || "").trim();
+
+    return `
+      <div style="
+        display:grid;
+        grid-template-columns:90px 1fr;
+        gap:8px;
+        padding:7px 0;
+        border-top:1px solid rgba(222,212,194,0.45);
+        font-size:0.80rem;
+        line-height:1.15;
+        color:#18443D;
+      ">
+        <div style="font-weight:1000; color:#0F5A4F;">
+          Véhicule ${escapeHtml(v)}
+        </div>
+
+        <div style="min-width:0;">
+          ${
+            prevName && prevName !== nextName
+              ? `
+                <div style="opacity:0.6; font-weight:600;">
+                  ${escapeHtml(prevName)}
+                </div>
+                <div style="font-weight:900;">
+                  → ${escapeHtml(nextName)}
+                </div>
+              `
+              : `
+                <div style="font-weight:900;">
+                  ${escapeHtml(nextName)}
+                </div>
+              `
+          }
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const chargeurRows = nextChargeurs.map(p => {
+    const name = String(p.label || p.benevole || "").trim();
+
+    return `
+      <div style="
+        display:grid;
+        grid-template-columns:90px 1fr;
+        gap:8px;
+        padding:7px 0;
+        border-top:1px solid rgba(222,212,194,0.45);
+        font-size:0.80rem;
+        line-height:1.15;
+        color:#18443D;
+      ">
+        <div style="font-weight:1000; color:#0F5A4F;">
+          Chargeur
+        </div>
+
+        <div style="
+          min-width:0;
+          font-weight:900;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+        ">
+          ${escapeHtml(name)}
+        </div>
+      </div>
+    `;
+  }).join("");
+
   return `
-    <div style="margin-top:10px;background:rgba(255,255,255,0.55);border-radius:16px;overflow:hidden;">
-      <button type="button" onclick="togglePeopleList('${id}')" style="width:100%;border:none;background:transparent;color:#18443D;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;font-weight:900;cursor:pointer;">
+    <div style="
+      margin-top:10px;
+      background:rgba(255,255,255,0.55);
+      border-radius:16px;
+      overflow:hidden;
+    ">
+      <button
+        type="button"
+        onclick="togglePeopleList('${id}')"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          color:#18443D;
+          padding:8px 12px;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          font-size:0.82rem;
+          font-weight:900;
+          cursor:pointer;
+        "
+      >
         <span>Voir les remplacements</span>
-        <span>${referentUiState.openMenuId === id ? "▲" : "▼"}</span>
+        <span id="chevron-${id}" style="font-size:0.75rem;">
+          ${referentUiState.openMenuId === id ? "▲" : "▼"}
+        </span>
       </button>
 
-      <div style="display:${referentUiState.openMenuId === id ? "block" : "none"};padding:0 12px 8px 12px;background:rgba(255,255,255,0.35);">
-        ${nextPeople.map(person => {
-          const vehicule = String(person.vehicule || "").trim();
-          const label = String(person.label || person.benevole || "").trim();
-
-          return `
-            <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;padding:7px 0;border-top:1px solid rgba(222,212,194,0.45);font-size:0.80rem;line-height:1.15;color:#18443D;">
-              <div style="font-weight:1000;color:#0F5A4F;">
-                ${escapeHtml(vehicule.toUpperCase().includes("CHARGEUR") ? "Chargeur" : "Véhicule " + vehicule)}
-              </div>
-              <div style="min-width:0;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${escapeHtml(label)}
-              </div>
-            </div>
-          `;
-        }).join("")}
+      <div
+        id="people-${id}"
+        style="
+          display:${referentUiState.openMenuId === id ? "block" : "none"};
+          padding:0 12px 8px 12px;
+          background:rgba(255,255,255,0.35);
+        "
+      >
+        ${rows}
+        ${chargeurRows}
       </div>
     </div>
   `;
 }
-
 function renderMessagesBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
   const isReferentMode = isReferentVisualMode();
