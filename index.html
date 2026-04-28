@@ -2901,7 +2901,13 @@ body {
       <section id="view-contacts" class="page">
         <div id="contactsContent"></div>
       </section>
+<section id="view-team" class="page">
+  <div id="teamContent"></div>
+</section>
 
+<section id="view-team-person" class="page">
+  <div id="teamPersonContent"></div>
+</section>
       <section id="view-vehicules" class="page">
   <div id="vehiculesContent">Chargement...</div>
 </section>
@@ -4625,7 +4631,8 @@ function renderBottomNav() {
         <span>Véhicules</span>
       </button>
 
-      <button class="nav-item" data-nav="contacts" onclick="showView('contacts')">
+      <!-- 🔥 ICI CHANGEMENT -->
+      <button class="nav-item" data-nav="team" onclick="showView('team')">
         <span class="nav-icon">👥</span>
         <span>Team</span>
       </button>
@@ -4660,7 +4667,7 @@ function renderBottomNav() {
     </button>
   `;
 }
-
+  
 function updateShellForView(name) {
   renderBottomNav();
 
@@ -4675,10 +4682,12 @@ function updateShellForView(name) {
     "mes-creneaux",
     "planning",
     "contacts",
+    "team",
     "vehicules",
     "infos",
     "shift-detail",
-    "person-detail"
+    "person-detail",
+    "team-person"
   ];
 
   if (inAppViews.includes(name)) {
@@ -4717,9 +4726,14 @@ function updateShellForView(name) {
       "planning";
   }
 
+  if (name === "team-person") {
+    activeName = "team";
+  }
+
   const activeBtn = document.querySelector(`.nav-item[data-nav="${activeName}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 }
+  
 
 /*********************************
  * 13 - VIEW ROUTER
@@ -4745,7 +4759,8 @@ function showView(name, options = {}) {
     !opts.restore &&
     name !== "direct" &&
     name !== "person-detail" &&
-    name !== "shift-detail"
+    name !== "shift-detail" &&
+    name !== "team-person"
   ) {
     updateShellForView(name);
     return;
@@ -4776,11 +4791,13 @@ function showView(name, options = {}) {
     if (name === "direct") loadDirect();
     if (name === "planning") loadPlanning();
     if (name === "contacts") loadContacts();
+    if (name === "team") loadTeam();
     if (name === "vehicules") loadVehicules();
     if (name === "infos") renderInfos();
     if (name === "referent") renderReferent();
     if (name === "shift-detail") loadShiftDetail();
     if (name === "person-detail") loadPersonDetail();
+    if (name === "team-person") loadTeamPerson();
 
     if (opts.push && name !== "login" && name !== "select-user") {
       pushHistoryState(name);
@@ -4804,10 +4821,12 @@ function refreshCurrentViewOnly() {
     if (state.currentView === "direct") loadDirect();
     if (state.currentView === "planning") loadPlanning();
     if (state.currentView === "contacts") loadContacts();
+    if (state.currentView === "team") loadTeam();               // 🔥 AJOUT
     if (state.currentView === "vehicules") loadVehicules();
     if (state.currentView === "infos") renderInfos();
     if (state.currentView === "shift-detail") loadShiftDetail();
     if (state.currentView === "person-detail") loadPersonDetail();
+    if (state.currentView === "team-person") loadTeamPerson();  // 🔥 AJOUT
   } catch (e) {
     console.error("Erreur refreshCurrentViewOnly", e);
   }
@@ -7063,7 +7082,124 @@ function renderReferentTile(p) {
   `;
 }
 
+function loadTeam() {
+  const container = document.getElementById("teamContent");
+  if (!container) return;
 
+  if (!APP_DATA || !APP_DATA.contacts) {
+    container.innerHTML = `<div class="card">Aucune donnée disponible</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="contact-search-sticky">
+      <div class="contact-search-wrap">
+        <input
+          id="teamSearch"
+          class="input"
+          type="text"
+          placeholder="Rechercher un bénévole..."
+          value="${escapeHtml(contactsState.query || "")}"
+          oninput="updateTeamSearch(this.value)"
+        >
+      </div>
+    </div>
+
+    <div class="card contact-section-card">
+      <div class="section-title">Team</div>
+      <div id="teamPeopleList"></div>
+    </div>
+  `;
+
+  renderTeamListOnly();
+}
+
+function updateTeamSearch(value) {
+  contactsState.query = value || "";
+  localStorage.setItem("planning_contacts_query", contactsState.query);
+  renderTeamListOnly();
+}
+
+function renderTeamListOnly() {
+  const listEl = document.getElementById("teamPeopleList");
+  if (!listEl) return;
+
+  const q = normalizeText(contactsState.query || "");
+
+  const people = (APP_DATA?.contacts?.others || [])
+    .filter(p =>
+      (p.prenom && p.prenom.trim()) ||
+      (p.nom && p.nom.trim()) ||
+      (p.label && p.label.trim())
+    )
+    .filter(p => {
+      if (!q) return true;
+      return normalizeText(
+        `${p.prenom || ""} ${p.nom || ""} ${p.label || ""}`
+      ).includes(q);
+    })
+    .sort((a, b) => {
+      const la = normalizeText(`${a.prenom || ""} ${a.nom || ""} ${a.label || ""}`);
+      const lb = normalizeText(`${b.prenom || ""} ${b.nom || ""} ${b.label || ""}`);
+      return la.localeCompare(lb, "fr");
+    });
+
+  if (!people.length) {
+    listEl.innerHTML = `
+      <div class="subtle-text" style="padding:10px 0;">
+        Aucun bénévole trouvé.
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = people.map(renderTeamPersonCard).join("");
+}
+
+function renderTeamPersonCard(person) {
+  const id = person.id || person.personId || person.userId || "";
+  const label = person.label || `${person.prenom || ""} ${person.nom || ""}`.trim();
+  const photo = person.photo || person.photoUrl || "";
+
+  return `
+    <button
+      type="button"
+      class="contact-row"
+      onclick="openTeamPerson('${escapeHtml(id)}')"
+      style="width:100%; text-align:left;"
+    >
+      <div class="contact-avatar">
+        ${
+          photo
+            ? `<img src="${escapeHtml(photo)}" alt="">`
+            : `<span>${escapeHtml((label || "?").charAt(0).toUpperCase())}</span>`
+        }
+      </div>
+
+      <div class="contact-main">
+        <div class="contact-name">${escapeHtml(label)}</div>
+      </div>
+    </button>
+  `;
+}
+
+function openTeamPerson(personId) {
+  personDetailState.personId = personId || "";
+  personDetailState.sourceView = "team";
+  showView("team-person");
+}
+
+function loadTeamPerson() {
+  const container = document.getElementById("teamPersonContent");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="home-main-title">Fiche Team</div>
+      <div class="home-subline">Fiche à construire.</div>
+    </div>
+  `;
+}
 
 /*********************************
  * 25 - DETAIL CRENEAU
