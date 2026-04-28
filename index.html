@@ -7704,21 +7704,31 @@ function shouldShowHomeFollowingConcerts() {
  * 34 - REFERENT UI
  *********************************/
 function togglePeopleList(id) {
-  referentUiState.openMenuId =
-    referentUiState.openMenuId === id ? "" : id;
+  const isOpening = referentUiState.openMenuId !== id;
+
+  // ferme tout dans le DOM
+  document.querySelectorAll('[id^="people-"]').forEach(el => {
+    el.style.display = "none";
+  });
+
+  document.querySelectorAll('[id^="chevron-"]').forEach(el => {
+    el.textContent = "▼";
+  });
+
+  // si on clique sur un déjà ouvert → tout reste fermé
+  if (!isOpening) {
+    referentUiState.openMenuId = "";
+    return;
+  }
+
+  // sinon on ouvre celui cliqué
+  referentUiState.openMenuId = id;
 
   const panel = document.getElementById("people-" + id);
   const chevron = document.getElementById("chevron-" + id);
 
-  if (panel) {
-    panel.style.display =
-      referentUiState.openMenuId === id ? "block" : "none";
-  }
-
-  if (chevron) {
-    chevron.textContent =
-      referentUiState.openMenuId === id ? "▲" : "▼";
-  }
+  if (panel) panel.style.display = "block";
+  if (chevron) chevron.textContent = "▲";
 }
 
 function closeAllReferentPeopleLists() {
