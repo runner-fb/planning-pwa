@@ -5715,31 +5715,100 @@ function parseShiftDateFromLabel(label) {
 }
 
 function renderReferentPeopleList(entry, id = "current") {
-  const benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
+  let benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
 
   if (!benevoles.length) {
-    return `<div class="subtle-text" style="margin-top:8px;">Aucun bénévole affecté.</div>`;
+    return `
+      <div class="subtle-text" style="margin-top:8px;">
+        Aucun bénévole affecté.
+      </div>
+    `;
+  }
+
+  benevoles.sort((a, b) => {
+    const va = String(a.vehicule || "").toUpperCase();
+    const vb = String(b.vehicule || "").toUpperCase();
+
+    const ca = va.includes("CHARGEUR");
+    const cb = vb.includes("CHARGEUR");
+
+    if (ca && !cb) return 1;
+    if (!ca && cb) return -1;
+
+    return va.localeCompare(vb, "fr", { numeric: true });
+  });
+
+  function formatVehicleLabel(v) {
+    const txt = String(v || "").trim();
+    if (!txt) return "-";
+    if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
+    return "Véhicule " + txt;
   }
 
   return `
-    <div style="margin-top:10px;background:rgba(255,255,255,0.55);border-radius:16px;overflow:hidden;">
-      <button type="button" onclick="togglePeopleList('${id}')" style="width:100%;border:none;background:transparent;color:#18443D;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;font-weight:900;cursor:pointer;">
+    <div style="
+      margin-top:10px;
+      background:rgba(255,255,255,0.55);
+      border-radius:16px;
+      overflow:hidden;
+    ">
+      <button
+        type="button"
+        onclick="togglePeopleList('${id}')"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          color:#18443D;
+          padding:8px 12px;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          font-size:0.82rem;
+          font-weight:900;
+          cursor:pointer;
+        "
+      >
         <span>Voir l’équipe</span>
-        <span>${referentUiState.openMenuId === id ? "▲" : "▼"}</span>
+        <span id="chevron-${id}" style="font-size:0.75rem;">
+          ${referentUiState.openMenuId === id ? "▲" : "▼"}
+        </span>
       </button>
 
-      <div style="display:${referentUiState.openMenuId === id ? "block" : "none"};padding:0 12px 8px 12px;background:rgba(255,255,255,0.35);">
+      <div
+        id="people-${id}"
+        style="
+          display:${referentUiState.openMenuId === id ? "block" : "none"};
+          padding:0 12px 8px 12px;
+          background:rgba(255,255,255,0.35);
+        "
+      >
         ${benevoles.map(person => {
           const vehicule = String(person.vehicule || "").trim();
-          const label = String(person.label || person.benevole || "").trim();
 
           return `
-            <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;padding:7px 0;border-top:1px solid rgba(222,212,194,0.45);font-size:0.80rem;line-height:1.15;color:#18443D;">
-              <div style="font-weight:1000;color:#0F5A4F;">
-                ${escapeHtml(vehicule.toUpperCase().includes("CHARGEUR") ? "Chargeur" : "Véhicule " + vehicule)}
+            <div style="
+              display:grid;
+              grid-template-columns:90px 1fr;
+              gap:8px;
+              padding:7px 0;
+              border-top:1px solid rgba(222,212,194,0.45);
+              font-size:0.80rem;
+              line-height:1.15;
+              color:#18443D;
+            ">
+              <div style="font-weight:1000; color:#0F5A4F;">
+                ${escapeHtml(formatVehicleLabel(vehicule))}
               </div>
-              <div style="min-width:0;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${escapeHtml(label)}
+
+              <div style="
+                min-width:0;
+                font-weight:900;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+              ">
+                ${escapeHtml(person.label || person.benevole || "")}
               </div>
             </div>
           `;
