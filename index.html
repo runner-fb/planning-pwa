@@ -4517,46 +4517,46 @@ function applyAppData(data) {
   }
 
   APP_DATA = data;
-if (!data.user || !data.user.id) {
-  console.warn("APP_DATA sans utilisateur valide", data.user);
-}
-  const incomingUserId = data.user?.id || "";
-  const incomingUserLabel = data.user?.label || "";
 
-  if (incomingUserId === "__REFERENT__") {
+  const incomingUser = data.user || {};
+
+  if (!incomingUser.id) {
+    console.warn("APP_DATA sans utilisateur valide", incomingUser);
+  }
+
+  // Mode référent visuel : on ne doit pas écraser le dernier bénévole choisi
+  if (isReferentVisualMode()) {
+    state.userId = "__REFERENT__";
+    state.userLabel = incomingUser.label || "Référent";
     state.isRef = true;
-
-    if (state.appMode === "referent") {
-      state.userId = "__REFERENT__";
-      state.userLabel = incomingUserLabel || "Référent";
-    }
   } else {
-    state.userId = incomingUserId || state.userId || "";
-    state.userLabel = incomingUserLabel || state.userLabel || "";
-    state.isRef = data.user?.isRef === true;
-
-    if (state.userId && state.userId !== "__REFERENT__") {
-      localStorage.setItem("planning_user_id", state.userId);
-      localStorage.setItem("planning_user_label", state.userLabel);
-
-      localStorage.setItem("planning_last_benevole_user_id", state.userId);
-      localStorage.setItem("planning_last_benevole_user_label", state.userLabel);
+    // Mode bénévole/admin : on restaure le dernier bénévole connu si besoin
+    if (!state.userId || state.userId === "__REFERENT__") {
+      restoreLastBenevoleIdentity();
     }
+
+    if (!state.userId && incomingUser.id && incomingUser.id !== "__REFERENT__") {
+      state.userId = incomingUser.id;
+      state.userLabel = incomingUser.label || "";
+      saveActiveBenevoleIdentity();
+    }
+
+    state.isRef = incomingUser.isRef === true;
   }
 
   planningState.allShifts = getPlanningShiftsFromAppData(data);
   planningState.byDay = buildPlanningByDay(planningState.allShifts);
 
-  directState.allShifts = Array.isArray(data.direct.allShifts)
+  directState.allShifts = Array.isArray(data.direct?.allShifts)
     ? data.direct.allShifts
     : [];
 
   directState.defaultIndex =
-    typeof data.direct.defaultIndex === "number"
+    typeof data.direct?.defaultIndex === "number"
       ? data.direct.defaultIndex
       : -1;
 
-  directState.liveState = data.direct.liveState || "next";
+  directState.liveState = data.direct?.liveState || "next";
 
   if (!directState.isManual) {
     directState.currentIndex = directState.defaultIndex;
