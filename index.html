@@ -6195,6 +6195,8 @@ function renderHomeReferent() {
     return;
   }
 
+  const phase = getFestivalPhase(state.userId);
+
   const currentFestivalEntry = getCurrentFestivalEntry();
   const currentShift = currentFestivalEntry?.shift || null;
 
@@ -6213,19 +6215,26 @@ function renderHomeReferent() {
     ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
     : "";
 
-  el.innerHTML = `
-    <div class="home-hero compact-home-hero">
-      <div class="home-hero-content" style="padding:12px 12px 0;">
-        <div class="home-hero-brand" style="max-width:145px;">
-          <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
-          <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
-          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
-          ${renderAdminMiniBand()}
-        </div>
-      </div>
-    </div>
+  let mainContent = "";
 
-    <div class="home-stack" style="margin-top:-20px;">
+  if (phase === "before") {
+    const daysNumber = Math.max(
+      0,
+      Math.round(
+        (
+          new Date("2026-07-01T00:00:00").setHours(0, 0, 0, 0) -
+          new Date(getCurrentNowDate()).setHours(0, 0, 0, 0)
+        ) / 86400000
+      )
+    );
+
+    mainContent = `
+      <div class="card home-main-card home-card-raise pre-festival-card" style="margin-bottom:8px;">
+        <div class="home-main-title">J-${daysNumber} avant le festival</div>
+      </div>
+    `;
+  } else {
+    mainContent = `
       <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
         <div class="home-main-title">Créneau en cours</div>
 
@@ -6255,8 +6264,8 @@ function renderHomeReferent() {
 
               ${
                 currentShift
-                  ? replacementHtml   // 👉 cas normal
-                  : nextPeopleHtml    // 👉 cas sans créneau en cours
+                  ? replacementHtml
+                  : nextPeopleHtml
               }
             `
             : `
@@ -6264,6 +6273,23 @@ function renderHomeReferent() {
             `
         }
       </div>
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="home-hero compact-home-hero">
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
+          ${renderAdminMiniBand()}
+        </div>
+      </div>
+    </div>
+
+    <div class="home-stack" style="margin-top:-20px;">
+      ${mainContent}
 
       ${renderMessagesBox()}
       ${renderConcertTimelineCard()}
@@ -6276,7 +6302,6 @@ function renderHomeReferent() {
     </div>
   `;
 }
-
 /*********************************
  * 18B - MES CRENEAUX FALLBACK
  *********************************/
