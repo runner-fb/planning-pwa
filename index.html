@@ -5478,6 +5478,7 @@ function renderAdminMiniBand() {
 async function setAdminVisualMode(mode) {
   if (!isTestAppMode() && state.appMode !== "admin") return;
 
+  // Sauvegarde du dernier bénévole actif
   if (state.userId && state.userId !== "__REFERENT__") {
     localStorage.setItem("planning_user_id", state.userId);
     localStorage.setItem("planning_user_label", state.userLabel || "");
@@ -5486,9 +5487,11 @@ async function setAdminVisualMode(mode) {
     localStorage.setItem("planning_last_benevole_user_label", state.userLabel || "");
   }
 
+  // Switch mode
   state.testViewMode = mode === "referent" ? "referent" : "benevole";
   localStorage.setItem("planning_test_view_mode", state.testViewMode);
 
+  // Restauration identité bénévole
   if (state.testViewMode === "benevole") {
     state.userId =
       localStorage.getItem("planning_last_benevole_user_id") ||
@@ -5501,8 +5504,12 @@ async function setAdminVisualMode(mode) {
       state.userLabel;
   }
 
+  // Reset UI états
   directState.isManual = false;
   referentUiState.openMenuId = "";
+
+  // 🔥 FIX IMPORTANT → MAJ immédiate navbar
+  updateShellForView(state.currentView);
 
   await loadAppData(true);
   showView("home", { push: false });
