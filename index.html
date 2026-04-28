@@ -3028,29 +3028,49 @@ async function apiGetBundle_(password, userId) {
  *********************************/
 let state = {
   currentView: "login",
+  previousView: "home",
+
   password: localStorage.getItem("planning_password") || "",
   authOk: localStorage.getItem("planning_auth_ok") === "1",
+
+  // Mode d'accès principal : benevole / referent / admin
   appMode: localStorage.getItem("planning_app_mode") || "",
 
+  // Mode visuel utilisé en admin/test26 : benevole / referent
   testViewMode: localStorage.getItem("planning_test_view_mode") || "benevole",
 
+  // Identité actuellement affichée
   userId: localStorage.getItem("planning_user_id") || "",
   userLabel: localStorage.getItem("planning_user_label") || "",
+
+  // Dernier bénévole réel sélectionné, pour restaurer après passage en référent
+  lastBenevoleUserId:
+    localStorage.getItem("planning_last_benevole_user_id") ||
+    localStorage.getItem("planning_user_id") ||
+    "",
+
+  lastBenevoleUserLabel:
+    localStorage.getItem("planning_last_benevole_user_label") ||
+    localStorage.getItem("planning_user_label") ||
+    "",
+
   isRef: false,
   isRefMode: false,
+
   allUsers: [],
   filteredUsers: [],
   selectedUserId: "",
   selectedUserLabel: "",
-  returnViewAfterUserChange: "home",
-  previousView: "home"
+
+  returnViewAfterUserChange: "home"
 };
 
-  let actionLock = false;
+let actionLock = false;
 
-  let referentUiState = {
+let referentUiState = {
   openMenuId: ""
 };
+
 /*********************************
  * DIRECT : STATE
  *********************************/
@@ -3103,14 +3123,12 @@ let vehiculesState = {
 /*********************************
  * 03 - CACHE OFFLINE
  *********************************/
-  
 const CACHE_VERSION = "v1";
 let APP_DATA = null;
-  let autoRefreshTimer = null;
+let autoRefreshTimer = null;
 let uiMinuteTimer = null;
 let syncHideTimer = null;
 let internalNavLock = false;
-
 /*********************************
  * 04 - CACHE HELPERS
  *********************************/
