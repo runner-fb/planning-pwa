@@ -7126,7 +7126,7 @@ function renderTeamListOnly() {
 
   const q = normalizeText(contactsState.query || "");
 
-  const people = (APP_DATA?.contacts?.others || [])
+  const people = (APP_DATA?.contacts?.autres || [])
     .filter(p =>
       (p.prenom && p.prenom.trim()) ||
       (p.nom && p.nom.trim()) ||
