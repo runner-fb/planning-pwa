@@ -1319,7 +1319,37 @@ body {
   margin-bottom: 4px;
   line-height: 1;
 }
+.admin-btn {
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.5);
+  background:rgba(255,255,255,0.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:14px;
+}
 
+.admin-btn.active {
+  background:rgba(255,255,255,0.95);
+}
+
+.admin-btn.danger {
+  background:rgba(0,0,0,0.45);
+  color:white;
+}
+
+.time-chip {
+  font-size:14px;
+  opacity:0.5;
+}
+
+.time-chip.active {
+  opacity:1;
+}
+    
 /* DIRECT */
 .direct-main-btn {
   width: 100%;
@@ -5423,31 +5453,33 @@ function renderAdminMiniBand() {
   const realActive = !forcedNow;
   const simulatedActive = !!forcedNow;
 
-  const realLabel = new Date().toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  const simulatedLabel = forcedNow
-    ? new Date(forcedNow).toLocaleString("fr-FR", {
-        weekday: "short",
-        hour: "2-digit",
-        minute: "2-digit"
-      })
-    : "simulée";
-
-  const iconBtn = (active, onclick, title, icon) => `
+  const iconBtn = (active, onclick, title, icon, danger = false) => `
     <button type="button" onclick="${onclick}" title="${title}" style="
       width:26px;
       height:26px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,0.50);
-      background:${active ? "rgba(243,211,154,0.95)" : "rgba(255,255,255,0.32)"};
-      color:#18443D;
+      background:${active ? "rgba(243,211,154,0.95)" : danger ? "rgba(0,0,0,0.42)" : "rgba(255,255,255,0.32)"};
+      color:${danger ? "white" : "#18443D"};
       font-size:13px;
       padding:0;
       cursor:pointer;
       box-shadow:${active ? "0 0 0 2px rgba(243,211,154,0.25)" : "none"};
+    ">${icon}</button>
+  `;
+
+  const timeIcon = (active, onclick, title, icon) => `
+    <button type="button" onclick="${onclick}" title="${title}" style="
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.50);
+      background:rgba(255,255,255,0.32);
+      color:${active ? "#F3D39A" : "rgba(255,255,255,0.72)"};
+      font-size:13px;
+      padding:0;
+      cursor:pointer;
+      box-shadow:${active ? "0 0 0 2px rgba(243,211,154,0.20)" : "none"};
     ">${icon}</button>
   `;
 
@@ -5469,22 +5501,11 @@ function renderAdminMiniBand() {
         ${iconBtn(referentActive, "setAdminVisualMode('referent')", "Vue référent", "🦺")}
         ${iconBtn(benevoleActive, "setAdminVisualMode('benevole')", "Vue bénévole", "👤")}
         ${iconBtn(false, "clearCacheAndReload()", "Vider le cache", "🧹")}
-        ${iconBtn(false, "logout()", "Déconnexion", "⎋")}
+        ${iconBtn(false, "logout()", "Déconnexion", "⎋", true)}
       </div>
 
       <div style="display:flex; gap:5px; align-items:center;">
-        <button type="button" onclick="clearForcedNow()" title="Heure réelle" style="
-          height:24px;
-          min-width:54px;
-          border-radius:999px;
-          border:1px solid rgba(255,255,255,0.50);
-          background:rgba(255,255,255,0.30);
-          color:${realActive ? "#F3D39A" : "rgba(255,255,255,0.82)"};
-          font-size:0.68rem;
-          font-weight:1000;
-          padding:0 7px;
-          cursor:pointer;
-        ">🕒 ${realLabel}</button>
+        ${timeIcon(realActive, "clearForcedNow()", "Heure réelle", "🕒")}
 
         <button type="button" onclick="toggleSimulatedTime()" title="Basculer heure simulée" style="
           width:38px;
@@ -5507,18 +5528,7 @@ function renderAdminMiniBand() {
           "></span>
         </button>
 
-        <button type="button" onclick="setTestNowPrompt()" title="Heure simulée" style="
-          height:24px;
-          min-width:62px;
-          border-radius:999px;
-          border:1px solid rgba(255,255,255,0.50);
-          background:rgba(255,255,255,0.30);
-          color:${simulatedActive ? "#F3D39A" : "rgba(255,255,255,0.82)"};
-          font-size:0.68rem;
-          font-weight:1000;
-          padding:0 7px;
-          cursor:pointer;
-        ">🧪 ${simulatedLabel}</button>
+        ${timeIcon(simulatedActive, "setTestNowPrompt()", "Heure simulée", "🧪")}
       </div>
     </div>
   `;
