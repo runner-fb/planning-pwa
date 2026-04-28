@@ -4340,6 +4340,24 @@ function renderSingleConcertCard(concert, title, badgeClass, badgeText) {
 /*********************************
  * 11 - OFFLINE-FIRST BOOTSTRAP
  *********************************/
+function isReferentVisualMode() {
+  return (
+    state.appMode === "referent" ||
+    (
+      isTestAppMode() &&
+      state.testViewMode === "referent"
+    )
+  );
+}
+
+function getBundleUserIdForCurrentVisualMode() {
+  if (isReferentVisualMode()) {
+    return "__REFERENT__";
+  }
+
+  return state.userId;
+}
+
 async function loadAppData(forceRefresh = false) {
   let cache = loadCache();
   const cacheTime = loadCacheTime();
@@ -4387,11 +4405,7 @@ async function loadAppData(forceRefresh = false) {
   showSyncStatus("loading");
 
   try {
-    const bundleUserId =
-  state.appMode === "referent" ||
-  (isTestAppMode() && state.testViewMode === "referent")
-    ? "__REFERENT__"
-    : state.userId;
+    const bundleUserId = getBundleUserIdForCurrentVisualMode();
 
     const data = await apiGetBundle_(state.password, bundleUserId);
 
@@ -4477,11 +4491,8 @@ function renderBottomNav() {
   const nav = document.getElementById("shellBottomNav");
   if (!nav) return;
 
-if (
-  state.appMode === "referent" ||
-  (isTestAppMode() && state.testViewMode === "referent")
-) {
-  nav.innerHTML = `
+  if (isReferentVisualMode()) {
+    nav.innerHTML = `
       <button class="nav-item" data-nav="home" onclick="showView('home')">
         <span class="nav-icon">🏠</span>
         <span>Accueil</span>
@@ -4592,7 +4603,8 @@ function updateShellForView(name) {
   const activeBtn = document.querySelector(`.nav-item[data-nav="${activeName}"]`);
   if (activeBtn) activeBtn.classList.add("active");
 }
- /*********************************
+
+/*********************************
  * 13 - VIEW ROUTER
  *********************************/
 function showView(name, options = {}) {
@@ -5380,11 +5392,7 @@ function renderConcertTimelineCard() {
   if (currentConcert) {
     html += renderCompactConcertRow(currentConcert, "En cours", "current");
   } else {
-    html += `
-      <div class="concert-empty-line">
-        Aucun concert en cours
-      </div>
-    `;
+    html += `<div class="concert-empty-line">Aucun concert en cours</div>`;
   }
 
   if (nextConcert && now >= new Date("2026-07-01T01:00:00")) {
@@ -5444,62 +5452,70 @@ function renderCompactConcertRow(concert, label, statusType) {
   `;
 }
 
-function renderAdminCacheButton() {
+function renderAdminMiniBand() {
   if (!isTestAppMode() && state.appMode !== "admin") return "";
 
+  const benevoleActive = state.testViewMode !== "referent";
+  const referentActive = state.testViewMode === "referent";
+
   return `
-    <button onclick="clearCacheAndReload()" style="
-      position:absolute;
-      top:12px;
-      left:12px;
-      z-index:80;
-      border:none;
-      border-radius:999px;
-      padding:8px 10px;
-      font-size:12px;
-      font-weight:900;
-      background:#fff;
-      color:#18443D;
-      box-shadow:0 4px 10px rgba(0,0,0,0.2);
-    ">
-      🧹 Cache
-    </button>
+    <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
+      <button type="button" onclick="setAdminVisualMode('benevole')" title="Simulation bénévole" style="
+        width:28px; height:28px; border-radius:999px;
+        border:1px solid rgba(255,255,255,0.55);
+        background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+        font-size:14px; padding:0; cursor:pointer;
+      ">👤</button>
+
+      <button type="button" onclick="setAdminVisualMode('referent')" title="Simulation référent" style="
+        width:28px; height:28px; border-radius:999px;
+        border:1px solid rgba(255,255,255,0.55);
+        background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+        font-size:14px; padding:0; cursor:pointer;
+      ">🦺</button>
+
+      <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="
+        width:28px; height:28px; border-radius:999px;
+        border:1px solid rgba(255,255,255,0.55);
+        background:rgba(255,255,255,0.75);
+        font-size:14px; padding:0; cursor:pointer;
+      ">🧹</button>
+
+      <button type="button" onclick="logout()" title="Déconnexion" style="
+        width:28px; height:28px; border-radius:999px;
+        border:1px solid rgba(255,255,255,0.55);
+        background:rgba(0,0,0,0.45);
+        color:white; font-size:14px; padding:0; cursor:pointer;
+      ">⎋</button>
+    </div>
   `;
 }
-  
+
+async function setAdminVisualMode(mode) {
+  if (!isTestAppMode() && state.appMode !== "admin") return;
+
+  state.testViewMode = mode === "referent" ? "referent" : "benevole";
+  localStorage.setItem("planning_test_view_mode", state.testViewMode);
+
+  directState.isManual = false;
+  referentUiState.openMenuId = "";
+
+  await loadAppData(true);
+  showView("home", { push: false });
+}
+
 function renderHome() {
-
-  if (isTestAppMode()) {
-
-    if (state.testViewMode === "referent") {
-      renderHomeReferent({
-        showTestButtons: true
-      });
-      return;
-    }
-
+  if (isReferentVisualMode()) {
+    renderHomeReferent();
+  } else {
     renderHomeStandard({
-      showTestButtons: true,
       showUserPill: true
     });
-    return;
   }
-
-  if (state.appMode === "referent") {
-    renderHomeReferent();
-    return;
-  }
-
-  renderHomeStandard({
-    showTestButtons: false,
-    showUserPill: true
-  });
 }
 
 function renderHomeStandard(options = {}) {
-  const {
-    showUserPill = true
-  } = options;
+  const { showUserPill = true } = options;
 
   const el = document.getElementById("homeContent");
   if (!el) return;
@@ -5605,13 +5621,13 @@ function renderHomeStandard(options = {}) {
   }
 
   el.innerHTML = `
-<div class="home-hero compact-home-hero">
-  ${renderAdminCacheButton()}
-  <div class="home-hero-content" style="padding:12px 12px 0;">
+    <div class="home-hero compact-home-hero">
+      <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Festival</div>
           <div class="home-hero-brand-main" style="font-size:1.55rem;">Beau<br>regard</div>
           <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">1+2.3.4.5 juillet 2026</div>
+          ${renderAdminMiniBand()}
         </div>
       </div>
 
@@ -5632,639 +5648,13 @@ function renderHomeStandard(options = {}) {
     </div>
   `;
 }
-  
-function renderReferentPeopleList(entry, id = "current") {
-  let benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
 
-  if (!benevoles.length) {
-    return `
-      <div class="subtle-text" style="margin-top:8px;">
-        Aucun bénévole affecté.
-      </div>
-    `;
-  }
-
-  benevoles.sort((a, b) => {
-    const va = String(a.vehicule || "").toUpperCase();
-    const vb = String(b.vehicule || "").toUpperCase();
-
-    const ca = va.includes("CHARGEUR");
-    const cb = vb.includes("CHARGEUR");
-
-    if (ca && !cb) return 1;
-    if (!ca && cb) return -1;
-
-    return va.localeCompare(vb, "fr", { numeric: true });
-  });
-
-  function formatVehicleLabel(v) {
-    const txt = String(v || "").trim();
-    if (!txt) return "-";
-    if (txt.toUpperCase().includes("CHARGEUR")) return "Chargeur";
-    return "Véhicule " + txt;
-  }
-
-  return `
-    <div
-      style="
-        margin-top:10px;
-        background:rgba(255,255,255,0.55);
-        border-radius:16px;
-        overflow:hidden;
-      "
-    >
-      <button
-        type="button"
-        onclick="togglePeopleList('${id}')"
-        style="
-          width:100%;
-          border:none;
-          background:transparent;
-          color:#18443D;
-          padding:8px 12px;
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          font-size:0.82rem;
-          font-weight:900;
-          cursor:pointer;
-        "
-      >
-        <span>Voir l’équipe</span>
-        <span id="chevron-${id}" style="font-size:0.75rem;">
-          ${referentUiState.openMenuId === id ? "▲" : "▼"}
-        </span>
-      </button>
-
-      <div
-        id="people-${id}"
-        style="
-          display:${referentUiState.openMenuId === id ? "block" : "none"};
-          padding:0 12px 8px 12px;
-          background:rgba(255,255,255,0.35);
-        "
-      >
-        ${benevoles.map(person => {
-          const vehicule = String(person.vehicule || "").trim();
-
-          return `
-            <div
-              style="
-                display:grid;
-                grid-template-columns:90px 1fr;
-                gap:8px;
-                padding:7px 0;
-                border-top:1px solid rgba(222,212,194,0.45);
-                font-size:0.80rem;
-                line-height:1.15;
-                color:#18443D;
-              "
-            >
-              <div style="font-weight:1000; color:#0F5A4F;">
-                ${escapeHtml(formatVehicleLabel(vehicule))}
-              </div>
-
-              <div
-                style="
-                  min-width:0;
-                  font-weight:900;
-                  white-space:nowrap;
-                  overflow:hidden;
-                  text-overflow:ellipsis;
-                "
-              >
-                ${escapeHtml(person.label || person.benevole || "")}
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function getNextFestivalEntry() {
-  const entries = Array.isArray(directState.allShifts) ? directState.allShifts : [];
-  const now = getCurrentNowDate();
-
-  const upcoming = entries.filter(entry => {
-    const shift = entry && entry.shift ? entry.shift : null;
-    if (!shift) return false;
-
-    const start = parseShiftDateFromLabel(shift.startLabel);
-    return start && start > now;
-  });
-
-  upcoming.sort((a, b) => {
-    const da = parseShiftDateFromLabel(a.shift.startLabel);
-    const db = parseShiftDateFromLabel(b.shift.startLabel);
-
-    return da - db;
-  });
-
-  return upcoming[0] || null;
-}
-
-function parseShiftDateFromLabel(label) {
-  const txt = String(label || "").trim();
-  const match = txt.match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
-
-  if (!match) return null;
-
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const hour = Number(match[3]);
-  const minute = Number(match[4]);
-
-  return new Date(2026, month - 1, day, hour, minute);
-}
-
-function renderReferentReplacementList(currentEntry, nextEntry, id = "replacement") {
-  const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
-  const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
-
-  if (!nextPeople.length) return "";
-
-  const isChargeur = v => String(v || "").toUpperCase().includes("CHARGEUR");
-
-  const currentVehicles = {};
-  const nextVehicles = [];
-  const currentChargeurs = [];
-  const nextChargeurs = [];
-
-  currentPeople.forEach(p => {
-    const v = String(p.vehicule || "").trim();
-
-    if (isChargeur(v)) {
-      currentChargeurs.push(p);
-    } else if (v) {
-      currentVehicles[v] = p;
-    }
-  });
-
-  nextPeople.forEach(p => {
-    const v = String(p.vehicule || "").trim();
-
-    if (isChargeur(v)) {
-      nextChargeurs.push(p);
-    } else {
-      nextVehicles.push(p);
-    }
-  });
-
-  nextVehicles.sort((a, b) =>
-    String(a.vehicule || "").localeCompare(String(b.vehicule || ""), "fr", { numeric: true })
-  );
-
-  const vehicleRows = nextVehicles.map(p => {
-    const v = String(p.vehicule || "").trim();
-    const prev = currentVehicles[v];
-
-    const prevName = String(prev?.label || prev?.benevole || "").trim();
-    const nextName = String(p.label || p.benevole || "").trim();
-
-    if (prevName && prevName === nextName) return "";
-
-    return `
-      <div
-        style="
-          display:grid;
-          grid-template-columns:90px 1fr;
-          gap:8px;
-          padding:7px 0;
-          border-top:1px solid rgba(222,212,194,0.45);
-          font-size:0.80rem;
-          line-height:1.15;
-          color:#18443D;
-        "
-      >
-        <div style="font-weight:1000; color:#0F5A4F;">
-          Véhicule ${escapeHtml(v)}
-        </div>
-
-        <div style="min-width:0;">
-          ${
-            prevName
-              ? `
-                <div style="opacity:0.6; font-weight:600;">
-                  ${escapeHtml(prevName)}
-                </div>
-                <div style="font-weight:900;">
-                  → ${escapeHtml(nextName)}
-                </div>
-              `
-              : `
-                <div style="font-weight:900;">
-                  ${escapeHtml(nextName)}
-                </div>
-                <div style="opacity:0.6;">
-                  nouveau
-                </div>
-              `
-          }
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const currentChargeurNames = currentChargeurs
-    .map(p => String(p.label || p.benevole || "").trim())
-    .filter(Boolean);
-
-  const nextChargeurNames = nextChargeurs
-    .map(p => String(p.label || p.benevole || "").trim())
-    .filter(Boolean);
-
-  const usedCurrentChargeurs = [];
-
-  const chargeurRows = nextChargeurNames.map(nextName => {
-    if (currentChargeurNames.includes(nextName)) return "";
-
-    const prevName = currentChargeurNames.find(name =>
-      name &&
-      !usedCurrentChargeurs.includes(name) &&
-      !nextChargeurNames.includes(name)
-    ) || "";
-
-    if (prevName) usedCurrentChargeurs.push(prevName);
-
-    return `
-      <div style="padding:5px 0; border-top:1px solid rgba(222,212,194,0.35); font-size:0.80rem;">
-        ${
-          prevName
-            ? `
-              <span style="opacity:0.6; font-weight:600;">${escapeHtml(prevName)}</span>
-              <span style="font-weight:900;"> → ${escapeHtml(nextName)}</span>
-            `
-            : `
-              <span style="font-weight:900;">${escapeHtml(nextName)}</span>
-              <span style="opacity:0.6;"> nouveau</span>
-            `
-        }
-      </div>
-    `;
-  }).join("");
-
-  const hasContent = vehicleRows.trim() || chargeurRows.trim();
-  if (!hasContent) return "";
-
-  return `
-    <div
-      style="
-        margin-top:10px;
-        background:rgba(255,255,255,0.55);
-        border-radius:16px;
-        overflow:hidden;
-      "
-    >
-      <button
-        type="button"
-        onclick="togglePeopleList('${id}')"
-        style="
-          width:100%;
-          border:none;
-          background:transparent;
-          color:#18443D;
-          padding:8px 12px;
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          font-size:0.82rem;
-          font-weight:900;
-          cursor:pointer;
-        "
-      >
-        <span>Voir les remplacements</span>
-        <span id="chevron-${id}" style="font-size:0.75rem;">
-          ${referentUiState.openMenuId === id ? "▲" : "▼"}
-        </span>
-      </button>
-
-      <div
-        id="people-${id}"
-        style="
-          display:${referentUiState.openMenuId === id ? "block" : "none"};
-          padding:0 12px 8px 12px;
-          background:rgba(255,255,255,0.35);
-        "
-      >
-        ${vehicleRows}
-
-        ${
-          chargeurRows.trim()
-            ? `
-              <div style="padding-top:8px; margin-top:4px; border-top:1px solid rgba(222,212,194,0.55);">
-                <div style="font-weight:1000; color:#0F5A4F; font-size:0.82rem; margin-bottom:4px;">
-                  Chargeurs
-                </div>
-                ${chargeurRows}
-              </div>
-            `
-            : ""
-        }
-      </div>
-    </div>
-  `;
-}
-
-function renderMessagesBox() {
-  let messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
-
-  messages = messages.slice().sort((a, b) => {
-    const pa = a.priorite === "important" ? 1 : 0;
-    const pb = b.priorite === "important" ? 1 : 0;
-
-    return pb - pa;
-  }).slice(0, 3);
-
-  const importants = messages.filter(m => m.priorite === "important");
-  const standards = messages.filter(m => m.priorite !== "important");
-
-  const isReferentMode = state.appMode === "referent" || state.isRefMode === true;
-
-  if (!messages.length && !isReferentMode) return "";
-
-  return `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div class="home-main-title">Infos</div>
-
-        ${
-          isReferentMode
-            ? `
-              <button
-                type="button"
-                onclick="openMessagesAdminModal()"
-                title="Gérer les messages"
-                style="
-                  border:none;
-                  border-radius:999px;
-                  background:rgba(255,255,255,0.8);
-                  width:34px;
-                  height:34px;
-                  font-size:18px;
-                  cursor:pointer;
-                "
-              >
-                ⚙️
-              </button>
-            `
-            : ""
-        }
-      </div>
-
-      ${importants.length ? `
-        <div style="margin-top:8px;">
-          ${importants.map(m => `
-            <div style="
-              display:flex;
-              align-items:flex-start;
-              gap:8px;
-              padding:6px 0;
-              border-top:1px solid rgba(222,212,194,0.5);
-              font-weight:900;
-              color:#9b1c1c;
-            ">
-              <div style="font-size:14px; margin-top:2px;">⚠️</div>
-              <div>${escapeHtml(m.message || "")}</div>
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-
-      ${standards.length ? `
-        <div style="margin-top:8px;">
-          ${standards.map(m => `
-            <div style="
-              display:flex;
-              align-items:flex-start;
-              gap:8px;
-              padding:6px 0;
-              border-top:1px solid rgba(222,212,194,0.5);
-              font-weight:850;
-            ">
-              <div style="font-size:14px; margin-top:2px;">ℹ️</div>
-              <div>${escapeHtml(m.message || "")}</div>
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-
-      ${
-        !messages.length && isReferentMode
-          ? `<div class="home-subline">Aucun message actif.</div>`
-          : ""
-      }
-    </div>
-  `;
-}
-
-function openMessagesAdminModal() {
-  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
-
-  const existingOptions = messages.map(m => `
-    <option value="${escapeHtml(m.id || "")}">
-      ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
-    </option>
-  `).join("");
-
-  const html = `
-    <div
-      id="messagesAdminModal"
-      style="
-        position:fixed;
-        inset:0;
-        z-index:9999;
-        background:rgba(0,0,0,0.45);
-        display:flex;
-        align-items:flex-end;
-        justify-content:center;
-      "
-    >
-      <div
-        style="
-          width:100%;
-          max-width:520px;
-          background:#FFFDF7;
-          border-radius:24px 24px 0 0;
-          padding:16px;
-          color:#18443D;
-          box-shadow:0 -8px 30px rgba(0,0,0,0.25);
-        "
-      >
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div style="font-weight:1000; font-size:1.1rem;">Gérer les messages</div>
-          <button onclick="closeMessagesAdminModal()" style="border:none; background:transparent; font-size:24px;">×</button>
-        </div>
-
-        <label style="font-weight:900;">Modifier un message existant</label>
-        <select id="adminMessageSelect" onchange="fillMessageAdminForm()" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;">
-          <option value="">Nouveau message</option>
-          ${existingOptions}
-        </select>
-
-        <input id="adminMessageId" type="hidden">
-
-        <label style="font-weight:900;">Titre</label>
-        <input id="adminMessageTitle" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;" placeholder="Info, Rappel, Urgence...">
-
-        <label style="font-weight:900;">Message</label>
-        <textarea id="adminMessageText" rows="3" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;" placeholder="Texte du message"></textarea>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <div>
-            <label style="font-weight:900;">Cible</label>
-            <select id="adminMessageTarget" style="width:100%; margin-top:6px; padding:10px; border-radius:12px;">
-              <option value="tous">Tous</option>
-              <option value="benevoles">Bénévoles</option>
-              <option value="referents">Référents</option>
-            </select>
-          </div>
-
-          <div>
-            <label style="font-weight:900;">Priorité</label>
-            <select id="adminMessagePriority" style="width:100%; margin-top:6px; padding:10px; border-radius:12px;">
-              <option value="normal">Standard</option>
-              <option value="important">Important</option>
-            </select>
-          </div>
-        </div>
-
-        <label style="display:flex; gap:8px; align-items:center; margin-top:12px; font-weight:900;">
-          <input id="adminMessageActive" type="checkbox" checked>
-          Message actif
-        </label>
-
-        <button
-          onclick="saveMessageAdminForm()"
-          style="
-            width:100%;
-            margin-top:14px;
-            padding:12px;
-            border:none;
-            border-radius:14px;
-            background:#18443D;
-            color:white;
-            font-weight:1000;
-            font-size:0.95rem;
-          "
-        >
-          Enregistrer
-        </button>
-
-        <button
-          onclick="deleteMessageAdminForm()"
-          style="
-            width:100%;
-            margin-top:8px;
-            padding:10px;
-            border:none;
-            border-radius:14px;
-            background:#b00000;
-            color:white;
-            font-weight:900;
-          "
-        >
-          Supprimer le message
-        </button>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML("beforeend", html);
-}
-
-function closeMessagesAdminModal() {
-  const modal = document.getElementById("messagesAdminModal");
-  if (modal) modal.remove();
-}
-
-async function deleteMessageAdminForm() {
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
-  const id = document.getElementById("adminMessageId").value.trim();
-
-  if (!id) {
-    alert("Sélectionne un message à supprimer.");
-    return;
-  }
-
-  if (!confirm("Supprimer ce message ?")) return;
-
-  try {
-    const res = await apiGet_({
-      api: "saveMessage",
-      pwd,
-      id,
-      actif: "false"
-    });
-
-    if (!res || !res.ok) {
-      throw new Error(res?.error || "DELETE_ERROR");
-    }
-
-    closeMessagesAdminModal();
-    await loadAppData(true);
-    renderHomeReferent();
-
-  } catch (err) {
-    alert("Erreur suppression : " + (err.message || err));
-  }
-}
-
-function fillMessageAdminForm() {
-  const select = document.getElementById("adminMessageSelect");
-  const id = select ? select.value : "";
-
-  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
-  const msg = messages.find(m => String(m.id || "") === String(id));
-
-  document.getElementById("adminMessageId").value = msg?.id || "";
-  document.getElementById("adminMessageTitle").value = msg?.titre || "";
-  document.getElementById("adminMessageText").value = msg?.message || "";
-  document.getElementById("adminMessageTarget").value = msg?.cible || "tous";
-  document.getElementById("adminMessagePriority").value = msg?.priorite || "normal";
-  document.getElementById("adminMessageActive").checked = true;
-}
-
-async function saveMessageAdminForm() {
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
-
-  const id = document.getElementById("adminMessageId").value.trim();
-  const titre = document.getElementById("adminMessageTitle").value.trim();
-  const message = document.getElementById("adminMessageText").value.trim();
-  const cible = document.getElementById("adminMessageTarget").value;
-  const priorite = document.getElementById("adminMessagePriority").value;
-  const actif = document.getElementById("adminMessageActive").checked;
-
-  if (!message) {
-    alert("Le message est vide.");
-    return;
-  }
-
-  try {
-    const res = await apiGet_({
-      api: "saveMessage",
-      pwd,
-      id,
-      titre,
-      message,
-      cible,
-      priorite,
-      actif: actif ? "true" : "false"
-    });
-
-    if (!res || !res.ok) {
-      throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
-    }
-
-    closeMessagesAdminModal();
-    await loadAppData(true);
-    renderHomeReferent();
-
-  } catch (err) {
-    alert("Impossible d’enregistrer : " + (err.message || err));
-  }
-}
+/* GARDE TOUT TON BLOC ENTRE ICI ET renderHomeReferent() TEL QUEL :
+   renderReferentPeopleList, getNextFestivalEntry, parseShiftDateFromLabel,
+   renderReferentReplacementList, renderMessagesBox, openMessagesAdminModal,
+   closeMessagesAdminModal, deleteMessageAdminForm, fillMessageAdminForm,
+   saveMessageAdminForm.
+*/
 
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
@@ -6272,124 +5662,6 @@ function renderHomeReferent() {
 
   if (!APP_DATA) {
     el.innerHTML = renderSkeletonList(3);
-    return;
-  }
-
-  const currentFestivalEntry = getCurrentFestivalEntry();
-  const currentShift = currentFestivalEntry && currentFestivalEntry.shift
-    ? currentFestivalEntry.shift
-    : null;
-
-  const nextFestivalEntry = getNextFestivalEntry();
-  const nextShift = nextFestivalEntry && nextFestivalEntry.shift
-    ? nextFestivalEntry.shift
-    : null;
-
-  const currentPeopleHtml = currentFestivalEntry
-    ? renderReferentPeopleList(currentFestivalEntry, "current")
-    : "";
-
-  const replacementHtml = currentFestivalEntry && nextFestivalEntry
-    ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
-    : "";
-
-  el.innerHTML = `
-    <div class="home-hero compact-home-hero">
-
-      ${
-        isTestAppMode()
-          ? `
-            <div style="
-              position:absolute;
-              top:12px;
-              right:12px;
-              z-index:50;
-              background:rgba(255,253,247,0.96);
-              border:1px solid rgba(255,255,255,0.55);
-              border-radius:999px;
-              padding:4px 8px;
-              box-shadow:0 8px 18px rgba(15,68,61,0.14);
-            ">
-              ${renderTestControlsInline()}
-            </div>
-          `
-          : `
-            <button
-              onclick="logout()"
-              style="
-                position:absolute;
-                top:12px;
-                right:12px;
-                z-index:50;
-                border:none;
-                border-radius:999px;
-                background:rgba(0,0,0,0.72);
-                color:white;
-                padding:8px 12px;
-                font-weight:900;
-                font-size:12px;
-              "
-            >
-              Déconnexion
-            </button>
-          `
-      }
-
-      <div class="home-hero-content" style="padding:12px 12px 0;">
-        <div class="home-hero-brand" style="max-width:145px;">
-          <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
-          <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
-          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="home-stack" style="margin-top:-20px;">
-      <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
-        <div class="home-main-title">Créneau en cours</div>
-
-        ${
-          currentShift
-            ? `
-              <div class="home-main-line">${escapeHtml(currentShift.jour)} • ${escapeHtml(currentShift.debut)} – ${escapeHtml(currentShift.fin)}</div>
-              <div class="home-subline">${escapeHtml(currentShift.libelle || "")}</div>
-              ${currentPeopleHtml}
-            `
-            : `
-              <div class="home-main-line">Aucun créneau en cours</div>
-            `
-        }
-      </div>
-
-      <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
-        <div class="home-main-title">Créneau suivant</div>
-
-        ${
-          nextShift
-            ? `
-              <div class="home-main-line">
-                ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
-              </div>
-              <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
-              ${replacementHtml}
-            `
-            : `
-              <div class="home-subline">Aucun créneau suivant</div>
-            `
-        }
-      </div>
-
-      ${renderMessagesBox()}
-      ${renderConcertTimelineCard()}
-
-      <div class="card compact home-meta-card" style="margin-bottom:0;">
-        <div class="subtle-text">
-          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
-        </div>
-      </div>
-    </div>
-  `;
-}
   
 
 /*********************************
