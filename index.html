@@ -4243,8 +4243,6 @@ function renderHomeHeroUserPill() {
             <div style="font-size:0.86rem; font-weight:1000; color:#18443D; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${escapeHtml(getSelectedUserDisplayName())}
             </div>
-
-            ${renderTestControlsInline()}
           </div>
 
           <div style="display:flex; align-items:center; gap:6px; margin-left:2px;">
@@ -5326,13 +5324,69 @@ function renderAdminMiniBand() {
 
   const benevoleActive = state.testViewMode !== "referent";
   const referentActive = state.testViewMode === "referent";
+  const forcedNow = localStorage.getItem("forced_now") || "";
+  const realNow = new Date();
+
+  const realLabel = realNow.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const forcedLabel = forcedNow
+    ? new Date(forcedNow).toLocaleTimeString("fr-FR", {
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+    : "réel";
 
   return `
-    <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
-      <button type="button" onclick="setAdminVisualMode('benevole')" title="Simulation bénévole" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};font-size:14px;padding:0;cursor:pointer;">👤</button>
-      <button type="button" onclick="setAdminVisualMode('referent')" title="Simulation référent" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};font-size:14px;padding:0;cursor:pointer;">🦺</button>
-      <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:rgba(255,255,255,0.75);font-size:14px;padding:0;cursor:pointer;">🧹</button>
-      <button type="button" onclick="logout()" title="Déconnexion" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:rgba(0,0,0,0.45);color:white;font-size:14px;padding:0;cursor:pointer;">⎋</button>
+    <div style="
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-top:8px;
+      flex-wrap:wrap;
+    ">
+      <button type="button" onclick="setAdminVisualMode('benevole')" title="Simulation bénévole" style="
+        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
+        background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+        font-size:14px;padding:0;cursor:pointer;
+      ">👤</button>
+
+      <button type="button" onclick="setAdminVisualMode('referent')" title="Simulation référent" style="
+        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
+        background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+        font-size:14px;padding:0;cursor:pointer;
+      ">🦺</button>
+
+      <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="
+        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
+        background:rgba(255,255,255,0.75);font-size:14px;padding:0;cursor:pointer;
+      ">🧹</button>
+
+      <button type="button" onclick="logout()" title="Déconnexion" style="
+        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
+        background:rgba(0,0,0,0.45);color:white;font-size:14px;padding:0;cursor:pointer;
+      ">⎋</button>
+
+      <span style="
+        font-size:0.68rem;
+        font-weight:900;
+        color:#F3D39A;
+        background:rgba(0,0,0,0.20);
+        border-radius:999px;
+        padding:5px 8px;
+      ">🕒 ${realLabel}</span>
+
+      <span style="
+        font-size:0.68rem;
+        font-weight:900;
+        color:white;
+        background:${forcedNow ? "rgba(184,107,36,0.85)" : "rgba(255,255,255,0.20)"};
+        border-radius:999px;
+        padding:5px 8px;
+      ">🧪 ${forcedLabel}</span>
     </div>
   `;
 }
@@ -7445,14 +7499,20 @@ function shouldShowHomeFollowingConcerts() {
  * 34 - REFERENT UI
  *********************************/
 function togglePeopleList(id) {
-  const isAlreadyOpen = referentUiState.openMenuId === id;
+  referentUiState.openMenuId =
+    referentUiState.openMenuId === id ? "" : id;
 
-  referentUiState.openMenuId = isAlreadyOpen ? "" : id;
+  const panel = document.getElementById("people-" + id);
+  const chevron = document.getElementById("chevron-" + id);
 
-  closeAllReferentPeopleLists();
+  if (panel) {
+    panel.style.display =
+      referentUiState.openMenuId === id ? "block" : "none";
+  }
 
-  if (!isAlreadyOpen) {
-    openReferentPeopleList(id);
+  if (chevron) {
+    chevron.textContent =
+      referentUiState.openMenuId === id ? "▲" : "▼";
   }
 }
 
