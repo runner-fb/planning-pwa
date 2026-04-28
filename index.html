@@ -5311,6 +5311,45 @@ function renderPlanningTabsBlock() {
 /*********************************
  * 18 - HOME / ACCUEIL
  *********************************/
+function renderHome() {
+  if (isReferentVisualMode()) {
+    renderHomeReferent();
+  } else {
+    renderHomeStandard({
+      showUserPill: true
+    });
+  }
+}
+
+function renderAdminMiniBand() {
+  if (!isTestAppMode() && state.appMode !== "admin") return "";
+
+  const benevoleActive = state.testViewMode !== "referent";
+  const referentActive = state.testViewMode === "referent";
+
+  return `
+    <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
+      <button type="button" onclick="setAdminVisualMode('benevole')" title="Simulation bénévole" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};font-size:14px;padding:0;cursor:pointer;">👤</button>
+      <button type="button" onclick="setAdminVisualMode('referent')" title="Simulation référent" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};font-size:14px;padding:0;cursor:pointer;">🦺</button>
+      <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:rgba(255,255,255,0.75);font-size:14px;padding:0;cursor:pointer;">🧹</button>
+      <button type="button" onclick="logout()" title="Déconnexion" style="width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);background:rgba(0,0,0,0.45);color:white;font-size:14px;padding:0;cursor:pointer;">⎋</button>
+    </div>
+  `;
+}
+
+async function setAdminVisualMode(mode) {
+  if (!isTestAppMode() && state.appMode !== "admin") return;
+
+  state.testViewMode = mode === "referent" ? "referent" : "benevole";
+  localStorage.setItem("planning_test_view_mode", state.testViewMode);
+
+  directState.isManual = false;
+  referentUiState.openMenuId = "";
+
+  await loadAppData(true);
+  showView("home", { push: false });
+}
+
 function renderFullInfoBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
@@ -5452,68 +5491,6 @@ function renderCompactConcertRow(concert, label, statusType) {
   `;
 }
 
-function renderAdminMiniBand() {
-  if (!isTestAppMode() && state.appMode !== "admin") return "";
-
-  const benevoleActive = state.testViewMode !== "referent";
-  const referentActive = state.testViewMode === "referent";
-
-  return `
-    <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
-      <button type="button" onclick="setAdminVisualMode('benevole')" title="Simulation bénévole" style="
-        width:28px; height:28px; border-radius:999px;
-        border:1px solid rgba(255,255,255,0.55);
-        background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-        font-size:14px; padding:0; cursor:pointer;
-      ">👤</button>
-
-      <button type="button" onclick="setAdminVisualMode('referent')" title="Simulation référent" style="
-        width:28px; height:28px; border-radius:999px;
-        border:1px solid rgba(255,255,255,0.55);
-        background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-        font-size:14px; padding:0; cursor:pointer;
-      ">🦺</button>
-
-      <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="
-        width:28px; height:28px; border-radius:999px;
-        border:1px solid rgba(255,255,255,0.55);
-        background:rgba(255,255,255,0.75);
-        font-size:14px; padding:0; cursor:pointer;
-      ">🧹</button>
-
-      <button type="button" onclick="logout()" title="Déconnexion" style="
-        width:28px; height:28px; border-radius:999px;
-        border:1px solid rgba(255,255,255,0.55);
-        background:rgba(0,0,0,0.45);
-        color:white; font-size:14px; padding:0; cursor:pointer;
-      ">⎋</button>
-    </div>
-  `;
-}
-
-async function setAdminVisualMode(mode) {
-  if (!isTestAppMode() && state.appMode !== "admin") return;
-
-  state.testViewMode = mode === "referent" ? "referent" : "benevole";
-  localStorage.setItem("planning_test_view_mode", state.testViewMode);
-
-  directState.isManual = false;
-  referentUiState.openMenuId = "";
-
-  await loadAppData(true);
-  showView("home", { push: false });
-}
-
-function renderHome() {
-  if (isReferentVisualMode()) {
-    renderHomeReferent();
-  } else {
-    renderHomeStandard({
-      showUserPill: true
-    });
-  }
-}
-
 function renderHomeStandard(options = {}) {
   const { showUserPill = true } = options;
 
@@ -5648,21 +5625,220 @@ function renderHomeStandard(options = {}) {
     </div>
   `;
 }
+function getNextFestivalEntry() {
+  const entries = Array.isArray(directState.allShifts) ? directState.allShifts : [];
+  const now = getCurrentNowDate();
 
-/* GARDE TOUT TON BLOC ENTRE ICI ET renderHomeReferent() TEL QUEL :
-   renderReferentPeopleList, getNextFestivalEntry, parseShiftDateFromLabel,
-   renderReferentReplacementList, renderMessagesBox, openMessagesAdminModal,
-   closeMessagesAdminModal, deleteMessageAdminForm, fillMessageAdminForm,
-   saveMessageAdminForm.
-*/
+  const upcoming = entries.filter(entry => {
+    const shift = entry && entry.shift ? entry.shift : null;
+    if (!shift) return false;
 
+    const start = parseShiftDateFromLabel(shift.startLabel);
+    return start && start > now;
+  });
+
+  upcoming.sort((a, b) => {
+    const da = parseShiftDateFromLabel(a.shift.startLabel);
+    const db = parseShiftDateFromLabel(b.shift.startLabel);
+    return da - db;
+  });
+
+  return upcoming[0] || null;
+}
+
+function parseShiftDateFromLabel(label) {
+  const txt = String(label || "").trim();
+  const match = txt.match(/^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (!match) return null;
+
+  return new Date(
+    2026,
+    Number(match[2]) - 1,
+    Number(match[1]),
+    Number(match[3]),
+    Number(match[4])
+  );
+}
+
+function renderReferentPeopleList(entry, id = "current") {
+  const benevoles = Array.isArray(entry?.benevoles) ? entry.benevoles.slice() : [];
+
+  if (!benevoles.length) {
+    return `<div class="subtle-text" style="margin-top:8px;">Aucun bénévole affecté.</div>`;
+  }
+
+  return `
+    <div style="margin-top:10px;background:rgba(255,255,255,0.55);border-radius:16px;overflow:hidden;">
+      <button type="button" onclick="togglePeopleList('${id}')" style="width:100%;border:none;background:transparent;color:#18443D;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;font-weight:900;cursor:pointer;">
+        <span>Voir l’équipe</span>
+        <span>${referentUiState.openMenuId === id ? "▲" : "▼"}</span>
+      </button>
+
+      <div style="display:${referentUiState.openMenuId === id ? "block" : "none"};padding:0 12px 8px 12px;background:rgba(255,255,255,0.35);">
+        ${benevoles.map(person => {
+          const vehicule = String(person.vehicule || "").trim();
+          const label = String(person.label || person.benevole || "").trim();
+
+          return `
+            <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;padding:7px 0;border-top:1px solid rgba(222,212,194,0.45);font-size:0.80rem;line-height:1.15;color:#18443D;">
+              <div style="font-weight:1000;color:#0F5A4F;">
+                ${escapeHtml(vehicule.toUpperCase().includes("CHARGEUR") ? "Chargeur" : "Véhicule " + vehicule)}
+              </div>
+              <div style="min-width:0;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${escapeHtml(label)}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderReferentReplacementList(currentEntry, nextEntry, id = "replacement") {
+  const currentPeople = Array.isArray(currentEntry?.benevoles) ? currentEntry.benevoles : [];
+  const nextPeople = Array.isArray(nextEntry?.benevoles) ? nextEntry.benevoles : [];
+
+  if (!nextPeople.length) return "";
+
+  return `
+    <div style="margin-top:10px;background:rgba(255,255,255,0.55);border-radius:16px;overflow:hidden;">
+      <button type="button" onclick="togglePeopleList('${id}')" style="width:100%;border:none;background:transparent;color:#18443D;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;font-weight:900;cursor:pointer;">
+        <span>Voir les remplacements</span>
+        <span>${referentUiState.openMenuId === id ? "▲" : "▼"}</span>
+      </button>
+
+      <div style="display:${referentUiState.openMenuId === id ? "block" : "none"};padding:0 12px 8px 12px;background:rgba(255,255,255,0.35);">
+        ${nextPeople.map(person => {
+          const vehicule = String(person.vehicule || "").trim();
+          const label = String(person.label || person.benevole || "").trim();
+
+          return `
+            <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;padding:7px 0;border-top:1px solid rgba(222,212,194,0.45);font-size:0.80rem;line-height:1.15;color:#18443D;">
+              <div style="font-weight:1000;color:#0F5A4F;">
+                ${escapeHtml(vehicule.toUpperCase().includes("CHARGEUR") ? "Chargeur" : "Véhicule " + vehicule)}
+              </div>
+              <div style="min-width:0;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${escapeHtml(label)}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderMessagesBox() {
+  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
+  const isReferentMode = isReferentVisualMode();
+
+  if (!messages.length && !isReferentMode) return "";
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Infos</div>
+
+      ${
+        messages.length
+          ? messages.slice(0, 3).map(m => `
+            <div style="padding:6px 0;border-top:1px solid rgba(222,212,194,0.5);font-weight:${m.priorite === "important" ? "900" : "850"};color:${m.priorite === "important" ? "#9b1c1c" : "inherit"};">
+              ${m.priorite === "important" ? "⚠️ " : "ℹ️ "}
+              ${escapeHtml(m.message || "")}
+            </div>
+          `).join("")
+          : `<div class="home-subline">Aucun message actif.</div>`
+      }
+    </div>
+  `;
+}
+  
 function renderHomeReferent() {
   const el = document.getElementById("homeContent");
   if (!el) return;
 
   if (!APP_DATA) {
     el.innerHTML = renderSkeletonList(3);
-  
+
+    return;
+  }
+
+  const currentFestivalEntry = getCurrentFestivalEntry();
+  const currentShift = currentFestivalEntry && currentFestivalEntry.shift
+    ? currentFestivalEntry.shift
+    : null;
+
+  const nextFestivalEntry = getNextFestivalEntry();
+  const nextShift = nextFestivalEntry && nextFestivalEntry.shift
+    ? nextFestivalEntry.shift
+    : null;
+
+  const currentPeopleHtml = currentFestivalEntry
+    ? renderReferentPeopleList(currentFestivalEntry, "current")
+    : "";
+
+  const replacementHtml = currentFestivalEntry && nextFestivalEntry
+    ? renderReferentReplacementList(currentFestivalEntry, nextFestivalEntry, "replacement")
+    : "";
+
+  el.innerHTML = `
+    <div class="home-hero compact-home-hero">
+      <div class="home-hero-content" style="padding:12px 12px 0;">
+        <div class="home-hero-brand" style="max-width:145px;">
+          <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
+          <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
+          <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
+          ${renderAdminMiniBand()}
+        </div>
+      </div>
+    </div>
+
+    <div class="home-stack" style="margin-top:-20px;">
+      <div class="card home-main-card home-card-raise current-slot-card" style="margin-bottom:8px;">
+        <div class="home-main-title">Créneau en cours</div>
+
+        ${
+          currentShift
+            ? `
+              <div class="home-main-line">${escapeHtml(currentShift.jour)} • ${escapeHtml(currentShift.debut)} – ${escapeHtml(currentShift.fin)}</div>
+              <div class="home-subline">${escapeHtml(currentShift.libelle || "")}</div>
+              ${currentPeopleHtml}
+            `
+            : `
+              <div class="home-main-line">Aucun créneau en cours</div>
+            `
+        }
+      </div>
+
+      <div class="card home-card-raise next-slot-card" style="margin-bottom:8px;">
+        <div class="home-main-title">Créneau suivant</div>
+
+        ${
+          nextShift
+            ? `
+              <div class="home-main-line">
+                ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
+              </div>
+              <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
+              ${replacementHtml}
+            `
+            : `
+              <div class="home-subline">Aucun créneau suivant</div>
+            `
+        }
+      </div>
+
+      ${renderMessagesBox()}
+      ${renderConcertTimelineCard()}
+
+      <div class="card compact home-meta-card" style="margin-bottom:0;">
+        <div class="subtle-text">
+          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 /*********************************
  * 18B - MES CRENEAUX FALLBACK
