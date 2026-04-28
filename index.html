@@ -3046,12 +3046,6 @@ let state = {
   previousView: "home"
 };
 
-// Migration douce : l’ancien mode "test" devient maintenant le vrai mode "admin".
-if (state.appMode === "test") {
-  state.appMode = "admin";
-  localStorage.setItem("planning_app_mode", "admin");
-}
-
   let actionLock = false;
 
   let referentUiState = {
@@ -3121,16 +3115,6 @@ let internalNavLock = false;
  * 04 - CACHE HELPERS
  *********************************/
 function getCacheKey() {
-  // Cache séparé selon le contexte, pour éviter qu'une vue référent/admin
-  // écrase le cache personnel du bénévole sélectionné.
-  if (state.appMode === "referent") {
-    return "planning_cache___REFERENT__";
-  }
-
-  if (state.appMode === "admin" && state.testViewMode === "referent") {
-    return "planning_cache___ADMIN_REFERENT__";
-  }
-
   if (!state.userId) return null;
   return "planning_cache_" + state.userId;
 }
@@ -3418,7 +3402,7 @@ function hideGlobalLoader() {
 }
 
  function isTestAppMode() {
-  return state.appMode === "admin";
+  return state.appMode === "admin" || state.appMode === "test";
 }
 
 function renderTestControls() {
@@ -3537,7 +3521,7 @@ function buildPlanningByDay(shifts) {
 }
 
 function getCurrentNowDate() {
-  if (state.appMode === "admin") {
+  if (isTestAppMode()) {
     const forced = localStorage.getItem("forced_now");
 
     if (forced) {
@@ -4405,7 +4389,7 @@ async function loadAppData(forceRefresh = false) {
   try {
     const bundleUserId =
   state.appMode === "referent" ||
-  (state.appMode === "admin" && state.testViewMode === "referent")
+  (isTestAppMode() && state.testViewMode === "referent")
     ? "__REFERENT__"
     : state.userId;
 
@@ -4455,22 +4439,8 @@ function applyAppData(data) {
 
   APP_DATA = data;
 
-  const dataUserId = data.user?.id || "";
-  const dataUserLabel = data.user?.label || "";
-
-  // En admin + simulation référent, le bundle renvoie l'utilisateur technique
-  // "__REFERENT__". On ne doit pas écraser le bénévole réellement sélectionné,
-  // sinon "Connecté en tant que" et les pages bénévoles se désynchronisent.
-  if (!(state.appMode === "admin" && state.testViewMode === "referent" && dataUserId === "__REFERENT__")) {
-    state.userId = dataUserId || state.userId || "";
-    state.userLabel = dataUserLabel || state.userLabel || "";
-
-    if (state.userId && state.userId !== "__REFERENT__") {
-      localStorage.setItem("planning_user_id", state.userId);
-      localStorage.setItem("planning_user_label", state.userLabel);
-    }
-  }
-
+  state.userId = data.user?.id || state.userId || "";
+  state.userLabel = data.user?.label || state.userLabel || "";
   state.isRef = data.user?.isRef === true;
 
   planningState.allShifts = getPlanningShiftsFromAppData(data);
@@ -4509,7 +4479,7 @@ function renderBottomNav() {
 
 if (
   state.appMode === "referent" ||
-  (state.appMode === "admin" && state.testViewMode === "referent")
+  (isTestAppMode() && state.testViewMode === "referent")
 ) {
   nav.innerHTML = `
       <button class="nav-item" data-nav="home" onclick="showView('home')">
@@ -5449,7 +5419,7 @@ function renderCompactConcertRow(concert, label, statusType) {
 
 function renderHome() {
 
-  if (state.appMode === "admin") {
+  if (isTestAppMode()) {
 
     if (state.testViewMode === "referent") {
       renderHomeReferent({
@@ -6370,6 +6340,68 @@ function renderHomeReferent() {
   `;
 }
   
+
+/*********************************
+ * 18B - MES CRENEAUX FALLBACK
+ *********************************/
+function buildMesCreneauxFallbackFromPlanning() {
+  const shifts = getPlanningShiftsFromAppData(APP_DATA);
+  const currentUserId = String(state.userId || "").trim();
+  const currentUserLabel = normalizeText(state.userLabel || "");
+
+  if (!Array.isArray(shifts) || (!currentUserId && !currentUserLabel)) {
+    return [];
+  }
+
+  const result = [];
+
+  shifts.forEach(shift => {
+    const people = Array.isArray(shift.benevoles) ? shift.benevoles : [];
+
+    people.forEach(person => {
+      const personId = String(person.id || person.userId || person.idBenevole || "").trim();
+      const personLabel = normalizeText(person.label || person.benevole || person.nom || "");
+
+      const sameId = currentUserId && personId && personId === currentUserId;
+      const sameLabel = currentUserLabel && personLabel && personLabel === currentUserLabel;
+
+      if (!sameId && !sameLabel) return;
+
+      result.push({
+        jour: shift.jour || "",
+        debut: shift.debut || shift.startLabel || "",
+        fin: shift.fin || shift.endLabel || "",
+        libelle: shift.libelle || shift.label || "",
+        shiftId: shift.id || shift.shiftId || "",
+        id: shift.id || shift.shiftId || "",
+        ordre: shift.ordre || 9999,
+        vehicule: person.vehicule || person.role || "",
+        benevole: person.label || person.benevole || state.userLabel || "",
+        idBenevole: personId || currentUserId
+      });
+    });
+  });
+
+  return result.sort((a, b) => Number(a.ordre || 9999) - Number(b.ordre || 9999));
+}
+
+function getSafeMesCreneauxData() {
+  const existing = Array.isArray(APP_DATA?.mesCreneaux?.creneaux)
+    ? APP_DATA.mesCreneaux.creneaux
+    : [];
+
+  if (existing.length) {
+    return APP_DATA.mesCreneaux;
+  }
+
+  const fallback = buildMesCreneauxFallbackFromPlanning();
+
+  return {
+    creneaux: fallback,
+    source: fallback.length ? "planning_fallback" : "mes_creneaux"
+  };
+}
+
 /*********************************
  * 19 - MES CRENEAUX
  *********************************/
@@ -6377,12 +6409,12 @@ function loadMesCreneaux() {
   const container = document.getElementById("mesCreneauxContent");
   if (!container) return;
 
-  if (!APP_DATA || !APP_DATA.mesCreneaux) {
+  if (!APP_DATA) {
     container.innerHTML = `<div class="card">Aucune donnée disponible</div>`;
     return;
   }
 
-  renderMesCreneaux(APP_DATA.mesCreneaux);
+  renderMesCreneaux(getSafeMesCreneauxData());
 }
 
 function renderMesCreneaux(data) {
@@ -7669,7 +7701,7 @@ async function boot() {
 
     state.authOk = true;
     state.isRefMode = isRef;
-    state.appMode = isRef ? "referent" : (state.appMode === "admin" ? "admin" : "benevole");
+    state.appMode = isRef ? "referent" : (state.appMode || "benevole");
 
     localStorage.setItem("planning_auth_ok", "1");
     localStorage.setItem("planning_app_mode", state.appMode);
