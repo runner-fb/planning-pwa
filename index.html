@@ -774,6 +774,42 @@ body {
   box-shadow: none;
 }
 
+.person-row.status-current {
+  background: rgba(76, 175, 80, 0.15);
+  border-left: 4px solid #4CAF50;
+}
+
+.person-row.status-next {
+  background: rgba(255, 193, 7, 0.15);
+  border-left: 4px solid #FFC107;
+}
+
+.person-row.status-done {
+  opacity: 0.6;
+}
+
+.team-badge {
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.team-badge.status-current {
+  background: #4CAF50;
+  color: white;
+}
+
+.team-badge.status-next {
+  background: #FFC107;
+  color: #333;
+}
+
+.team-badge.status-done {
+  background: #999;
+  color: white;
+}
+    
 .btn-link {
   width: 100%;
   margin-top: 12px;
@@ -4207,7 +4243,60 @@ function getSelectedUserFullName() {
 /*********************************
  * 08 - SHIFT / TIME HELPERS
  *********************************/
-function getPersonShifts(personId) {
+function getPersonGlobalStatus(personId) {
+  const shifts = getPersonShifts(personId) || [];
+
+  const now = new Date();
+
+  let hasToday = false;
+
+  for (let s of shifts) {
+    if (!s.debut || !s.fin) continue;
+
+    const start = new Date(s.debut);
+    const end = new Date(s.fin);
+
+    // 🟢 EN COURS
+    if (now >= start && now <= end) {
+      return {
+        label: "En cours",
+        class: "status-current"
+      };
+    }
+
+    // 🟡 A VENIR (dans la journée)
+    if (start > now && isSameDay(start, now)) {
+      hasToday = true;
+    }
+
+    // ⚫ TERMINE AUJOURD’HUI
+    if (end < now && isSameDay(end, now)) {
+      hasToday = true;
+    }
+  }
+
+  if (hasToday) {
+    const hasFuture = shifts.some(s => {
+      const start = new Date(s.debut);
+      return start > now && isSameDay(start, now);
+    });
+
+    return hasFuture
+      ? { label: "À venir", class: "status-next" }
+      : { label: "Terminé", class: "status-done" };
+  }
+
+  return { label: "", class: "" };
+}
+
+  function isSameDay(d1, d2) {
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  );
+}
+  function getPersonShifts(personId) {
   const shifts = getPlanningShiftsFromAppData(APP_DATA);
   const result = [];
 
@@ -7154,9 +7243,21 @@ function renderTeamListOnly() {
   const q = normalizeText(contactsState.query || "");
 
   const people = getAllPeopleForContacts()
-    .filter(p => !p.isRef)
+    .filter(p =>
+      p &&
+      p.id &&
+      String(p.id).trim() &&
+      String(p.id).trim() !== "false_" &&
+      !p.isRef &&
+      (
+        (p.prenom && String(p.prenom).trim()) ||
+        (p.nom && String(p.nom).trim()) ||
+        (p.label && String(p.label).trim())
+      )
+    )
     .filter(p => {
       if (!q) return true;
+
       return normalizeText(
         `${p.prenom || ""} ${p.nom || ""} ${p.label || ""}`
       ).includes(q);
@@ -7180,20 +7281,28 @@ function renderTeamListOnly() {
 }
 
 function renderTeamPersonCard(p) {
+  const status = getPersonGlobalStatus(p.id);
+
   return `
     <button
       type="button"
-      class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
+      class="person-row person-row-button ${status.class}"
       onclick="openTeamPerson('${escapeHtml(p.id || "")}')"
     >
       ${renderAvatar(p)}
- 
+
       <div class="person-main">
         <div class="person-left">
           <div class="person-name">
             <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
           </div>
         </div>
+
+        ${
+          status.label
+            ? `<span class="team-badge ${status.class}">${status.label}</span>`
+            : ""
+        }
       </div>
     </button>
   `;
@@ -7229,10 +7338,227 @@ function loadTeamPerson() {
     return;
   }
 
+  const person = getPersonById(personDetailState.personId);
+
+  if (!person) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="home-main-title">Bénévole introuvable</div>
+        <div class="home-subline">Impossible de retrouver cette fiche.</div>
+        <button class="btn" onclick="showView('team')">Retour Team</button>
+      </div>
+    `;
+    return;
+  }
+
+  if (!personDetailState.teamOpenPanel) {
+    personDetailState.teamOpenPanel = "current";
+  }
+
   container.innerHTML = `
-    <div class="card">
-      <div class="home-main-title">Fiche Team</div>
-      <div class="home-subline">Bénévole sélectionné : ${escapeHtml(personDetailState.personId)}</div>
+    <div class="back-row">
+      <button class="back-btn" onclick="showView('team')">← Retour Team</button>
+    </div>
+
+    <div class="card detail-top-card">
+      <div class="person-head">
+        ${renderAvatar(person)}
+
+        <div class="person-head-text">
+          <div class="person-head-name">
+            ${escapeHtml(person.prenom || "")} ${escapeHtml(person.nom || "")}
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:14px;">
+        ${renderTeamActionButton("tel", person.tel, "📞", "Appeler")}
+        ${renderTeamActionButton("sms", person.tel, "💬", "SMS")}
+        ${renderTeamActionButton("mail", person.mail, "✉️", "Mail")}
+      </div>
+    </div>
+
+    ${renderTeamAccordion("current", "Affectation actuelle", renderTeamCurrentAssignment(person))}
+    ${renderTeamAccordion("shifts", "Voir ses créneaux", renderTeamShiftsList(person))}
+    ${renderTeamAccordion("infos", "Infos utiles", renderTeamUsefulInfo(person))}
+  `;
+}
+
+function renderTeamActionButton(type, value, icon, label) {
+  const clean = String(value || "").trim();
+
+  if (!clean) {
+    return `
+      <button class="btn-light" disabled style="opacity:0.45; padding:10px;">
+        ${icon}<br><span style="font-size:0.72rem;">${escapeHtml(label)}</span>
+      </button>
+    `;
+  }
+
+  let href = "#";
+  if (type === "tel") href = `tel:${clean}`;
+  if (type === "sms") href = `sms:${clean}`;
+  if (type === "mail") href = `mailto:${clean}`;
+
+  return `
+    <a href="${escapeHtml(href)}" class="btn-light" style="
+      text-decoration:none;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+      margin:0;
+      font-weight:1000;
+    ">
+      <span style="font-size:1.2rem;">${icon}</span>
+      <span style="font-size:0.72rem; margin-top:3px;">${escapeHtml(label)}</span>
+    </a>
+  `;
+}
+
+function toggleTeamPersonPanel(panel) {
+  personDetailState.teamOpenPanel =
+    personDetailState.teamOpenPanel === panel ? "" : panel;
+
+  loadTeamPerson();
+}
+
+function renderTeamAccordion(id, title, contentHtml) {
+  const open = personDetailState.teamOpenPanel === id;
+
+  return `
+    <div class="card compact" style="margin-bottom:8px;">
+      <button
+        type="button"
+        onclick="toggleTeamPersonPanel('${escapeHtml(id)}')"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          padding:4px 0;
+          cursor:pointer;
+          color:#18443D;
+          font-weight:1000;
+          text-align:left;
+        "
+      >
+        <span>${escapeHtml(title)}</span>
+        <span class="planning-chevron ${open ? "open" : ""}">▼</span>
+      </button>
+
+      ${
+        open
+          ? `<div style="margin-top:10px;">${contentHtml}</div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderTeamCurrentAssignment(person) {
+  const current = getCurrentShiftForPerson(person.id);
+  const next = getUpcomingShiftForPerson(person.id);
+
+  if (current) {
+    const role = getRoleInfo(current.vehicule);
+
+    return `
+      <div class="status-box current">
+        <div class="status-main">
+          <div class="status-title">Actuellement</div>
+          <div class="status-line">
+            En poste • ${escapeHtml(current.jour)} • ${escapeHtml(current.debut)} – ${escapeHtml(current.fin)}
+          </div>
+          <div class="subtle-text" style="margin-top:4px;">
+            ${escapeHtml(role.label)}
+          </div>
+        </div>
+        <span class="badge current">En cours</span>
+      </div>
+    `;
+  }
+
+  if (next) {
+    const role = getRoleInfo(next.vehicule);
+
+    return `
+      <div class="status-box next">
+        <div class="status-main">
+          <div class="status-title">Prochain créneau</div>
+          <div class="status-line">
+            ${escapeHtml(next.jour)} • ${escapeHtml(next.debut)} – ${escapeHtml(next.fin)}
+          </div>
+          <div class="subtle-text" style="margin-top:4px;">
+            ${escapeHtml(role.label)}
+          </div>
+        </div>
+        <span class="badge next">À venir</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="home-subline">
+      Aucun créneau actuel ou à venir.
+    </div>
+  `;
+}
+
+function renderTeamShiftsList(person) {
+  const shifts = getPersonShifts(person.id);
+
+  if (!shifts.length) {
+    return `<div class="home-subline">Aucun créneau trouvé.</div>`;
+  }
+
+  return shifts.map(shift => {
+    const stateInfo = getShiftStatusInfo(shift);
+    const role = getRoleInfo(shift.vehicule);
+
+    return `
+      <div style="
+        padding:9px 0;
+        border-top:1px solid rgba(222,212,194,0.65);
+      ">
+        <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
+          <div style="min-width:0;">
+            <div class="person-name">
+              ${escapeHtml(shift.jour || "")} • ${escapeHtml(shift.debut || "")} – ${escapeHtml(shift.fin || "")}
+            </div>
+            <div class="subtle-text" style="margin-top:3px;">
+              ${escapeHtml(role.label)}
+            </div>
+          </div>
+
+          <span class="badge ${stateInfo.badgeClass}">
+            ${escapeHtml(stateInfo.badgeText)}
+          </span>
+        </div>
+
+        ${
+          stateInfo.timerText
+            ? `<div class="mini-note">${escapeHtml(stateInfo.timerText)}</div>`
+            : ""
+        }
+      </div>
+    `;
+  }).join("");
+}
+
+function renderTeamUsefulInfo(person) {
+  const tel = person.tel || "—";
+  const mail = person.mail || "—";
+  const tshirt = person.tshirt || person.tailleTshirt || person.taille_tshirt || person.taille || "—";
+
+  return `
+    <div style="display:grid; gap:8px;">
+      <div><strong>Téléphone :</strong> ${escapeHtml(tel)}</div>
+      <div><strong>Mail :</strong> ${escapeHtml(mail)}</div>
+      <div><strong>Taille t-shirt :</strong> ${escapeHtml(tshirt)}</div>
     </div>
   `;
 }
