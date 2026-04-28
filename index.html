@@ -7157,29 +7157,18 @@ function renderTeamListOnly() {
 }
 
 function renderTeamPersonCard(person) {
-  const id = person.id || person.personId || person.userId || "";
-  const label = person.label || `${person.prenom || ""} ${person.nom || ""}`.trim();
-  const photo = person.photo || person.photoUrl || "";
-
   return `
-    <button
-      type="button"
-      class="contact-row"
-      onclick="openTeamPerson('${escapeHtml(id)}')"
-      style="width:100%; text-align:left;"
-    >
+    <div class="contact-row" onclick="openTeamPerson('${escapeHtml(person.id)}')">
       <div class="contact-avatar">
-        ${
-          photo
-            ? `<img src="${escapeHtml(photo)}" alt="">`
-            : `<span>${escapeHtml((label || "?").charAt(0).toUpperCase())}</span>`
-        }
+        ${person.photo ? `<img src="${escapeHtml(person.photo)}">` : ""}
       </div>
 
       <div class="contact-main">
-        <div class="contact-name">${escapeHtml(label)}</div>
+        <div class="contact-name">
+          ${escapeHtml(person.prenom || "")} ${escapeHtml(person.nom || "")}
+        </div>
       </div>
-    </button>
+    </div>
   `;
 }
 
