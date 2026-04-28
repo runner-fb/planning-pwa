@@ -7156,19 +7156,23 @@ function renderTeamListOnly() {
   listEl.innerHTML = people.map(renderTeamPersonCard).join("");
 }
 
-function renderTeamPersonCard(person) {
+function renderTeamPersonCard(p) {
   return `
-    <div class="contact-row" onclick="openTeamPerson('${escapeHtml(person.id)}')">
-      <div class="contact-avatar">
-        ${person.photo ? `<img src="${escapeHtml(person.photo)}">` : ""}
-      </div>
+    <button
+      type="button"
+      class="person-row person-row-button ${p.photo ? "" : "no-photo"}"
+      onclick="openTeamPerson('${escapeHtml(p.id || "")}')"
+    >
+      ${renderAvatar(p)}
 
-      <div class="contact-main">
-        <div class="contact-name">
-          ${escapeHtml(person.prenom || "")} ${escapeHtml(person.nom || "")}
+      <div class="person-main">
+        <div class="person-left">
+          <div class="person-name">
+            <strong>${escapeHtml(p.prenom || "")}</strong> ${escapeHtml(p.nom || "")}
+          </div>
         </div>
       </div>
-    </div>
+    </button>
   `;
 }
 
