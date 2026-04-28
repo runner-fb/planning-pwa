@@ -5220,8 +5220,7 @@ function renderUserHeader(options = {}) {
         <div class="user-info">
           <span class="user-label">Hello John, tu es connecté en tant que</span>
           <span class="user-name">${escapeHtml(state.userLabel || "Aucun")}</span>
-          ${renderTestControlsInline()}
-        </div>
+          </div>
 
         <div style="display:flex; align-items:center; gap:8px;">
           <button
@@ -5322,75 +5321,130 @@ function renderHome() {
 function renderAdminMiniBand() {
   if (!isTestAppMode() && state.appMode !== "admin") return "";
 
-  const benevoleActive = state.testViewMode !== "referent";
+  const adminActive = state.appMode === "admin";
   const referentActive = state.testViewMode === "referent";
+  const benevoleActive = state.testViewMode !== "referent";
   const forcedNow = localStorage.getItem("forced_now") || "";
-  const realNow = new Date();
 
-  const realLabel = realNow.toLocaleTimeString("fr-FR", {
+  const realLabel = new Date().toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit"
   });
 
-  const forcedLabel = forcedNow
-    ? new Date(forcedNow).toLocaleTimeString("fr-FR", {
+  const simulatedLabel = forcedNow
+    ? new Date(forcedNow).toLocaleString("fr-FR", {
         weekday: "short",
         hour: "2-digit",
         minute: "2-digit"
       })
-    : "réel";
+    : "simulée";
 
   return `
     <div style="
       display:flex;
-      align-items:center;
+      flex-direction:column;
       gap:6px;
       margin-top:8px;
-      flex-wrap:wrap;
+      align-items:flex-start;
     ">
-      <button type="button" onclick="setAdminVisualMode('benevole')" title="Simulation bénévole" style="
-        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
-        background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-        font-size:14px;padding:0;cursor:pointer;
-      ">👤</button>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button type="button" title="Administration" onclick="showView('home')" style="
+          width:28px;height:28px;border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:${adminActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+          font-size:14px;padding:0;cursor:pointer;
+        ">🛠️</button>
 
-      <button type="button" onclick="setAdminVisualMode('referent')" title="Simulation référent" style="
-        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
-        background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-        font-size:14px;padding:0;cursor:pointer;
-      ">🦺</button>
+        <button type="button" onclick="setAdminVisualMode('referent')" title="Vue référent" style="
+          width:28px;height:28px;border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+          font-size:14px;padding:0;cursor:pointer;
+        ">🦺</button>
 
-      <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="
-        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
-        background:rgba(255,255,255,0.75);font-size:14px;padding:0;cursor:pointer;
-      ">🧹</button>
+        <button type="button" onclick="setAdminVisualMode('benevole')" title="Vue bénévole" style="
+          width:28px;height:28px;border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
+          font-size:14px;padding:0;cursor:pointer;
+        ">👤</button>
 
-      <button type="button" onclick="logout()" title="Déconnexion" style="
-        width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);
-        background:rgba(0,0,0,0.45);color:white;font-size:14px;padding:0;cursor:pointer;
-      ">⎋</button>
+        <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="
+          width:28px;height:28px;border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:rgba(255,255,255,0.75);
+          font-size:14px;padding:0;cursor:pointer;
+        ">🧹</button>
 
-      <span style="
-        font-size:0.68rem;
-        font-weight:900;
-        color:#F3D39A;
-        background:rgba(0,0,0,0.20);
-        border-radius:999px;
-        padding:5px 8px;
-      ">🕒 ${realLabel}</span>
+        <button type="button" onclick="logout()" title="Déconnexion" style="
+          width:28px;height:28px;border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:rgba(0,0,0,0.45);
+          color:white;font-size:14px;padding:0;cursor:pointer;
+        ">⎋</button>
+      </div>
 
-      <span style="
-        font-size:0.68rem;
-        font-weight:900;
-        color:white;
-        background:${forcedNow ? "rgba(184,107,36,0.85)" : "rgba(255,255,255,0.20)"};
-        border-radius:999px;
-        padding:5px 8px;
-      ">🧪 ${forcedLabel}</span>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span title="Heure réelle" style="
+          height:26px;
+          display:inline-flex;
+          align-items:center;
+          gap:4px;
+          border-radius:999px;
+          padding:0 8px;
+          background:rgba(255,255,255,0.35);
+          color:white;
+          font-size:0.72rem;
+          font-weight:1000;
+        ">🕒 ${realLabel}</span>
+
+        <button type="button" onclick="toggleSimulatedTime()" title="Basculer heure simulée" style="
+          width:42px;
+          height:24px;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:${forcedNow ? "rgba(184,107,36,0.95)" : "rgba(255,255,255,0.35)"};
+          padding:2px;
+          cursor:pointer;
+          position:relative;
+        ">
+          <span style="
+            display:block;
+            width:18px;
+            height:18px;
+            border-radius:999px;
+            background:white;
+            transform:translateX(${forcedNow ? "18px" : "0"});
+          "></span>
+        </button>
+
+        <button type="button" onclick="setTestNowPrompt()" title="Heure simulée" style="
+          min-width:64px;
+          height:26px;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,0.55);
+          background:${forcedNow ? "rgba(184,107,36,0.95)" : "rgba(255,255,255,0.25)"};
+          color:white;
+          font-size:0.72rem;
+          font-weight:1000;
+          padding:0 8px;
+          cursor:pointer;
+        ">🧪 ${simulatedLabel}</button>
+      </div>
     </div>
   `;
 }
 
+  function toggleSimulatedTime() {
+  const forcedNow = localStorage.getItem("forced_now");
+
+  if (forcedNow) {
+    clearForcedNow();
+    return;
+  }
+
+  setTestNowPrompt();
+}
 async function setAdminVisualMode(mode) {
   if (!isTestAppMode() && state.appMode !== "admin") return;
 
