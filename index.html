@@ -3407,6 +3407,42 @@ async function flushPendingSyncQueue() {
     await loadAppData(true);
   }
 }
+
+  /*********************************
+ * STATE HELPERS - IDENTITÉ
+ *********************************/
+
+// Sauvegarde le bénévole actif (UNIQUEMENT si on est vraiment en mode bénévole)
+function saveActiveBenevoleIdentity() {
+  if (!state.userId || state.userId === "__REFERENT__") return;
+
+  state.lastBenevoleUserId = state.userId;
+  state.lastBenevoleUserLabel = state.userLabel;
+
+  localStorage.setItem("planning_last_benevole_user_id", state.userId);
+  localStorage.setItem("planning_last_benevole_user_label", state.userLabel);
+}
+
+// Restaure le dernier bénévole connu
+function restoreLastBenevoleIdentity() {
+  const id =
+    state.lastBenevoleUserId ||
+    localStorage.getItem("planning_last_benevole_user_id") ||
+    "";
+
+  const label =
+    state.lastBenevoleUserLabel ||
+    localStorage.getItem("planning_last_benevole_user_label") ||
+    "";
+
+  if (!id) return;
+
+  state.userId = id;
+  state.userLabel = label;
+
+  localStorage.setItem("planning_user_id", id);
+  localStorage.setItem("planning_user_label", label);
+}
 /*********************************
  * 05 - OUTILS / HELPERS
  *********************************/
@@ -5189,6 +5225,7 @@ async function validateSelectedUser() {
 
   state.userId = state.selectedUserId;
   state.userLabel = state.selectedUserLabel;
+  saveActiveBenevoleIdentity();
 
   localStorage.setItem("planning_user_id", state.userId);
   localStorage.setItem("planning_user_label", state.userLabel);
@@ -5500,37 +5537,22 @@ function renderAdminMiniBand() {
 async function setAdminVisualMode(mode) {
   if (!isTestAppMode() && state.appMode !== "admin") return;
 
-  // Sauvegarde du dernier bénévole actif
-  if (state.userId && state.userId !== "__REFERENT__") {
-    localStorage.setItem("planning_user_id", state.userId);
-    localStorage.setItem("planning_user_label", state.userLabel || "");
-
-    localStorage.setItem("planning_last_benevole_user_id", state.userId);
-    localStorage.setItem("planning_last_benevole_user_label", state.userLabel || "");
+  // Sauvegarde avant de quitter la vue bénévole
+  if (state.testViewMode === "benevole") {
+    saveActiveBenevoleIdentity();
   }
 
-  // Switch mode
   state.testViewMode = mode === "referent" ? "referent" : "benevole";
   localStorage.setItem("planning_test_view_mode", state.testViewMode);
 
-  // Restauration identité bénévole
+  // Restauration quand on revient en bénévole
   if (state.testViewMode === "benevole") {
-    state.userId =
-      localStorage.getItem("planning_last_benevole_user_id") ||
-      localStorage.getItem("planning_user_id") ||
-      state.userId;
-
-    state.userLabel =
-      localStorage.getItem("planning_last_benevole_user_label") ||
-      localStorage.getItem("planning_user_label") ||
-      state.userLabel;
+    restoreLastBenevoleIdentity();
   }
 
-  // Reset UI états
   directState.isManual = false;
   referentUiState.openMenuId = "";
 
-  // 🔥 FIX IMPORTANT → MAJ immédiate navbar
   updateShellForView(state.currentView);
 
   await loadAppData(true);
