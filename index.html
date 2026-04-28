@@ -3760,17 +3760,25 @@ function setMainScrollTop(value) {
   if (main) main.scrollTop = value || 0;
 }
 
-function saveLastView(name) {
-  const allowed = ["home", "direct", "mes-creneaux", "planning", "contacts", "vehicules"];
-  if (allowed.includes(name)) {
-    localStorage.setItem("planning_last_view", name);
-  }
-}
-
+saveLastView(name)
 function getLastView() {
-  const allowed = ["home", "direct", "mes-creneaux", "planning", "contacts", "vehicules"];
-  const saved = localStorage.getItem("planning_last_view");
-  return allowed.includes(saved) ? saved : "home";
+  const view = localStorage.getItem("planning_last_view") || "home";
+
+  const allowedViews = [
+    "home",
+    "direct",
+    "mes-creneaux",
+    "planning",
+    "contacts",
+    "team",
+    "team-person",
+    "vehicules",
+    "infos",
+    "shift-detail",
+    "person-detail"
+  ];
+
+  return allowedViews.includes(view) ? view : "home";
 }
 
 function renderAvatar(person, large = false) {
@@ -7179,12 +7187,50 @@ function renderTeamPersonCard(p) {
 function openTeamPerson(personId) {
   personDetailState.personId = personId || "";
   personDetailState.sourceView = "team";
+
+  localStorage.setItem("planning_team_person_id", personDetailState.personId);
+  localStorage.setItem("planning_team_person_source", "team");
+
   showView("team-person");
 }
-
+  
 function loadTeamPerson() {
   const container = document.getElementById("teamPersonContent");
   if (!container) return;
+
+  if (!personDetailState.personId) {
+    personDetailState.personId = localStorage.getItem("planning_team_person_id") || "";
+    personDetailState.sourceView = localStorage.getItem("planning_team_person_source") || "team";
+  }
+
+  if (!personDetailState.personId) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="home-main-title">Fiche Team</div>
+        <div class="home-subline">Aucun bénévole sélectionné.</div>
+        <button class="btn" onclick="showView('team')">Retour Team</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="home-main-title">Fiche Team</div>
+      <div class="home-subline">Bénévole sélectionné : ${escapeHtml(personDetailState.personId)}</div>
+    </div>
+  `;
+}
+
+  function openTeamPerson(personId) {
+  personDetailState.personId = personId || "";
+  personDetailState.sourceView = "team";
+
+  localStorage.setItem("planning_team_person_id", personDetailState.personId);
+  localStorage.setItem("planning_team_person_source", "team");
+
+  showView("team-person");
+}
 
   container.innerHTML = `
     <div class="card">
