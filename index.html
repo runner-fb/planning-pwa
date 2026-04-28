@@ -5496,12 +5496,27 @@ function renderAdminMiniBand() {
       backdrop-filter:blur(6px);
       align-items:flex-start;
     ">
-      <div style="display:flex; gap:5px; align-items:center;">
-        ${iconBtn(adminActive, "showView('home')", "Administration", "🛠️")}
-        ${iconBtn(referentActive, "setAdminVisualMode('referent')", "Vue référent", "🦺")}
-        ${iconBtn(benevoleActive, "setAdminVisualMode('benevole')", "Vue bénévole", "👤")}
-        ${iconBtn(false, "clearCacheAndReload()", "Vider le cache", "🧹")}
-        ${iconBtn(false, "logout()", "Déconnexion", "ტ", true)}
+     <div style="
+  display:flex;
+  gap:8px;
+  align-items:center;
+">
+  <div style="display:flex; gap:5px; align-items:center;">
+    ${iconBtn(adminActive, "showView('home')", "Administration", "🛠️")}
+    ${iconBtn(referentActive, "setAdminVisualMode('referent')", "Vue référent", "🦺")}
+    ${iconBtn(benevoleActive, "setAdminVisualMode('benevole')", "Vue bénévole", "👤")}
+  </div>
+
+  <div style="
+    width:1px;
+    height:20px;
+    background:rgba(255,255,255,0.25);
+  "></div>
+
+  <div style="display:flex; gap:5px; align-items:center;">
+    ${iconBtn(false, "clearCacheAndReload()", "Vider le cache", "🧹")}
+    ${iconBtn(false, "logout()", "Déconnexion", "⏻")}
+  </div>
 </div>
 
       <div style="display:flex; gap:5px; align-items:center;">
