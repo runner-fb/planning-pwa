@@ -6712,7 +6712,6 @@ function renderPlanning() {
 
   if (!shifts.length) {
     container.innerHTML = `
-      ${renderUserHeader()}
       ${renderPlanningTabsBlock()}
 
       <div class="card planning-empty">
@@ -6724,15 +6723,14 @@ function renderPlanning() {
   }
 
   let html = `
-    ${renderUserHeader()}
     ${renderPlanningTabsBlock()}
 
     <div class="planning-day-header">
-  <div>
-    <div class="planning-day-subtitle">Planning du jour</div>
-    <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
-  </div>
-</div>
+      <div>
+        <div class="planning-day-subtitle">Planning du jour</div>
+        <div class="planning-day-title">${escapeHtml(planningState.selectedDay)}</div>
+      </div>
+    </div>
   `;
 
   shifts.forEach(shift => {
