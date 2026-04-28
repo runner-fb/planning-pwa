@@ -3115,8 +3115,19 @@ let internalNavLock = false;
  * 04 - CACHE HELPERS
  *********************************/
 function getCacheKey() {
-  if (!state.userId) return null;
-  return "planning_cache_" + state.userId;
+  const bundleUserId =
+    typeof getBundleUserIdForCurrentVisualMode === "function"
+      ? getBundleUserIdForCurrentVisualMode()
+      : state.userId;
+
+  if (!bundleUserId) return null;
+
+  return [
+    "planning_cache",
+    state.appMode || "unknown",
+    state.testViewMode || "default",
+    bundleUserId
+  ].join("_");
 }
 
 function saveCache(data) {
@@ -4451,9 +4462,30 @@ function applyAppData(data) {
 
   APP_DATA = data;
 
-  state.userId = data.user?.id || state.userId || "";
-  state.userLabel = data.user?.label || state.userLabel || "";
-  state.isRef = data.user?.isRef === true;
+  const incomingUserId = data.user?.id || "";
+  const incomingUserLabel = data.user?.label || "";
+
+  // IMPORTANT :
+  // En mode admin/test, quand on charge la vue référent,
+  // le backend peut renvoyer "__REFERENT__".
+  // On ne doit PAS écraser le bénévole sélectionné.
+  if (incomingUserId === "__REFERENT__") {
+    state.isRef = true;
+
+    if (state.appMode === "referent") {
+      state.userId = "__REFERENT__";
+      state.userLabel = incomingUserLabel || "Référent";
+    }
+  } else {
+    state.userId = incomingUserId || state.userId || "";
+    state.userLabel = incomingUserLabel || state.userLabel || "";
+    state.isRef = data.user?.isRef === true;
+
+    if (state.userId && state.userId !== "__REFERENT__") {
+      localStorage.setItem("planning_user_id", state.userId);
+      localStorage.setItem("planning_user_label", state.userLabel);
+    }
+  }
 
   planningState.allShifts = getPlanningShiftsFromAppData(data);
   planningState.byDay = buildPlanningByDay(planningState.allShifts);
@@ -5443,8 +5475,18 @@ function renderAdminMiniBand() {
 async function setAdminVisualMode(mode) {
   if (!isTestAppMode() && state.appMode !== "admin") return;
 
+  if (state.userId && state.userId !== "__REFERENT__") {
+    localStorage.setItem("planning_user_id", state.userId);
+    localStorage.setItem("planning_user_label", state.userLabel || "");
+  }
+
   state.testViewMode = mode === "referent" ? "referent" : "benevole";
   localStorage.setItem("planning_test_view_mode", state.testViewMode);
+
+  if (state.testViewMode === "benevole") {
+    state.userId = localStorage.getItem("planning_user_id") || state.userId;
+    state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel;
+  }
 
   directState.isManual = false;
   referentUiState.openMenuId = "";
@@ -5452,7 +5494,6 @@ async function setAdminVisualMode(mode) {
   await loadAppData(true);
   showView("home", { push: false });
 }
-
 function renderFullInfoBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
