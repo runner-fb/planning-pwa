@@ -4465,10 +4465,6 @@ function applyAppData(data) {
   const incomingUserId = data.user?.id || "";
   const incomingUserLabel = data.user?.label || "";
 
-  // IMPORTANT :
-  // En mode admin/test, quand on charge la vue référent,
-  // le backend peut renvoyer "__REFERENT__".
-  // On ne doit PAS écraser le bénévole sélectionné.
   if (incomingUserId === "__REFERENT__") {
     state.isRef = true;
 
@@ -4484,6 +4480,9 @@ function applyAppData(data) {
     if (state.userId && state.userId !== "__REFERENT__") {
       localStorage.setItem("planning_user_id", state.userId);
       localStorage.setItem("planning_user_label", state.userLabel);
+
+      localStorage.setItem("planning_last_benevole_user_id", state.userId);
+      localStorage.setItem("planning_last_benevole_user_label", state.userLabel);
     }
   }
 
@@ -5162,6 +5161,7 @@ async function validateSelectedUser() {
 
   if (!state.selectedUserId) {
     if (userError) userError.textContent = "Choisis un bénévole.";
+    unlockAction();
     return;
   }
 
@@ -5170,6 +5170,9 @@ async function validateSelectedUser() {
 
   localStorage.setItem("planning_user_id", state.userId);
   localStorage.setItem("planning_user_label", state.userLabel);
+
+  localStorage.setItem("planning_last_benevole_user_id", state.userId);
+  localStorage.setItem("planning_last_benevole_user_label", state.userLabel);
 
   contactsState.query = "";
   localStorage.removeItem("planning_contacts_query");
@@ -5478,14 +5481,24 @@ async function setAdminVisualMode(mode) {
   if (state.userId && state.userId !== "__REFERENT__") {
     localStorage.setItem("planning_user_id", state.userId);
     localStorage.setItem("planning_user_label", state.userLabel || "");
+
+    localStorage.setItem("planning_last_benevole_user_id", state.userId);
+    localStorage.setItem("planning_last_benevole_user_label", state.userLabel || "");
   }
 
   state.testViewMode = mode === "referent" ? "referent" : "benevole";
   localStorage.setItem("planning_test_view_mode", state.testViewMode);
 
   if (state.testViewMode === "benevole") {
-    state.userId = localStorage.getItem("planning_user_id") || state.userId;
-    state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel;
+    state.userId =
+      localStorage.getItem("planning_last_benevole_user_id") ||
+      localStorage.getItem("planning_user_id") ||
+      state.userId;
+
+    state.userLabel =
+      localStorage.getItem("planning_last_benevole_user_label") ||
+      localStorage.getItem("planning_user_label") ||
+      state.userLabel;
   }
 
   directState.isManual = false;
@@ -5494,6 +5507,7 @@ async function setAdminVisualMode(mode) {
   await loadAppData(true);
   showView("home", { push: false });
 }
+  
 function renderFullInfoBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
 
