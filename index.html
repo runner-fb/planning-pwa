@@ -4917,6 +4917,33 @@ async function login() {
 }
   window.login = login;
 
+function clearCacheAndReload() {
+  if (!confirm("Vider complètement le cache de cette appli ?")) return;
+
+  try {
+    const keysToDelete = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+
+      if (key && key.startsWith("planning_")) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach(key => localStorage.removeItem(key));
+
+    APP_DATA = null;
+    location.reload();
+
+  } catch (e) {
+    console.error("Erreur clearCacheAndReload", e);
+    alert("Erreur pendant le vidage du cache.");
+  }
+}
+
+window.clearCacheAndReload = clearCacheAndReload;
+  
 function logout() {
   stopAutoRefresh();
   stopUiMinuteRefresh();
@@ -5417,6 +5444,29 @@ function renderCompactConcertRow(concert, label, statusType) {
   `;
 }
 
+function renderAdminCacheButton() {
+  if (!isTestAppMode() && state.appMode !== "admin") return "";
+
+  return `
+    <button onclick="clearCacheAndReload()" style="
+      position:absolute;
+      top:12px;
+      left:12px;
+      z-index:80;
+      border:none;
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:12px;
+      font-weight:900;
+      background:#fff;
+      color:#18443D;
+      box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    ">
+      🧹 Cache
+    </button>
+  `;
+}
+  
 function renderHome() {
 
   if (isTestAppMode()) {
@@ -5555,8 +5605,9 @@ function renderHomeStandard(options = {}) {
   }
 
   el.innerHTML = `
-    <div class="home-hero compact-home-hero">
-      <div class="home-hero-content" style="padding:12px 12px 0;">
+<div class="home-hero compact-home-hero">
+  ${renderAdminCacheButton()}
+  <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Festival</div>
           <div class="home-hero-brand-main" style="font-size:1.55rem;">Beau<br>regard</div>
