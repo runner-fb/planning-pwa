@@ -5321,10 +5321,13 @@ function renderHome() {
 function renderAdminMiniBand() {
   if (!isTestAppMode() && state.appMode !== "admin") return "";
 
-  const adminActive = state.appMode === "admin";
+  const adminActive = state.appMode === "admin" && !state.testViewMode;
   const referentActive = state.testViewMode === "referent";
   const benevoleActive = state.testViewMode !== "referent";
   const forcedNow = localStorage.getItem("forced_now") || "";
+
+  const realActive = !forcedNow;
+  const simulatedActive = !!forcedNow;
 
   const realLabel = new Date().toLocaleTimeString("fr-FR", {
     hour: "2-digit",
@@ -5339,95 +5342,87 @@ function renderAdminMiniBand() {
       })
     : "simulée";
 
+  const iconBtn = (active, onclick, title, icon) => `
+    <button type="button" onclick="${onclick}" title="${title}" style="
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.50);
+      background:${active ? "rgba(243,211,154,0.95)" : "rgba(255,255,255,0.32)"};
+      color:#18443D;
+      font-size:13px;
+      padding:0;
+      cursor:pointer;
+      box-shadow:${active ? "0 0 0 2px rgba(243,211,154,0.25)" : "none"};
+    ">${icon}</button>
+  `;
+
   return `
     <div style="
-      display:flex;
+      display:inline-flex;
       flex-direction:column;
-      gap:6px;
-      margin-top:8px;
+      gap:5px;
+      margin-top:7px;
+      padding:6px;
+      border-radius:14px;
+      background:rgba(0,0,0,0.16);
+      border:1px solid rgba(255,255,255,0.18);
+      backdrop-filter:blur(6px);
       align-items:flex-start;
     ">
-      <div style="display:flex; gap:6px; align-items:center;">
-        <button type="button" title="Administration" onclick="showView('home')" style="
-          width:28px;height:28px;border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:${adminActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-          font-size:14px;padding:0;cursor:pointer;
-        ">🛠️</button>
-
-        <button type="button" onclick="setAdminVisualMode('referent')" title="Vue référent" style="
-          width:28px;height:28px;border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:${referentActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-          font-size:14px;padding:0;cursor:pointer;
-        ">🦺</button>
-
-        <button type="button" onclick="setAdminVisualMode('benevole')" title="Vue bénévole" style="
-          width:28px;height:28px;border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:${benevoleActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)"};
-          font-size:14px;padding:0;cursor:pointer;
-        ">👤</button>
-
-        <button type="button" onclick="clearCacheAndReload()" title="Vider le cache" style="
-          width:28px;height:28px;border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:rgba(255,255,255,0.75);
-          font-size:14px;padding:0;cursor:pointer;
-        ">🧹</button>
-
-        <button type="button" onclick="logout()" title="Déconnexion" style="
-          width:28px;height:28px;border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:rgba(0,0,0,0.45);
-          color:white;font-size:14px;padding:0;cursor:pointer;
-        ">⎋</button>
+      <div style="display:flex; gap:5px; align-items:center;">
+        ${iconBtn(adminActive, "showView('home')", "Administration", "🛠️")}
+        ${iconBtn(referentActive, "setAdminVisualMode('referent')", "Vue référent", "🦺")}
+        ${iconBtn(benevoleActive, "setAdminVisualMode('benevole')", "Vue bénévole", "👤")}
+        ${iconBtn(false, "clearCacheAndReload()", "Vider le cache", "🧹")}
+        ${iconBtn(false, "logout()", "Déconnexion", "⎋")}
       </div>
 
-      <div style="display:flex; gap:6px; align-items:center;">
-        <span title="Heure réelle" style="
-          height:26px;
-          display:inline-flex;
-          align-items:center;
-          gap:4px;
+      <div style="display:flex; gap:5px; align-items:center;">
+        <button type="button" onclick="clearForcedNow()" title="Heure réelle" style="
+          height:24px;
+          min-width:54px;
           border-radius:999px;
-          padding:0 8px;
-          background:rgba(255,255,255,0.35);
-          color:white;
-          font-size:0.72rem;
+          border:1px solid rgba(255,255,255,0.50);
+          background:rgba(255,255,255,0.30);
+          color:${realActive ? "#F3D39A" : "rgba(255,255,255,0.82)"};
+          font-size:0.68rem;
           font-weight:1000;
-        ">🕒 ${realLabel}</span>
+          padding:0 7px;
+          cursor:pointer;
+        ">🕒 ${realLabel}</button>
 
         <button type="button" onclick="toggleSimulatedTime()" title="Basculer heure simulée" style="
-          width:42px;
-          height:24px;
+          width:38px;
+          height:22px;
           border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:${forcedNow ? "rgba(184,107,36,0.95)" : "rgba(255,255,255,0.35)"};
+          border:1px solid rgba(255,255,255,0.50);
+          background:rgba(255,255,255,0.28);
           padding:2px;
           cursor:pointer;
           position:relative;
         ">
           <span style="
             display:block;
-            width:18px;
-            height:18px;
+            width:16px;
+            height:16px;
             border-radius:999px;
-            background:white;
-            transform:translateX(${forcedNow ? "18px" : "0"});
+            background:#FFFFFF;
+            transform:translateX(${forcedNow ? "16px" : "0"});
+            transition:transform 0.15s ease;
           "></span>
         </button>
 
         <button type="button" onclick="setTestNowPrompt()" title="Heure simulée" style="
-          min-width:64px;
-          height:26px;
+          height:24px;
+          min-width:62px;
           border-radius:999px;
-          border:1px solid rgba(255,255,255,0.55);
-          background:${forcedNow ? "rgba(184,107,36,0.95)" : "rgba(255,255,255,0.25)"};
-          color:white;
-          font-size:0.72rem;
+          border:1px solid rgba(255,255,255,0.50);
+          background:rgba(255,255,255,0.30);
+          color:${simulatedActive ? "#F3D39A" : "rgba(255,255,255,0.82)"};
+          font-size:0.68rem;
           font-weight:1000;
-          padding:0 8px;
+          padding:0 7px;
           cursor:pointer;
         ">🧪 ${simulatedLabel}</button>
       </div>
