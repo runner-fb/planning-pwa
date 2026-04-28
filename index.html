@@ -6109,22 +6109,21 @@ function renderHomeReferent() {
 
   if (!APP_DATA) {
     el.innerHTML = renderSkeletonList(3);
-
     return;
   }
 
   const currentFestivalEntry = getCurrentFestivalEntry();
-  const currentShift = currentFestivalEntry && currentFestivalEntry.shift
-    ? currentFestivalEntry.shift
-    : null;
+  const currentShift = currentFestivalEntry?.shift || null;
 
   const nextFestivalEntry = getNextFestivalEntry();
-  const nextShift = nextFestivalEntry && nextFestivalEntry.shift
-    ? nextFestivalEntry.shift
-    : null;
+  const nextShift = nextFestivalEntry?.shift || null;
 
   const currentPeopleHtml = currentFestivalEntry
     ? renderReferentPeopleList(currentFestivalEntry, "current")
+    : "";
+
+  const nextPeopleHtml = nextFestivalEntry
+    ? renderReferentPeopleList(nextFestivalEntry, "next-team")
     : "";
 
   const replacementHtml = currentFestivalEntry && nextFestivalEntry
@@ -6138,27 +6137,7 @@ function renderHomeReferent() {
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
           <div class="home-hero-brand-main" style="font-size:1.55rem;">Runner<br>Navette</div>
           <div class="home-hero-brand-date" style="margin-top:6px; font-size:0.78rem;">Beauregard 2026</div>
-${renderAdminMiniBand()}
-${!isTestAppMode() && state.appMode === "referent" ? `
-  <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
-    <button
-      type="button"
-      onclick="logout()"
-      title="Déconnexion"
-      style="
-        width:28px;
-        height:28px;
-        border-radius:999px;
-        border:1px solid rgba(255,255,255,0.55);
-        background:rgba(0,0,0,0.45);
-        color:white;
-        font-size:14px;
-        padding:0;
-        cursor:pointer;
-      "
-    >⎋</button>
-  </div>
-` : ""}
+          ${renderAdminMiniBand()}
         </div>
       </div>
     </div>
@@ -6190,7 +6169,12 @@ ${!isTestAppMode() && state.appMode === "referent" ? `
                 ${escapeHtml(nextShift.jour)} • ${escapeHtml(nextShift.debut)} – ${escapeHtml(nextShift.fin)}
               </div>
               <div class="home-subline">${escapeHtml(nextShift.libelle || "")}</div>
-              ${replacementHtml}
+
+              ${
+                currentShift
+                  ? replacementHtml   // 👉 cas normal
+                  : nextPeopleHtml    // 👉 cas sans créneau en cours
+              }
             `
             : `
               <div class="home-subline">Aucun créneau suivant</div>
