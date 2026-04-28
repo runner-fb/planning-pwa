@@ -4415,7 +4415,9 @@ async function loadAppData(forceRefresh = false) {
 
   try {
     const bundleUserId = getBundleUserIdForCurrentVisualMode();
-
+    if (!bundleUserId) {
+  throw new Error("Aucun utilisateur actif pour charger les données.");
+}
     const data = await apiGetBundle_(state.password, bundleUserId);
 
     if (!isValidAppDataShape(data)) {
@@ -4461,7 +4463,9 @@ function applyAppData(data) {
   }
 
   APP_DATA = data;
-
+if (!data.user || !data.user.id) {
+  console.warn("APP_DATA sans utilisateur valide", data.user);
+}
   const incomingUserId = data.user?.id || "";
   const incomingUserLabel = data.user?.label || "";
 
@@ -5666,6 +5670,20 @@ function renderHomeStandard(options = {}) {
     el.innerHTML = renderSkeletonList(3);
     return;
   }
+  if (!state.userId || state.userId === "__REFERENT__") {
+  el.innerHTML = `
+    <div class="card">
+      <div class="empty-state-title">Utilisateur non sélectionné</div>
+      <div class="empty-state-subtitle">
+        Reviens à la sélection du bénévole.
+      </div>
+      <button class="primary-btn" onclick="changeUser()" style="margin-top:12px;">
+        Choisir un bénévole
+      </button>
+    </div>
+  `;
+  return;
+}
 
   const phase = getFestivalPhase(state.userId);
   const currentPersonalShift = getCurrentShiftForPerson(state.userId);
