@@ -5500,12 +5500,7 @@ function renderAdminMiniBand() {
         ${iconBtn(referentActive, "setAdminVisualMode('referent')", "Vue référent", "🦺")}
         ${iconBtn(benevoleActive, "setAdminVisualMode('benevole')", "Vue bénévole", "👤")}
         ${iconBtn(false, "clearCacheAndReload()", "Vider le cache", "🧹")}
-${iconBtn(false, "logout()", "Déconnexion", `
-<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-  <path d="M12 3v9" stroke="#e54848" stroke-width="2" stroke-linecap="round"/>
-  <path d="M6.5 6.5a7 7 0 1 0 11 0" stroke="#e54848" stroke-width="2" stroke-linecap="round"/>
-</svg>
-`, true)}
+        ${iconBtn(false, "logout()", "Déconnexion", "🚪", true)}
 </div>
 
       <div style="display:flex; gap:5px; align-items:center;">
