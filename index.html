@@ -7134,12 +7134,8 @@ function renderTeamListOnly() {
 
   const q = normalizeText(contactsState.query || "");
 
-  const people = (APP_DATA?.contacts?.autres || [])
-    .filter(p =>
-      (p.prenom && p.prenom.trim()) ||
-      (p.nom && p.nom.trim()) ||
-      (p.label && p.label.trim())
-    )
+  const people = getAllPeopleForContacts()
+    .filter(p => !p.isRef)
     .filter(p => {
       if (!q) return true;
       return normalizeText(
@@ -7154,8 +7150,8 @@ function renderTeamListOnly() {
 
   if (!people.length) {
     listEl.innerHTML = `
-      <div class="subtle-text" style="padding:10px 0;">
-        Aucun bénévole trouvé.
+      <div class="empty-state-card" style="padding:18px 8px 8px;">
+        <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
       </div>
     `;
     return;
