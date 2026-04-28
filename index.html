@@ -3760,8 +3760,26 @@ function setMainScrollTop(value) {
   if (main) main.scrollTop = value || 0;
 }
 
-saveLastView(name)
-function getLastView() {
+function saveLastView(name) {
+  const allowedViews = [
+    "home",
+    "direct",
+    "mes-creneaux",
+    "planning",
+    "contacts",
+    "team",
+    "team-person",
+    "vehicules",
+    "infos",
+    "shift-detail",
+    "person-detail"
+  ];
+
+  if (!allowedViews.includes(name)) return;
+
+  localStorage.setItem("planning_last_view", name);
+}
+  function getLastView() {
   const view = localStorage.getItem("planning_last_view") || "home";
 
   const allowedViews = [
