@@ -3797,8 +3797,8 @@ function setMainScrollTop(value) {
   if (main) main.scrollTop = value || 0;
 }
 
-function saveLastView(name) {
-  const allowedViews = [
+function getAllowedViewsForRestore() {
+  return [
     "home",
     "direct",
     "mes-creneaux",
@@ -3811,29 +3811,52 @@ function saveLastView(name) {
     "shift-detail",
     "person-detail"
   ];
+}
 
+function saveLastView(name) {
+  const allowedViews = getAllowedViewsForRestore();
   if (!allowedViews.includes(name)) return;
 
+  const viewState = getViewState(name);
+
   localStorage.setItem("planning_last_view", name);
+  localStorage.setItem("planning_last_view_state", JSON.stringify(viewState));
 }
-  function getLastView() {
+
+function getLastView() {
+  const allowedViews = getAllowedViewsForRestore();
   const view = localStorage.getItem("planning_last_view") || "home";
 
-  const allowedViews = [
-    "home",
-    "direct",
-    "mes-creneaux",
-    "planning",
-    "contacts",
-    "team",
-    "team-person",
-    "vehicules",
-    "infos",
-    "shift-detail",
-    "person-detail"
-  ];
-
   return allowedViews.includes(view) ? view : "home";
+}
+
+function getLastViewState() {
+  try {
+    const raw = localStorage.getItem("planning_last_view_state");
+    if (!raw) return null;
+
+    const st = JSON.parse(raw);
+    if (!st || !st.currentView) return null;
+
+    const allowedViews = getAllowedViewsForRestore();
+    if (!allowedViews.includes(st.currentView)) return null;
+
+    if (st.currentView === "shift-detail" && !st.shiftId) {
+      st.currentView = "planning";
+    }
+
+    if (
+      (st.currentView === "person-detail" || st.currentView === "team-person") &&
+      !st.personId
+    ) {
+      st.currentView = "team";
+    }
+
+    return st;
+
+  } catch (e) {
+    return null;
+  }
 }
 
 function renderAvatar(person, large = false) {
@@ -8117,10 +8140,16 @@ async function boot() {
         APP_DATA = cache;
         applyAppData(cache);
 
-        const targetView = getLastView();
+        const savedState = getLastViewState();
+const targetView = savedState?.currentView || getLastView();
 
-        showView(targetView, { push: false });
-        replaceHistoryRoot(targetView);
+showView(targetView, {
+  push: false,
+  restore: savedState,
+  preserveScroll: true
+});
+
+replaceHistoryRoot(targetView);
 
         startAutoRefresh();
         startUiMinuteRefresh();
@@ -8178,10 +8207,17 @@ async function boot() {
       startAutoRefresh();
       startUiMinuteRefresh();
 
-      const targetView = getLastView();
+      const savedState = getLastViewState();
+const targetView = savedState?.currentView || getLastView();
 
-      showView(targetView, { push: false });
-      replaceHistoryRoot(targetView);
+showView(targetView, {
+  push: false,
+  restore: savedState,
+  preserveScroll: true
+});
+
+replaceHistoryRoot(targetView);
+      
     } else {
       await loadUsers();
     }
@@ -8226,10 +8262,16 @@ function bootFromFallbackCacheOrLogin() {
       APP_DATA = fallbackCache;
       applyAppData(fallbackCache);
 
-      const targetView = getLastView();
+     const savedState = getLastViewState();
+const targetView = savedState?.currentView || getLastView();
 
-      showView(targetView, { push: false });
-      replaceHistoryRoot(targetView);
+showView(targetView, {
+  push: false,
+  restore: savedState,
+  preserveScroll: true
+});
+
+replaceHistoryRoot(targetView);
 
       startAutoRefresh();
       startUiMinuteRefresh();
