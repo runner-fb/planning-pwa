@@ -6330,12 +6330,36 @@ function renderMessagesBox() {
 
   return `
     <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Infos</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div class="home-main-title">Messages</div>
+
+        ${isReferentMode ? `
+          <button
+            type="button"
+            onclick="openMessagesSettings()"
+            title="Paramétrer les messages"
+            style="
+              width:34px;
+              height:34px;
+              border-radius:999px;
+              border:1px solid rgba(222,212,194,0.9);
+              background:#FFFDF8;
+              font-size:1rem;
+              cursor:pointer;
+            "
+          >⚙️</button>
+        ` : ""}
+      </div>
 
       ${
         messages.length
           ? messages.slice(0, 3).map(m => `
-            <div style="padding:6px 0;border-top:1px solid rgba(222,212,194,0.5);font-weight:${m.priorite === "important" ? "900" : "850"};color:${m.priorite === "important" ? "#9b1c1c" : "inherit"};">
+            <div style="
+              padding:6px 0;
+              border-top:1px solid rgba(222,212,194,0.5);
+              font-weight:${m.priorite === "important" ? "900" : "850"};
+              color:${m.priorite === "important" ? "#9b1c1c" : "inherit"};
+            ">
               ${m.priorite === "important" ? "⚠️ " : "ℹ️ "}
               ${escapeHtml(m.message || "")}
             </div>
@@ -6344,6 +6368,264 @@ function renderMessagesBox() {
       }
     </div>
   `;
+}
+
+  let messagesSettingsState = {
+  messages: [],
+  loading: false
+};
+
+async function apiListMessages_() {
+  const res = await apiGet_({
+    api: "listMessages",
+    pwd: state.password
+  });
+
+  if (!res || !res.ok) {
+    throw new Error((res && res.error) || "LIST_MESSAGES_ERROR");
+  }
+
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+async function apiSaveMessage_(message, priorite) {
+  const res = await apiGet_({
+    api: "saveMessage",
+    pwd: state.password,
+    message,
+    priorite
+  });
+
+  if (!res || !res.ok) {
+    throw new Error((res && res.error) || "SAVE_MESSAGE_ERROR");
+  }
+
+  return res;
+}
+
+async function apiToggleMessage_(id, actif) {
+  const res = await apiGet_({
+    api: "toggleMessage",
+    pwd: state.password,
+    id,
+    actif: actif ? "1" : "0"
+  });
+
+  if (!res || !res.ok) {
+    throw new Error((res && res.error) || "TOGGLE_MESSAGE_ERROR");
+  }
+
+  return res;
+}
+
+async function apiDeleteMessage_(id) {
+  const res = await apiGet_({
+    api: "deleteMessage",
+    pwd: state.password,
+    id
+  });
+
+  if (!res || !res.ok) {
+    throw new Error((res && res.error) || "DELETE_MESSAGE_ERROR");
+  }
+
+  return res;
+}
+
+async function openMessagesSettings() {
+  if (!isReferentVisualMode()) return;
+
+  ensureMessagesSettingsModal_();
+  document.getElementById("messagesSettingsModal")?.classList.remove("hidden");
+
+  await refreshMessagesSettings_();
+}
+
+function closeMessagesSettings() {
+  document.getElementById("messagesSettingsModal")?.classList.add("hidden");
+}
+
+function ensureMessagesSettingsModal_() {
+  if (document.getElementById("messagesSettingsModal")) return;
+
+  const div = document.createElement("div");
+  div.id = "messagesSettingsModal";
+  div.className = "print-modal-backdrop hidden";
+  div.innerHTML = `
+    <div class="print-modal" style="max-height:88vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div>
+          <div class="print-modal-title">Paramétrage des messages</div>
+          <div class="print-modal-subtitle">Messages visibles sur la vue référent.</div>
+        </div>
+
+        <button
+          type="button"
+          onclick="closeMessagesSettings()"
+          style="
+            width:34px;
+            height:34px;
+            border-radius:999px;
+            border:1px solid var(--line);
+            background:white;
+            font-weight:1000;
+            cursor:pointer;
+          "
+        >✕</button>
+      </div>
+
+      <div id="messagesSettingsList"></div>
+
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px;">
+        <div style="font-weight:1000;margin-bottom:8px;">Ajouter un message</div>
+
+        <textarea
+          id="newMessageText"
+          class="input"
+          rows="3"
+          placeholder="Message à afficher..."
+          style="resize:vertical;"
+        ></textarea>
+
+        <select
+          id="newMessagePriority"
+          class="input"
+          style="margin-top:8px;"
+        >
+          <option value="standard">Standard</option>
+          <option value="important">Important</option>
+        </select>
+
+        <button
+          type="button"
+          class="btn-dark"
+          style="margin-top:10px;"
+          onclick="submitNewMessage()"
+        >
+          Ajouter le message
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(div);
+}
+
+async function refreshMessagesSettings_() {
+  const list = document.getElementById("messagesSettingsList");
+  if (!list) return;
+
+  list.innerHTML = `<div class="placeholder-text">Chargement des messages...</div>`;
+
+  try {
+    messagesSettingsState.messages = await apiListMessages_();
+    renderMessagesSettingsList_();
+  } catch (err) {
+    list.innerHTML = `<div class="error">Impossible de charger les messages.</div>`;
+  }
+}
+
+function renderMessagesSettingsList_() {
+  const list = document.getElementById("messagesSettingsList");
+  if (!list) return;
+
+  const messages = messagesSettingsState.messages || [];
+
+  if (!messages.length) {
+    list.innerHTML = `<div class="placeholder-text">Aucun message enregistré.</div>`;
+    return;
+  }
+
+  list.innerHTML = messages.map(m => `
+    <div style="
+      padding:10px 0;
+      border-top:1px solid rgba(222,212,194,0.65);
+      opacity:${m.actif ? "1" : "0.5"};
+    ">
+      <div style="
+        font-weight:1000;
+        color:${m.priorite === "important" ? "#9b1c1c" : "#18443D"};
+        margin-bottom:6px;
+      ">
+        ${m.priorite === "important" ? "⚠️ Important" : "ℹ️ Standard"}
+      </div>
+
+      <div style="font-weight:850;line-height:1.25;margin-bottom:8px;">
+        ${escapeHtml(m.message || "")}
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button
+          type="button"
+          class="btn-light"
+          style="margin-top:0;padding:9px;font-size:0.85rem;"
+          onclick="toggleMessageSetting('${escapeHtml(m.id)}', ${m.actif ? "false" : "true"})"
+        >
+          ${m.actif ? "Désactiver" : "Réactiver"}
+        </button>
+
+        <button
+          type="button"
+          class="btn-light"
+          style="margin-top:0;padding:9px;font-size:0.85rem;color:#9b1c1c;"
+          onclick="deleteMessageSetting('${escapeHtml(m.id)}')"
+        >
+          Supprimer
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function submitNewMessage() {
+  const textarea = document.getElementById("newMessageText");
+  const select = document.getElementById("newMessagePriority");
+
+  const message = String(textarea?.value || "").trim();
+  const priorite = String(select?.value || "standard").trim();
+
+  if (!message) {
+    alert("Message vide. Même le néant mérite au moins trois mots.");
+    return;
+  }
+
+  try {
+    await apiSaveMessage_(message, priorite);
+
+    if (textarea) textarea.value = "";
+    if (select) select.value = "standard";
+
+    await refreshMessagesSettings_();
+    await loadAppData(true);
+    renderHomeReferent();
+  } catch (err) {
+    alert("Impossible d'ajouter le message.");
+  }
+}
+
+async function toggleMessageSetting(id, actif) {
+  try {
+    await apiToggleMessage_(id, actif);
+    await refreshMessagesSettings_();
+    await loadAppData(true);
+    renderHomeReferent();
+  } catch (err) {
+    alert("Impossible de modifier ce message.");
+  }
+}
+
+async function deleteMessageSetting(id) {
+  const ok = confirm("Supprimer définitivement ce message ?");
+  if (!ok) return;
+
+  try {
+    await apiDeleteMessage_(id);
+    await refreshMessagesSettings_();
+    await loadAppData(true);
+    renderHomeReferent();
+  } catch (err) {
+    alert("Impossible de supprimer ce message.");
+  }
 }
   
 function renderHomeReferent() {
