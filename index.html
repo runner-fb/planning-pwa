@@ -7643,34 +7643,37 @@ function loadTeamPerson() {
   }
 
   const rawStatus = String(
-    person.statutPlanning || person.statut_planning || person.statusPlanning || "actif"
-  ).toLowerCase();
+  person.statutPlanning || person.statut_planning || person.statusPlanning || "ACTIF"
+)
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "");
 
-  const planningStatus =
-    rawStatus === "temporaire" ? "temporaire" :
-    rawStatus === "demission" || rawStatus === "démission" ? "demission" :
-    "actif";
+const planningStatus =
+  rawStatus === "temporaire" ? "TEMPORAIRE" :
+  rawStatus === "demission" ? "DEMISSION" :
+  "ACTIF";
 
   const statusSelectHtml = isReferentVisualMode()
     ? `
       <select
-        onchange="setBenevolePlanningStatus('${escapeHtml(person.id)}', this.value)"
-        style="
-          margin-top:6px;
-          width:100%;
-          max-width:220px;
-          border-radius:999px;
-          border:1px solid rgba(15,90,79,0.25);
-          background:#FFFDF8;
-          padding:8px 12px;
-          font-weight:900;
-          color:#18443D;
-        "
-      >
-        <option value="actif" ${planningStatus === "actif" ? "selected" : ""}>Actif</option>
-        <option value="temporaire" ${planningStatus === "temporaire" ? "selected" : ""}>Absent temporaire</option>
-        <option value="demission" ${planningStatus === "demission" ? "selected" : ""}>Démission</option>
-      </select>
+  onchange="setBenevolePlanningStatus('${escapeHtml(person.id)}', this.value)"
+  style="
+    margin-top:6px;
+    width:100%;
+    max-width:220px;
+    border-radius:999px;
+    border:1px solid rgba(15,90,79,0.25);
+    background:#FFFDF8;
+    padding:8px 12px;
+    font-weight:900;
+    color:#18443D;
+  "
+>
+  <option value="ACTIF" ${planningStatus === "ACTIF" ? "selected" : ""}>Actif</option>
+  <option value="TEMPORAIRE" ${planningStatus === "TEMPORAIRE" ? "selected" : ""}>Absent temporaire</option>
+  <option value="DEMISSION" ${planningStatus === "DEMISSION" ? "selected" : ""}>Démission</option>
+</select>
     `
     : "";
 
@@ -7707,9 +7710,9 @@ function loadTeamPerson() {
 
 async function setBenevolePlanningStatus(personId, status) {
   const cleanStatus =
-    status === "temporaire" ? "temporaire" :
-    status === "demission" ? "démission" :
-    "actif";
+    status === "TEMPORAIRE" ? "TEMPORAIRE" :
+    status === "DEMISSION" ? "DEMISSION" :
+    "ACTIF";
 
   function updatePersonInList(list) {
     if (!Array.isArray(list)) return;
