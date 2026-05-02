@@ -3388,11 +3388,29 @@ function startAutoRefresh() {
 
   autoRefreshTimer = setInterval(async () => {
     try {
+      // Sécurité : pas de refresh pendant une action utilisateur
+      if (actionLock) return;
+
+      // Sécurité : pas de refresh si l'utilisateur n'est pas vraiment connecté
+      if (!state.authOk) return;
+      if (!state.password) return;
+
+      if (!state.userId && state.appMode !== "referent") return;
+
+      if (["login", "select-user"].includes(state.currentView)) return;
+
+      const scrollBefore = getMainScrollTop();
+
       if (typeof flushPendingSyncQueue === "function") {
         await flushPendingSyncQueue();
       }
 
       await loadAppData(true);
+
+      requestAnimationFrame(() => {
+        setMainScrollTop(scrollBefore);
+      });
+
     } catch (e) {
       console.warn("Refresh automatique échoué", e);
     }
@@ -3539,7 +3557,63 @@ function showGlobalLoader() {
 function hideGlobalLoader() {
   document.getElementById("syncOverlay")?.classList.add("hidden");
 }
+async function refreshDataWithoutChangingPage(forceRefresh = true) {
+  const currentView = state.currentView;
+  const scrollBefore = getMainScrollTop();
 
+  directState.isManual = false;
+  mesCreneauxState.autoScrolled = false;
+
+  if (state.password && (state.userId || state.appMode === "referent")) {
+    await loadAppData(forceRefresh);
+  } else {
+    refreshCurrentViewOnly();
+  }
+
+  updateShellForView(currentView);
+
+  requestAnimationFrame(() => {
+    setMainScrollTop(scrollBefore);
+    syncCurrentHistoryState();
+  });
+}
+
+function getSafeViewAfterModeChange(currentView, targetMode) {
+  const commonViews = ["home", "planning"];
+
+  const referentViews = [
+    "home",
+    "planning",
+    "vehicules",
+    "team",
+    "infos",
+    "team-person"
+  ];
+
+  const benevoleViews = [
+    "home",
+    "mes-creneaux",
+    "planning",
+    "contacts",
+    "person-detail",
+    "shift-detail"
+  ];
+
+  if (commonViews.includes(currentView)) {
+    return currentView;
+  }
+
+  if (targetMode === "referent" && referentViews.includes(currentView)) {
+    return currentView;
+  }
+
+  if (targetMode === "benevole" && benevoleViews.includes(currentView)) {
+    return currentView;
+  }
+
+  return "home";
+}
+  
  function isTestAppMode() {
   return state.appMode === "admin" || state.appMode === "test";
 }
@@ -5233,6 +5307,8 @@ function clearCacheAndReload() {
 
     keysToDelete.forEach(key => localStorage.removeItem(key));
 
+    localStorage.removeItem("forced_now");
+    
     APP_DATA = null;
     location.reload();
 
@@ -5249,6 +5325,7 @@ function logout() {
   stopAutoRefresh();
   stopUiMinuteRefresh();
   clearTimeout(syncHideTimer);
+  localStorage.removeItem("forced_now")
 
   // 2. Vider TOUT le cache de l'app (localStorage)
   Object.keys(localStorage).forEach(key => {
@@ -5739,28 +5816,45 @@ function renderAdminMiniBand() {
 }
 async function setAdminVisualMode(mode) {
   if (!isTestAppMode() && state.appMode !== "admin") return;
+  if (!lockAction()) return;
 
-  // Sauvegarde avant de quitter la vue bénévole
-  if (state.testViewMode === "benevole") {
-    saveActiveBenevoleIdentity();
+  try {
+    // Sauvegarde avant de quitter la vue bénévole
+    if (state.testViewMode === "benevole") {
+      saveActiveBenevoleIdentity();
+    }
+
+    state.testViewMode = mode === "referent" ? "referent" : "benevole";
+    localStorage.setItem("planning_test_view_mode", state.testViewMode);
+
+    // Restauration quand on revient en bénévole
+    if (state.testViewMode === "benevole") {
+      restoreLastBenevoleIdentity();
+    }
+
+    directState.isManual = false;
+    referentUiState.openMenuId = "";
+    mesCreneauxState.autoScrolled = false;
+
+    const targetView = getSafeViewAfterModeChange(
+      state.currentView,
+      state.testViewMode
+    );
+
+    await loadAppData(true);
+
+    showView(targetView, {
+      push: false,
+      preserveScroll: true
+    });
+
+    syncCurrentHistoryState();
+
+  } finally {
+    unlockAction();
   }
-
-  state.testViewMode = mode === "referent" ? "referent" : "benevole";
-  localStorage.setItem("planning_test_view_mode", state.testViewMode);
-
-  // Restauration quand on revient en bénévole
-  if (state.testViewMode === "benevole") {
-    restoreLastBenevoleIdentity();
-  }
-
-  directState.isManual = false;
-  referentUiState.openMenuId = "";
-
-  updateShellForView(state.currentView);
-
-  await loadAppData(true);
-  showView("home", { push: false });
 }
+  
   
 function renderFullInfoBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
@@ -8656,14 +8750,23 @@ replaceHistoryRoot(targetView);
       return;
     }
 
-    const isRef = await apiCheckRefPassword_(state.password).catch(() => false);
-    const ok = isRef || await apiCheckPassword_(state.password).catch(() => false);
+    let isRef = false;
+let ok = false;
 
-    if (!ok) {
-      clearAuthState();
-      goToLogin();
-      return;
-    }
+try {
+  isRef = await apiCheckRefPassword_(state.password);
+  ok = isRef || await apiCheckPassword_(state.password);
+} catch (e) {
+  console.warn("Contrôle mot de passe impossible au boot", e);
+  bootFromFallbackCacheOrLogin();
+  return;
+}
+
+if (!ok) {
+  clearAuthState();
+  goToLogin();
+  return;
+}
 
     state.authOk = true;
     state.isRefMode = isRef;
@@ -8848,21 +8951,35 @@ window.addEventListener("online", async function () {
 /*********************************
  * 31 - TEST MODE
  *********************************/
-function setTestNowPrompt() {
+async function setTestNowPrompt() {
   const value = prompt("Entrer une date au format JJ/MM HH:MM", "02/07 17:01");
   if (!value) return;
 
   localStorage.setItem("forced_now", value);
-  location.reload();
+
+  if (!lockAction()) return;
+
+  try {
+    await refreshDataWithoutChangingPage(true);
+  } finally {
+    unlockAction();
+  }
 }
 
 function setSimulatedNow() {
   setTestNowPrompt();
 }
 
-function clearForcedNow() {
+async function clearForcedNow() {
   localStorage.removeItem("forced_now");
-  location.reload();
+
+  if (!lockAction()) return;
+
+  try {
+    await refreshDataWithoutChangingPage(true);
+  } finally {
+    unlockAction();
+  }
 }
 
 /*********************************
