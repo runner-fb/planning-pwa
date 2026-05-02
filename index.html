@@ -5234,18 +5234,22 @@ function clearCacheAndReload() {
 window.clearCacheAndReload = clearCacheAndReload;
   
 function logout() {
+  // 1. Stop tous les mécanismes en cours
   stopAutoRefresh();
   stopUiMinuteRefresh();
   clearTimeout(syncHideTimer);
+
+  // 2. Vider TOUT le cache de l'app (localStorage)
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith("planning_")) {
+      localStorage.removeItem(key);
+    }
+  });
+
+  // 3. Vider le cache applicatif interne
   clearCache();
 
-  localStorage.removeItem("planning_auth_ok");
-  localStorage.removeItem("planning_app_mode");
-  localStorage.removeItem("planning_user_id");
-  localStorage.removeItem("planning_user_label");
-  localStorage.removeItem("planning_contacts_query");
-  localStorage.removeItem("planning_password");
-
+  // 4. Reset du state global
   state.password = "";
   state.authOk = false;
   state.appMode = "";
@@ -5256,13 +5260,16 @@ function logout() {
   state.selectedUserLabel = "";
   state.previousView = "home";
 
+  // 5. Reset des états secondaires
   detailState.shiftId = "";
   personDetailState.personId = "";
   personDetailState.sourceView = "planning";
-
-  APP_DATA = null;
   contactsState.query = "";
 
+  // 6. Reset des données chargées
+  APP_DATA = null;
+
+  // 7. Reset UI
   showSyncStatus(null);
   showView("login", { push: false });
   replaceHistoryRoot("login");
@@ -6670,6 +6677,29 @@ function renderHomeReferent() {
 
   el.innerHTML = `
     <div class="home-hero compact-home-hero">
+
+      <button
+        type="button"
+        onclick="logout()"
+        title="Déconnexion"
+        style="
+          position:absolute;
+          top:12px;
+          right:12px;
+          z-index:100;
+          border:none;
+          border-radius:999px;
+          background:rgba(255,255,255,0.92);
+          color:#18443D;
+          font-weight:1000;
+          padding:8px 12px;
+          box-shadow:0 6px 16px rgba(0,0,0,0.25);
+          cursor:pointer;
+        "
+      >
+        Déconnexion
+      </button>
+
       <div class="home-hero-content" style="padding:12px 12px 0;">
         <div class="home-hero-brand" style="max-width:145px;">
           <div class="home-hero-brand-top" style="font-size:0.72rem;">Mode référent</div>
