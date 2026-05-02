@@ -7642,6 +7642,47 @@ function loadTeamPerson() {
     personDetailState.teamOpenPanel = "current";
   }
 
+  const planningStatus = String(
+    person.statutPlanning || person.statut_planning || person.statusPlanning || "actif"
+  ).toLowerCase();
+
+  const isTemporaire = planningStatus === "temporaire";
+  const isDemission =
+    planningStatus === "demission" ||
+    planningStatus === "démission" ||
+    planningStatus === "demissionnaire" ||
+    planningStatus === "démissionnaire";
+
+  const statusAdminBlock = isReferentVisualMode()
+    ? `
+      <div class="card" style="margin-bottom:8px;">
+        <div class="home-main-title">Statut planning</div>
+
+        <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
+          <input
+            type="checkbox"
+            ${isTemporaire ? "checked" : ""}
+            onchange="toggleBenevolePlanningStatus('${escapeHtml(person.id)}', 'temporaire', this.checked)"
+          >
+          Absent temporaire
+        </label>
+
+        <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
+          <input
+            type="checkbox"
+            ${isDemission ? "checked" : ""}
+            onchange="toggleBenevolePlanningStatus('${escapeHtml(person.id)}', 'demission', this.checked)"
+          >
+          Démission
+        </label>
+
+        <div class="subtle-text" style="margin-top:8px;">
+          Si aucune case n’est cochée, le bénévole repasse en actif.
+        </div>
+      </div>
+    `
+    : "";
+
   container.innerHTML = `
     <div class="back-row">
       <button class="back-btn" onclick="showView('team')">← Retour Team</button>
@@ -7664,6 +7705,8 @@ function loadTeamPerson() {
         ${renderTeamActionButton("mail", person.mail, "✉️", "Mail")}
       </div>
     </div>
+
+    ${statusAdminBlock}
 
     ${renderTeamAccordion("current", "Affectation actuelle", renderTeamCurrentAssignment(person))}
     ${renderTeamAccordion("shifts", "Voir ses créneaux", renderTeamShiftsList(person))}
