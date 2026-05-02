@@ -3196,6 +3196,10 @@ let vehiculesState = {
   openId: ""
 };
 
+  let infosState = {
+  openTerrainGroupId: ""
+};
+
 /*********************************
  * 03 - CACHE OFFLINE
  *********************************/
@@ -5714,27 +5718,63 @@ function renderInfos() {
         Véhicules, absences, pleins à faire.
       </div>
 
-      ${
-        terrainMessages.length
-          ? terrainMessages.map(renderTerrainInfoMessage).join("")
-          : `
-            <div class="empty-state-card" style="padding:14px 8px 6px;">
-              <div class="empty-state-title">Aucun message terrain</div>
-              <div class="empty-state-subtitle">
-                Aucun véhicule en panne, bénévole absent ou plein à faire détecté.
-              </div>
-            </div>
-          `
-      }
+     ${
+  terrainMessages.length
+    ? groupTerrainMessagesByTitle(terrainMessages).map(renderTerrainMessageGroup).join("")
+    : `
+      <div class="empty-state-card" style="padding:14px 8px 6px;">
+        <div class="empty-state-title">Aucun message terrain</div>
+        <div class="empty-state-subtitle">
+          Aucun véhicule désactivé détecté.
+        </div>
+      </div>
+    `
+}
     </div>
   `;
 }
 
-function renderTerrainInfoMessage(item) {
-  const niveau = String(item.niveau || item.severite || item.priorite || "info").toLowerCase();
+function toggleTerrainGroup(groupId) {
+  infosState.openTerrainGroupId =
+    infosState.openTerrainGroupId === groupId ? "" : groupId;
+
+  renderInfos();
+}
+
+  function groupTerrainMessagesByTitle(messages) {
+  const groups = {};
+
+  (Array.isArray(messages) ? messages : []).forEach(item => {
+    const title = String(item.titre || item.type || "Message terrain").trim();
+    if (!title) return;
+
+    const groupId = normalizeText(title).replace(/\s+/g, "_");
+
+    if (!groups[groupId]) {
+      groups[groupId] = {
+        id: groupId,
+        titre: title,
+        type: item.type || "",
+        niveau: item.niveau || item.severite || item.priorite || "info",
+        items: []
+      };
+    }
+
+    groups[groupId].items.push(item);
+  });
+
+  return Object.values(groups);
+}
+  
+function renderTerrainMessageGroup(group) {
+  const isOpen = infosState.openTerrainGroupId === group.id;
+  const count = Array.isArray(group.items) ? group.items.length : 0;
+
+  const niveau = String(group.niveau || "info").toLowerCase();
 
   const icon =
-    niveau.includes("urgent") || niveau.includes("panne") || niveau.includes("absent")
+    niveau.includes("urgent") ||
+    normalizeText(group.titre).includes("desactive")
       ? "🚨"
       : niveau.includes("warning") || niveau.includes("alerte")
         ? "⚠️"
@@ -5753,37 +5793,115 @@ function renderTerrainInfoMessage(item) {
   return `
     <div style="
       margin-top:8px;
-      padding:10px 12px;
       border-radius:16px;
       background:${bg};
       border:1px solid rgba(222,212,194,0.72);
+      overflow:hidden;
     ">
-      <div style="display:flex; gap:8px; align-items:flex-start;">
-        <div style="font-size:1rem; flex-shrink:0;">${icon}</div>
+      <button
+        type="button"
+        onclick="toggleTerrainGroup('${escapeHtml(group.id)}')"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          padding:10px 12px;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+          cursor:pointer;
+          text-align:left;
+          color:#18443D;
+        "
+      >
+        <div style="display:flex; align-items:flex-start; gap:8px; min-width:0;">
+          <div style="font-size:1rem; flex-shrink:0;">${icon}</div>
 
-        <div style="min-width:0; flex:1;">
-          <div style="
-            font-weight:1000;
-            color:${color};
-            line-height:1.2;
-          ">
-            ${escapeHtml(item.titre || item.type || "Message terrain")}
-          </div>
+          <div style="min-width:0;">
+            <div style="
+              font-weight:1000;
+              color:${color};
+              line-height:1.2;
+            ">
+              ${escapeHtml(group.titre)}
+            </div>
 
-          <div style="
-            margin-top:4px;
-            font-weight:850;
-            color:#3F4F48;
-            line-height:1.35;
-          ">
-            ${escapeHtml(item.message || item.detail || item.description || "")}
-          </div>
-
-          <div class="mini-note" style="margin-top:6px;">
-            Type : ${escapeHtml(item.type || "—")}
+            <div class="mini-note" style="margin-top:4px;">
+              ${count} conséquence${count > 1 ? "s" : ""}
+            </div>
           </div>
         </div>
+
+        <div style="
+          font-weight:1000;
+          font-size:0.9rem;
+          flex-shrink:0;
+          transform:${isOpen ? "rotate(180deg)" : "rotate(0deg)"};
+          transition:transform 0.15s ease;
+        ">
+          ▼
+        </div>
+      </button>
+
+      ${
+        isOpen
+          ? `
+            <div style="
+              padding:0 12px 10px 36px;
+              background:rgba(255,255,255,0.35);
+            ">
+              ${group.items.map(renderTerrainMessageConsequence).join("")}
+            </div>
+          `
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderTerrainMessageConsequence(item) {
+  return `
+    <div style="
+      padding:8px 0;
+      border-top:1px solid rgba(222,212,194,0.65);
+    ">
+      <div style="
+        font-weight:900;
+        color:#18443D;
+        line-height:1.25;
+      ">
+        ${escapeHtml(item.message || item.detail || item.description || "")}
       </div>
+
+      ${
+        item.jour || item.creneau || item.benevole || item.action
+          ? `
+            <div class="mini-note" style="margin-top:5px;">
+              ${
+                item.jour
+                  ? `Jour : ${escapeHtml(item.jour)}`
+                  : ""
+              }
+              ${
+                item.creneau
+                  ? ` • Créneau : ${escapeHtml(item.creneau)}`
+                  : ""
+              }
+              ${
+                item.benevole
+                  ? ` • Bénévole : ${escapeHtml(item.benevole)}`
+                  : ""
+              }
+              ${
+                item.action
+                  ? ` • Action : ${escapeHtml(item.action)}`
+                  : ""
+              }
+            </div>
+          `
+          : ""
+      }
     </div>
   `;
 }
@@ -5794,36 +5912,24 @@ function renderTerrainInfoMessage(item) {
     Array.isArray(APP_DATA?.logcheck) ? APP_DATA.logcheck :
     [];
 
-  const allowedKeywords = [
-    "vehicule_panne",
-    "vehicule en panne",
-    "panne vehicule",
-    "panne véhicule",
-    "benevole_absent",
-    "benevole absent",
-    "bénévole absent",
-    "absence benevole",
-    "absence bénévole",
-    "plein_a_faire",
-    "plein a faire",
-    "plein à faire"
-  ];
-
   return raw
     .filter(item => item && typeof item === "object")
     .filter(item => {
-      const searchable = normalizeText([
-        item.type,
-        item.titre,
-        item.message,
-        item.detail,
-        item.description,
-        item.source
-      ].join(" "));
+      const titre = normalizeText(item.titre || item.sujet || "");
+      const type = normalizeText(item.type || "");
+      const bloc = normalizeText(item.bloc || "");
 
-      return allowedKeywords.some(keyword =>
-        searchable.includes(normalizeText(keyword))
-      );
+      const isVehiculeDesactive =
+        (
+          titre.includes("vehicule") &&
+          titre.includes("desactive")
+        ) ||
+        type === "vehicule_desactive";
+
+      const isBlocVehicules =
+        !bloc || bloc === "vehicules";
+
+      return isVehiculeDesactive && isBlocVehicules;
     })
     .filter(item => {
       const statut = normalizeText(item.statut || item.status || "");
