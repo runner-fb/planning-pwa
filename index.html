@@ -5694,15 +5694,101 @@ function renderPlanningTabsBlock() {
   `;
 }
 
-  function renderInfos() {
+function renderInfos() {
   const el = document.getElementById("infosContent");
   if (!el) return;
 
+  const demoMessages = [
+    {
+      type: "VEHICULE_PANNE",
+      titre: "Véhicule en panne",
+      message: "Véhicule B indisponible pour le prochain créneau.",
+      niveau: "urgent"
+    },
+    {
+      type: "BENEVOLE_ABSENT",
+      titre: "Bénévole absent",
+      message: "Un bénévole est signalé absent sur le créneau en cours.",
+      niveau: "warning"
+    },
+    {
+      type: "PLEIN_A_FAIRE",
+      titre: "Plein à faire",
+      message: "Véhicule D : plein à prévoir dès que possible.",
+      niveau: "info"
+    }
+  ];
+
   el.innerHTML = `
-    <div class="card home-card-raise">
+    <div class="card home-card-raise" style="margin-bottom:8px;">
       <div class="home-main-title">Infos référent</div>
       <div class="home-subline">
-        Cette page affichera les messages terrain utiles : véhicule en panne, bénévole absent, pleins à faire.
+        Messages terrain utiles aux référents.
+      </div>
+    </div>
+
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Messages terrain</div>
+      <div class="home-subline" style="margin-bottom:8px;">
+        Véhicules, absences, pleins à faire.
+      </div>
+
+      ${demoMessages.map(renderTerrainDemoMessage).join("")}
+    </div>
+  `;
+}
+
+function renderTerrainDemoMessage(item) {
+  const niveau = String(item.niveau || "info").toLowerCase();
+
+  const icon =
+    niveau === "urgent" ? "🚨" :
+    niveau === "warning" ? "⚠️" :
+    "ℹ️";
+
+  const color =
+    niveau === "urgent" ? "#9b1c1c" :
+    niveau === "warning" ? "#9A5A16" :
+    "#18443D";
+
+  const bg =
+    niveau === "urgent" ? "rgba(185,28,28,0.08)" :
+    niveau === "warning" ? "rgba(201,122,43,0.10)" :
+    "rgba(15,90,79,0.06)";
+
+  return `
+    <div style="
+      margin-top:8px;
+      padding:10px 12px;
+      border-radius:16px;
+      background:${bg};
+      border:1px solid rgba(222,212,194,0.72);
+    ">
+      <div style="display:flex; gap:8px; align-items:flex-start;">
+        <div style="font-size:1rem; flex-shrink:0;">${icon}</div>
+
+        <div style="min-width:0; flex:1;">
+          <div style="
+            font-weight:1000;
+            color:${color};
+            line-height:1.2;
+          ">
+            ${escapeHtml(item.titre || "")}
+          </div>
+
+          <div style="
+            margin-top:4px;
+            font-weight:850;
+            color:#3F4F48;
+            line-height:1.35;
+          ">
+            ${escapeHtml(item.message || "")}
+          </div>
+
+          <div class="mini-note" style="margin-top:6px;">
+            Type : ${escapeHtml(item.type || "")}
+          </div>
+        </div>
       </div>
     </div>
   `;
