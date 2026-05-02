@@ -2945,6 +2945,9 @@ body {
 <section id="view-team-person" class="page">
   <div id="teamPersonContent"></div>
 </section>
+      <section id="view-infos" class="page">
+  <div id="infosContent"></div>
+</section>
       <section id="view-vehicules" class="page">
   <div id="vehiculesContent">Chargement...</div>
 </section>
@@ -4178,6 +4181,7 @@ function getMiniPageTitle(viewName) {
   planning: "Planning",
   contacts: "Contacts",
   vehicules: "Véhicules",
+   infos: "Infos",
   "shift-detail": "Détail créneau",
   "person-detail": "Fiche bénévole"
 };
@@ -5686,6 +5690,20 @@ function renderPlanningTabsBlock() {
           ${day}
         </button>
       `).join("")}
+    </div>
+  `;
+}
+
+  function renderInfos() {
+  const el = document.getElementById("infosContent");
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="card home-card-raise">
+      <div class="home-main-title">Infos référent</div>
+      <div class="home-subline">
+        Cette page affichera les messages terrain utiles : véhicule en panne, bénévole absent, pleins à faire.
+      </div>
     </div>
   `;
 }
