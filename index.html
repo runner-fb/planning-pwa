@@ -7765,8 +7765,24 @@ async function setBenevolePlanningStatus(personId, status) {
       throw new Error(res?.error || "UPDATE_STATUS_ERROR");
     }
 
-    await loadAppData(true);
+await loadAppData(true);
+const freshPerson = (APP_DATA.people || []).find(p => p.id === personId);
 
+if (freshPerson) {
+  const serverStatus = String(
+    freshPerson.statutPlanning ||
+    freshPerson.statut_planning ||
+    freshPerson.statusPlanning ||
+    "ACTIF"
+  ).toUpperCase();
+
+  freshPerson.statutPlanning = serverStatus;
+  freshPerson.statut_planning = serverStatus;
+  freshPerson.statusPlanning = serverStatus;
+}
+
+saveCache(APP_DATA);
+loadTeamPerson();
     patchPersonStatusEverywhere(APP_DATA);
     saveCache(APP_DATA);
 
