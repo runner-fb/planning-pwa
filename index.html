@@ -5698,26 +5698,7 @@ function renderInfos() {
   const el = document.getElementById("infosContent");
   if (!el) return;
 
-  const demoMessages = [
-    {
-      type: "VEHICULE_PANNE",
-      titre: "Véhicule en panne",
-      message: "Véhicule B indisponible pour le prochain créneau.",
-      niveau: "urgent"
-    },
-    {
-      type: "BENEVOLE_ABSENT",
-      titre: "Bénévole absent",
-      message: "Un bénévole est signalé absent sur le créneau en cours.",
-      niveau: "warning"
-    },
-    {
-      type: "PLEIN_A_FAIRE",
-      titre: "Plein à faire",
-      message: "Véhicule D : plein à prévoir dès que possible.",
-      niveau: "info"
-    }
-  ];
+  const terrainMessages = getTerrainMessagesForInfos();
 
   el.innerHTML = `
     <div class="card home-card-raise" style="margin-bottom:8px;">
@@ -5733,27 +5714,40 @@ function renderInfos() {
         Véhicules, absences, pleins à faire.
       </div>
 
-      ${demoMessages.map(renderTerrainDemoMessage).join("")}
+      ${
+        terrainMessages.length
+          ? terrainMessages.map(renderTerrainInfoMessage).join("")
+          : `
+            <div class="empty-state-card" style="padding:14px 8px 6px;">
+              <div class="empty-state-title">Aucun message terrain</div>
+              <div class="empty-state-subtitle">
+                Aucun véhicule en panne, bénévole absent ou plein à faire détecté.
+              </div>
+            </div>
+          `
+      }
     </div>
   `;
 }
 
-function renderTerrainDemoMessage(item) {
-  const niveau = String(item.niveau || "info").toLowerCase();
+function renderTerrainInfoMessage(item) {
+  const niveau = String(item.niveau || item.severite || item.priorite || "info").toLowerCase();
 
   const icon =
-    niveau === "urgent" ? "🚨" :
-    niveau === "warning" ? "⚠️" :
-    "ℹ️";
+    niveau.includes("urgent") || niveau.includes("panne") || niveau.includes("absent")
+      ? "🚨"
+      : niveau.includes("warning") || niveau.includes("alerte")
+        ? "⚠️"
+        : "ℹ️";
 
   const color =
-    niveau === "urgent" ? "#9b1c1c" :
-    niveau === "warning" ? "#9A5A16" :
+    icon === "🚨" ? "#9b1c1c" :
+    icon === "⚠️" ? "#9A5A16" :
     "#18443D";
 
   const bg =
-    niveau === "urgent" ? "rgba(185,28,28,0.08)" :
-    niveau === "warning" ? "rgba(201,122,43,0.10)" :
+    icon === "🚨" ? "rgba(185,28,28,0.08)" :
+    icon === "⚠️" ? "rgba(201,122,43,0.10)" :
     "rgba(15,90,79,0.06)";
 
   return `
@@ -5773,7 +5767,7 @@ function renderTerrainDemoMessage(item) {
             color:${color};
             line-height:1.2;
           ">
-            ${escapeHtml(item.titre || "")}
+            ${escapeHtml(item.titre || item.type || "Message terrain")}
           </div>
 
           <div style="
@@ -5782,16 +5776,74 @@ function renderTerrainDemoMessage(item) {
             color:#3F4F48;
             line-height:1.35;
           ">
-            ${escapeHtml(item.message || "")}
+            ${escapeHtml(item.message || item.detail || item.description || "")}
           </div>
 
           <div class="mini-note" style="margin-top:6px;">
-            Type : ${escapeHtml(item.type || "")}
+            Type : ${escapeHtml(item.type || "—")}
           </div>
         </div>
       </div>
     </div>
   `;
+}
+
+  function getTerrainMessagesForInfos() {
+  const raw =
+    Array.isArray(APP_DATA?.logCheck) ? APP_DATA.logCheck :
+    Array.isArray(APP_DATA?.logcheck) ? APP_DATA.logcheck :
+    [];
+
+  const allowedKeywords = [
+    "vehicule_panne",
+    "vehicule en panne",
+    "panne vehicule",
+    "panne véhicule",
+    "benevole_absent",
+    "benevole absent",
+    "bénévole absent",
+    "absence benevole",
+    "absence bénévole",
+    "plein_a_faire",
+    "plein a faire",
+    "plein à faire"
+  ];
+
+  return raw
+    .filter(item => item && typeof item === "object")
+    .filter(item => {
+      const searchable = normalizeText([
+        item.type,
+        item.titre,
+        item.message,
+        item.detail,
+        item.description,
+        item.source
+      ].join(" "));
+
+      return allowedKeywords.some(keyword =>
+        searchable.includes(normalizeText(keyword))
+      );
+    })
+    .filter(item => {
+      const statut = normalizeText(item.statut || item.status || "");
+      const actif = item.actif;
+      const resolu = item.resolu || item.resolved || item.resoluLe;
+
+      if (actif === false) return false;
+      if (String(actif).toLowerCase() === "false") return false;
+      if (String(actif).toLowerCase() === "non") return false;
+
+      if (resolu === true) return false;
+      if (String(resolu).toLowerCase() === "true") return false;
+      if (String(resolu).toLowerCase() === "oui") return false;
+
+      if (statut.includes("resolu")) return false;
+      if (statut.includes("archive")) return false;
+      if (statut === "ok") return false;
+
+      return true;
+    });
 }
 
 /*********************************
