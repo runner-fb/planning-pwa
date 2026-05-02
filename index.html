@@ -3274,6 +3274,16 @@ function loadCacheTime() {
   }
 }
 
+  function getRealLastRefreshIso() {
+  const cacheTime = loadCacheTime();
+
+  if (cacheTime) {
+    return new Date(cacheTime).toISOString();
+  }
+
+  return null;
+}
+
 function clearCache() {
   const cacheKey = getCacheKey();
   if (!cacheKey) return;
@@ -4702,9 +4712,7 @@ async function loadAppData(forceRefresh = false) {
       APP_DATA = cache;
       applyAppData(cache);
 
-      const cacheLastUpdate =
-        cache?.meta?.lastUpdate ||
-        (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+      const cacheLastUpdate = getRealLastRefreshIso();
 
       showSyncStatus(navigator.onLine ? "ok" : "offline", cacheLastUpdate);
 
@@ -4743,7 +4751,7 @@ async function loadAppData(forceRefresh = false) {
     APP_DATA = data;
     saveCache(data);
     applyAppData(data);
-    showSyncStatus("ok", data?.meta?.lastUpdate || null);
+    showSyncStatus("ok", getRealLastRefreshIso());
 
   } catch (err) {
     console.error("Erreur serveur loadAppData", err);
@@ -4753,9 +4761,7 @@ async function loadAppData(forceRefresh = false) {
         APP_DATA = cache;
         applyAppData(cache);
 
-        const cacheLastUpdate =
-          cache?.meta?.lastUpdate ||
-          (loadCacheTime() ? new Date(loadCacheTime()).toISOString() : null);
+        const cacheLastUpdate = getRealLastRefreshIso();
 
         showSyncStatus("offline", cacheLastUpdate);
 
@@ -6139,7 +6145,7 @@ function renderHomeStandard(options = {}) {
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">
-          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
+          Dernière mise à jour réelle : ${escapeHtml(formatLastUpdateLabel(getRealLastRefreshIso()) || "—")}
         </div>
       </div>
     </div>
@@ -6814,7 +6820,7 @@ function renderHomeReferent() {
 
       <div class="card compact home-meta-card" style="margin-bottom:0;">
         <div class="subtle-text">
-          Dernière mise à jour : ${escapeHtml(formatLastUpdateLabel(APP_DATA?.meta?.lastUpdate) || "—")}
+          Dernière mise à jour réelle : ${escapeHtml(formatLastUpdateLabel(getRealLastRefreshIso()) || "—")}
         </div>
       </div>
     </div>
