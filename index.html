@@ -6330,7 +6330,32 @@ function renderMessagesBox() {
 
   return `
     <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Infos</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+  <div class="home-main-title">Infos</div>
+
+  ${
+    isReferentMode
+      ? `
+        <button
+          type="button"
+          onclick="openMessagesAdminModal()"
+          title="Gérer les messages"
+          style="
+            border:none;
+            border-radius:999px;
+            background:rgba(255,255,255,0.8);
+            width:34px;
+            height:34px;
+            font-size:18px;
+            cursor:pointer;
+          "
+        >
+          ⚙️
+        </button>
+      `
+      : ""
+  }
+</div>
 
       ${
         messages.length
@@ -6344,6 +6369,213 @@ function renderMessagesBox() {
       }
     </div>
   `;
+}
+
+  function openMessagesAdminModal() {
+  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
+
+  const existingOptions = messages.map(m => `
+    <option value="${escapeHtml(m.id || "")}">
+      ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
+    </option>
+  `).join("");
+
+  const html = `
+    <div
+      id="messagesAdminModal"
+      style="
+        position:fixed;
+        inset:0;
+        z-index:9999;
+        background:rgba(0,0,0,0.45);
+        display:flex;
+        align-items:flex-end;
+        justify-content:center;
+      "
+    >
+      <div
+        style="
+          width:100%;
+          max-width:520px;
+          background:#FFFDF7;
+          border-radius:24px 24px 0 0;
+          padding:16px;
+          color:#18443D;
+          box-shadow:0 -8px 30px rgba(0,0,0,0.25);
+        "
+      >
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-weight:1000; font-size:1.1rem;">Gérer les messages</div>
+          <button onclick="closeMessagesAdminModal()" style="border:none; background:transparent; font-size:24px;">×</button>
+        </div>
+
+        <label style="font-weight:900;">Modifier un message existant</label>
+        <select id="adminMessageSelect" onchange="fillMessageAdminForm()" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;">
+          <option value="">Nouveau message</option>
+          ${existingOptions}
+        </select>
+
+        <input id="adminMessageId" type="hidden">
+
+        <label style="font-weight:900;">Titre</label>
+        <input id="adminMessageTitle" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;" placeholder="Info, Rappel, Urgence...">
+
+        <label style="font-weight:900;">Message</label>
+        <textarea id="adminMessageText" rows="3" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;" placeholder="Texte du message"></textarea>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-weight:900;">Cible</label>
+            <select id="adminMessageTarget" style="width:100%; margin-top:6px; padding:10px; border-radius:12px;">
+              <option value="tous">Tous</option>
+              <option value="benevoles">Bénévoles</option>
+              <option value="referents">Référents</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-weight:900;">Priorité</label>
+            <select id="adminMessagePriority" style="width:100%; margin-top:6px; padding:10px; border-radius:12px;">
+              <option value="normal">Standard</option>
+              <option value="important">Important</option>
+            </select>
+          </div>
+        </div>
+
+        <label style="display:flex; gap:8px; align-items:center; margin-top:12px; font-weight:900;">
+          <input id="adminMessageActive" type="checkbox" checked>
+          Message actif
+        </label>
+
+        <button
+          onclick="saveMessageAdminForm()"
+          style="
+            width:100%;
+            margin-top:14px;
+            padding:12px;
+            border:none;
+            border-radius:14px;
+            background:#18443D;
+            color:white;
+            font-weight:1000;
+            font-size:0.95rem;
+          "
+        >
+          Enregistrer
+        </button>
+
+        <button
+          onclick="deleteMessageAdminForm()"
+          style="
+            width:100%;
+            margin-top:8px;
+            padding:10px;
+            border:none;
+            border-radius:14px;
+            background:#b00000;
+            color:white;
+            font-weight:900;
+          "
+        >
+          Supprimer le message
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", html);
+}
+
+function closeMessagesAdminModal() {
+  const modal = document.getElementById("messagesAdminModal");
+  if (modal) modal.remove();
+}
+
+async function deleteMessageAdminForm() {
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const id = document.getElementById("adminMessageId").value.trim();
+
+  if (!id) {
+    alert("Sélectionne un message à supprimer.");
+    return;
+  }
+
+  if (!confirm("Supprimer ce message ?")) return;
+
+  try {
+    const res = await apiGet_({
+      api: "saveMessage",
+      pwd: pwd,
+      id: id,
+      actif: "false"
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "DELETE_ERROR");
+    }
+
+    closeMessagesAdminModal();
+    await loadAppData(true);
+    renderHomeReferent();
+
+  } catch (err) {
+    alert("Erreur suppression : " + (err.message || err));
+  }
+}
+
+function fillMessageAdminForm() {
+  const select = document.getElementById("adminMessageSelect");
+  const id = select ? select.value : "";
+
+  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
+  const msg = messages.find(m => String(m.id || "") === String(id));
+
+  document.getElementById("adminMessageId").value = msg?.id || "";
+  document.getElementById("adminMessageTitle").value = msg?.titre || "";
+  document.getElementById("adminMessageText").value = msg?.message || "";
+  document.getElementById("adminMessageTarget").value = msg?.cible || "tous";
+  document.getElementById("adminMessagePriority").value = msg?.priorite || "normal";
+  document.getElementById("adminMessageActive").checked = true;
+}
+
+async function saveMessageAdminForm() {
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
+
+  const id = document.getElementById("adminMessageId").value.trim();
+  const titre = document.getElementById("adminMessageTitle").value.trim();
+  const message = document.getElementById("adminMessageText").value.trim();
+  const cible = document.getElementById("adminMessageTarget").value;
+  const priorite = document.getElementById("adminMessagePriority").value;
+  const actif = document.getElementById("adminMessageActive").checked;
+
+  if (!message) {
+    alert("Le message est vide.");
+    return;
+  }
+
+  try {
+    const res = await apiGet_({
+      api: "saveMessage",
+      pwd: pwd,
+      id: id,
+      titre: titre,
+      message: message,
+      cible: cible,
+      priorite: priorite,
+      actif: actif ? "true" : "false"
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
+    }
+
+    closeMessagesAdminModal();
+    await loadAppData(true);
+    renderHomeReferent();
+
+  } catch (err) {
+    alert("Impossible d’enregistrer : " + (err.message || err));
+  }
 }
   
 function renderHomeReferent() {
