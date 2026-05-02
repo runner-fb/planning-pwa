@@ -7913,6 +7913,37 @@ function loadPersonDetail() {
   const current = getCurrentShiftForPerson(person.id);
   const next = getUpcomingShiftForPerson(person.id);
   const message = getFestivalMessageForHome(person.id);
+  const planningStatus = String(person.statutPlanning || person.statut_planning || "actif").toLowerCase();
+
+const statusAdminBlock = isReferentMode()
+  ? `
+    <div class="card compact">
+      <div class="home-main-title">Statut planning</div>
+
+      <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
+        <input
+          type="checkbox"
+          ${planningStatus === "temporaire" ? "checked" : ""}
+          onchange="toggleBenevolePlanningStatus('${escapeHtml(person.id)}', 'temporaire', this.checked)"
+        >
+        Absent temporaire
+      </label>
+
+      <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
+        <input
+          type="checkbox"
+          ${planningStatus === "demission" || planningStatus === "démission" ? "checked" : ""}
+          onchange="toggleBenevolePlanningStatus('${escapeHtml(person.id)}', 'demission', this.checked)"
+        >
+        Démission
+      </label>
+
+      <div class="subtle-text" style="margin-top:8px;">
+        Si aucune case n’est cochée, le bénévole repasse en actif.
+      </div>
+    </div>
+  `
+  : "";
 
   let statusBlock = "";
   if (current) {
@@ -7989,12 +8020,71 @@ function loadPersonDetail() {
     </div>
 
     ${statusBlock}
+    ${statusAdminBlock}
 
     <div class="card">
       <div class="section-title">Créneaux</div>
       ${daysHtml || `<div class="subtle-text">Aucun créneau.</div>`}
     </div>
   `;
+}
+
+  async function toggleBenevolePlanningStatus(personId, targetStatus, checked) {
+  const people = []
+    .concat(APP_DATA?.contacts?.benevoles || [])
+    .concat(APP_DATA?.contacts?.referents || [])
+    .concat(APP_DATA?.people || []);
+
+  const person = people.find(p => String(p.id || "") === String(personId));
+
+  let newStatus = "actif";
+
+  if (checked) {
+    newStatus = targetStatus === "demission" ? "démission" : "temporaire";
+  }
+
+  if (person) {
+    person.statutPlanning = newStatus;
+    person.statut_planning = newStatus;
+  }
+
+  saveCache(APP_DATA);
+  loadPersonDetail();
+
+  if (!navigator.onLine) {
+    addPendingSyncAction({
+      type: "updateBenevolePlanningStatus",
+      id: personId,
+      statutPlanning: newStatus
+    });
+
+    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+    return;
+  }
+
+  try {
+    await apiGet_({
+      api: "updateBenevolePlanningStatus",
+      pwd: state.password,
+      id: personId,
+      statutPlanning: newStatus
+    });
+
+    await loadAppData(true);
+    loadPersonDetail();
+
+  } catch (e) {
+    addPendingSyncAction({
+      type: "updateBenevolePlanningStatus",
+      id: personId,
+      statutPlanning: newStatus
+    });
+
+    saveCache(APP_DATA);
+    loadPersonDetail();
+
+    console.warn("Statut planning bénévole gardé en attente", e);
+  }
 }
 
 /*********************************
