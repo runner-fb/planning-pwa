@@ -5861,6 +5861,8 @@ function renderTerrainMessageGroup(group) {
 }
 
 function renderTerrainMessageConsequence(item) {
+  const phrase = buildTerrainConsequenceSentence(item);
+
   return `
     <div style="
       padding:8px 0;
@@ -5871,39 +5873,33 @@ function renderTerrainMessageConsequence(item) {
         color:#18443D;
         line-height:1.25;
       ">
-        ${escapeHtml(item.message || item.detail || item.description || "")}
+        ${escapeHtml(phrase)}
       </div>
-
-      ${
-        item.jour || item.creneau || item.benevole || item.action
-          ? `
-            <div class="mini-note" style="margin-top:5px;">
-              ${
-                item.jour
-                  ? `Jour : ${escapeHtml(item.jour)}`
-                  : ""
-              }
-              ${
-                item.creneau
-                  ? ` • Créneau : ${escapeHtml(item.creneau)}`
-                  : ""
-              }
-              ${
-                item.benevole
-                  ? ` • Bénévole : ${escapeHtml(item.benevole)}`
-                  : ""
-              }
-              ${
-                item.action
-                  ? ` • Action : ${escapeHtml(item.action)}`
-                  : ""
-              }
-            </div>
-          `
-          : ""
-      }
     </div>
   `;
+}
+
+function buildTerrainConsequenceSentence(item) {
+  const message = String(item.message || "").trim();
+  const action = String(item.action || "").trim();
+
+  if (!message) return "";
+
+  const cleanAction = normalizeText(action);
+
+  if (cleanAction.includes("devenu chargeur")) {
+    return message + " est devenu chargeur.";
+  }
+
+  if (cleanAction.includes("laisser sans vehicule")) {
+    return message + " est laissé sans véhicule / chargeur.";
+  }
+
+  if (action) {
+    return message + " — " + action + ".";
+  }
+
+  return message.endsWith(".") ? message : message + ".";
 }
 
   function getTerrainMessagesForInfos() {
