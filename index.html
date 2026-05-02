@@ -7642,44 +7642,35 @@ function loadTeamPerson() {
     personDetailState.teamOpenPanel = "current";
   }
 
-  const planningStatus = String(
+  const rawStatus = String(
     person.statutPlanning || person.statut_planning || person.statusPlanning || "actif"
   ).toLowerCase();
 
-  const isTemporaire = planningStatus === "temporaire";
-  const isDemission =
-    planningStatus === "demission" ||
-    planningStatus === "démission" ||
-    planningStatus === "demissionnaire" ||
-    planningStatus === "démissionnaire";
+  const planningStatus =
+    rawStatus === "temporaire" ? "temporaire" :
+    rawStatus === "demission" || rawStatus === "démission" ? "demission" :
+    "actif";
 
-  const statusAdminBlock = isReferentVisualMode()
+  const statusSelectHtml = isReferentVisualMode()
     ? `
-      <div class="card" style="margin-bottom:8px;">
-        <div class="home-main-title">Statut planning</div>
-
-        <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
-          <input
-            type="checkbox"
-            ${isTemporaire ? "checked" : ""}
-            onchange="toggleBenevolePlanningStatus('${escapeHtml(person.id)}', 'temporaire', this.checked)"
-          >
-          Absent temporaire
-        </label>
-
-        <label style="display:flex; gap:8px; align-items:center; margin-top:8px; font-weight:900;">
-          <input
-            type="checkbox"
-            ${isDemission ? "checked" : ""}
-            onchange="toggleBenevolePlanningStatus('${escapeHtml(person.id)}', 'demission', this.checked)"
-          >
-          Démission
-        </label>
-
-        <div class="subtle-text" style="margin-top:8px;">
-          Si aucune case n’est cochée, le bénévole repasse en actif.
-        </div>
-      </div>
+      <select
+        onchange="setBenevolePlanningStatus('${escapeHtml(person.id)}', this.value)"
+        style="
+          margin-top:6px;
+          width:100%;
+          max-width:220px;
+          border-radius:999px;
+          border:1px solid rgba(15,90,79,0.25);
+          background:#FFFDF8;
+          padding:8px 12px;
+          font-weight:900;
+          color:#18443D;
+        "
+      >
+        <option value="actif" ${planningStatus === "actif" ? "selected" : ""}>Actif</option>
+        <option value="temporaire" ${planningStatus === "temporaire" ? "selected" : ""}>Absent temporaire</option>
+        <option value="demission" ${planningStatus === "demission" ? "selected" : ""}>Démission</option>
+      </select>
     `
     : "";
 
@@ -7696,6 +7687,8 @@ function loadTeamPerson() {
           <div class="person-head-name">
             ${escapeHtml(person.prenom || "")} ${escapeHtml(person.nom || "")}
           </div>
+
+          ${statusSelectHtml}
         </div>
       </div>
 
@@ -7706,12 +7699,68 @@ function loadTeamPerson() {
       </div>
     </div>
 
-    ${statusAdminBlock}
-
     ${renderTeamAccordion("current", "Affectation actuelle", renderTeamCurrentAssignment(person))}
     ${renderTeamAccordion("shifts", "Voir ses créneaux", renderTeamShiftsList(person))}
     ${renderTeamAccordion("infos", "Infos utiles", renderTeamUsefulInfo(person))}
   `;
+}
+
+  async function setBenevolePlanningStatus(personId, status) {
+  const cleanStatus =
+    status === "temporaire" ? "temporaire" :
+    status === "demission" ? "démission" :
+    "actif";
+
+  const people = []
+    .concat(APP_DATA?.contacts?.benevoles || [])
+    .concat(APP_DATA?.contacts?.referents || [])
+    .concat(APP_DATA?.people || []);
+
+  const person = people.find(p => String(p.id || "") === String(personId));
+
+  if (person) {
+    person.statutPlanning = cleanStatus;
+    person.statut_planning = cleanStatus;
+    person.statusPlanning = cleanStatus;
+  }
+
+  saveCache(APP_DATA);
+  loadTeamPerson();
+
+  if (!navigator.onLine) {
+    addPendingSyncAction({
+      type: "updateBenevolePlanningStatus",
+      id: personId,
+      statutPlanning: cleanStatus
+    });
+
+    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+    return;
+  }
+
+  try {
+    await apiGet_({
+      api: "updateBenevolePlanningStatus",
+      pwd: state.password,
+      id: personId,
+      statutPlanning: cleanStatus
+    });
+
+    await loadAppData(true);
+    loadTeamPerson();
+
+  } catch (e) {
+    addPendingSyncAction({
+      type: "updateBenevolePlanningStatus",
+      id: personId,
+      statutPlanning: cleanStatus
+    });
+
+    saveCache(APP_DATA);
+    loadTeamPerson();
+
+    console.warn("Statut planning gardé en attente", e);
+  }
 }
 
 function renderTeamActionButton(type, value, icon, label) {
