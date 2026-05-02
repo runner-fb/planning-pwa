@@ -7947,8 +7947,8 @@ function loadPersonDetail() {
 
 const statusAdminBlock = isReferentVisualMode()
   ? `
-    <div class="card compact">
-      <div class="home-main-title">Statut planning</div>
+<div class="card" style="margin-bottom:8px;">
+<div class="home-main-title">Statut planning</div>
 
       <label style="display:flex; gap:8px; align-items:center; margin-top:10px; font-weight:900;">
         <input
@@ -8049,8 +8049,10 @@ const statusAdminBlock = isReferentVisualMode()
       </div>
     </div>
 
+${statusAdminBlock}
+    
     ${statusBlock}
-    ${statusAdminBlock}
+    
 
     <div class="card">
       <div class="section-title">Créneaux</div>
