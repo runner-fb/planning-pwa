@@ -3198,6 +3198,7 @@ let vehiculesState = {
  *********************************/
 const CACHE_VERSION = "v1";
 let APP_DATA = null;
+let ADMIN_MESSAGES = [];
 let autoRefreshTimer = null;
 let uiMinuteTimer = null;
 let syncHideTimer = null;
@@ -6388,12 +6389,29 @@ function renderMessagesBox() {
   `;
 }
 
-  function openMessagesAdminModal() {
-  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
+ async function openMessagesAdminModal() {
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
 
-  const existingOptions = messages.map(m => `
+  try {
+    const res = await apiGet_({
+      api: "listMessages",
+      pwd: pwd
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "LIST_MESSAGES_ERROR");
+    }
+
+    ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
+
+  } catch (err) {
+    alert("Impossible de charger les messages admin : " + (err.message || err));
+    return;
+  }
+
+  const existingOptions = ADMIN_MESSAGES.map(m => `
     <option value="${escapeHtml(m.id || "")}">
-      ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
+      ${m.actif ? "🟢" : "⚪"} ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
     </option>
   `).join("");
 
@@ -6464,36 +6482,11 @@ function renderMessagesBox() {
           Message actif
         </label>
 
-        <button
-          onclick="saveMessageAdminForm()"
-          style="
-            width:100%;
-            margin-top:14px;
-            padding:12px;
-            border:none;
-            border-radius:14px;
-            background:#18443D;
-            color:white;
-            font-weight:1000;
-            font-size:0.95rem;
-          "
-        >
+        <button onclick="saveMessageAdminForm()" style="width:100%; margin-top:14px; padding:12px; border:none; border-radius:14px; background:#18443D; color:white; font-weight:1000; font-size:0.95rem;">
           Enregistrer
         </button>
 
-        <button
-          onclick="deleteMessageAdminForm()"
-          style="
-            width:100%;
-            margin-top:8px;
-            padding:10px;
-            border:none;
-            border-radius:14px;
-            background:#b00000;
-            color:white;
-            font-weight:900;
-          "
-        >
+        <button onclick="deleteMessageAdminForm()" style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:14px; background:#b00000; color:white; font-weight:900;">
           Supprimer le message
         </button>
       </div>
@@ -6544,15 +6537,14 @@ function fillMessageAdminForm() {
   const select = document.getElementById("adminMessageSelect");
   const id = select ? select.value : "";
 
-  const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
-  const msg = messages.find(m => String(m.id || "") === String(id));
+  const msg = ADMIN_MESSAGES.find(m => String(m.id || "") === String(id));
 
   document.getElementById("adminMessageId").value = msg?.id || "";
   document.getElementById("adminMessageTitle").value = msg?.titre || "";
   document.getElementById("adminMessageText").value = msg?.message || "";
   document.getElementById("adminMessageTarget").value = msg?.cible || "tous";
   document.getElementById("adminMessagePriority").value = msg?.priorite || "normal";
-  document.getElementById("adminMessageActive").checked = true;
+  document.getElementById("adminMessageActive").checked = msg ? msg.actif === true : true;
 }
 
 async function saveMessageAdminForm() {
