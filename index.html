@@ -4205,17 +4205,27 @@ function getPeopleIndexFromAppData() {
   sources.forEach(p => {
     if (!p || !p.id) return;
 
-   map[p.id] = {
-  id: p.id,
-  label: p.label || [p.prenom, p.nom].filter(Boolean).join(" ").trim(),
-  prenom: p.prenom || "",
-  nom: p.nom || "",
-  tel: p.tel || "",
-  mail: p.mail || p.email || "",
-  tshirt: p.tshirt || p.tailleTshirt || p.taille_tshirt || p.taille || "",
-  photo: p.photo || "",
-  isRef: !!p.isRef
-};
+    const statutPlanning =
+      p.statutPlanning ||
+      p.statut_planning ||
+      p.statusPlanning ||
+      "ACTIF";
+
+    map[p.id] = {
+      id: p.id,
+      label: p.label || [p.prenom, p.nom].filter(Boolean).join(" ").trim(),
+      prenom: p.prenom || "",
+      nom: p.nom || "",
+      tel: p.tel || "",
+      mail: p.mail || "",
+      tshirt: p.tshirt || "",
+      photo: p.photo || "",
+      isRef: !!p.isRef,
+
+      statutPlanning: statutPlanning,
+      statut_planning: statutPlanning,
+      statusPlanning: statutPlanning
+    };
   });
 
   return map;
