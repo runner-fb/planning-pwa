@@ -7945,7 +7945,7 @@ function loadPersonDetail() {
   const message = getFestivalMessageForHome(person.id);
   const planningStatus = String(person.statutPlanning || person.statut_planning || "actif").toLowerCase();
 
-const statusAdminBlock = isReferentVisualMode()
+const statusAdminBlock = (isReferentVisualMode() || state.appMode === "admin")
   ? `
 <div class="card" style="margin-bottom:8px;">
 <div class="home-main-title">Statut planning</div>
