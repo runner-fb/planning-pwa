@@ -7705,61 +7705,50 @@ function loadTeamPerson() {
   `;
 }
 
-  async function setBenevolePlanningStatus(personId, status) {
+async function setBenevolePlanningStatus(personId, status) {
   const cleanStatus =
     status === "temporaire" ? "temporaire" :
     status === "demission" ? "démission" :
     "actif";
 
-  const people = []
-    .concat(APP_DATA?.contacts?.benevoles || [])
-    .concat(APP_DATA?.contacts?.referents || [])
-    .concat(APP_DATA?.people || []);
+  function updatePersonInList(list) {
+    if (!Array.isArray(list)) return;
 
-  const person = people.find(p => String(p.id || "") === String(personId));
-
-  if (person) {
-    person.statutPlanning = cleanStatus;
-    person.statut_planning = cleanStatus;
-    person.statusPlanning = cleanStatus;
+    list.forEach(function(p) {
+      if (String(p.id || "") === String(personId)) {
+        p.statutPlanning = cleanStatus;
+        p.statut_planning = cleanStatus;
+        p.statusPlanning = cleanStatus;
+      }
+    });
   }
+
+  updatePersonInList(APP_DATA?.people);
+  updatePersonInList(APP_DATA?.contacts?.autres);
+  updatePersonInList(APP_DATA?.contacts?.referents);
+  updatePersonInList(APP_DATA?.contacts?.benevoles);
 
   saveCache(APP_DATA);
   loadTeamPerson();
 
-  if (!navigator.onLine) {
-    addPendingSyncAction({
-      type: "updateBenevolePlanningStatus",
-      id: personId,
-      statutPlanning: cleanStatus
-    });
-
-    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
-    return;
-  }
-
   try {
-    await apiGet_({
+    const res = await apiGet_({
       api: "updateBenevolePlanningStatus",
-      pwd: state.password,
+      pwd: state.password || localStorage.getItem("planning_password") || "",
       id: personId,
       statutPlanning: cleanStatus
     });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "UPDATE_STATUS_ERROR");
+    }
 
     await loadAppData(true);
     loadTeamPerson();
 
   } catch (e) {
-    addPendingSyncAction({
-      type: "updateBenevolePlanningStatus",
-      id: personId,
-      statutPlanning: cleanStatus
-    });
-
-    saveCache(APP_DATA);
-    loadTeamPerson();
-
-    console.warn("Statut planning gardé en attente", e);
+    console.warn("Erreur changement statut planning", e);
+    alert("Statut changé en local, mais pas enregistré côté serveur : " + (e.message || e));
   }
 }
 
