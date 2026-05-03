@@ -7165,6 +7165,27 @@ function fillMessageAdminForm() {
 
 let MESSAGE_ADMIN_BUSY = false;
 
+ function resetMessageAdminForm() {
+  const select = document.getElementById("adminMessageSelect");
+  if (select) select.value = "";
+
+  const id = document.getElementById("adminMessageId");
+  const title = document.getElementById("adminMessageTitle");
+  const text = document.getElementById("adminMessageText");
+  const target = document.getElementById("adminMessageTarget");
+  const priority = document.getElementById("adminMessagePriority");
+  const active = document.getElementById("adminMessageActive");
+
+  if (id) id.value = "";
+  if (title) title.value = "";
+  if (text) text.value = "";
+  if (target) target.value = "tous";
+  if (priority) priority.value = "normal";
+  if (active) active.checked = true;
+
+  localStorage.removeItem("admin_message_form");
+} 
+  
 function setMessageAdminBusy(isBusy, text) {
   MESSAGE_ADMIN_BUSY = isBusy;
 
