@@ -6897,13 +6897,17 @@ function renderMessagesBox() {
 }
 
  async function openMessagesAdminModal() {
+  const oldModal = document.getElementById("messagesAdminModal");
+  if (oldModal) oldModal.remove();
+
   const pwd = state.password || localStorage.getItem("planning_password") || "";
 
   try {
     const res = await apiGet_({
-      api: "listMessages",
-      pwd: pwd
-    });
+  api: "listMessages",
+  pwd: pwd,
+  _: Date.now()+
+});
 
     if (!res || !res.ok) {
       throw new Error(res?.error || "LIST_MESSAGES_ERROR");
@@ -7037,8 +7041,60 @@ function renderMessagesBox() {
     </div>
   `;
 
-  document.body.insertAdjacentHTML("beforeend", html);
+document.body.insertAdjacentHTML("beforeend", html);
+
+restoreMessageFormState();
+bindMessageFormStateEvents();
 }
+  function saveMessageFormState() {
+  const modal = document.getElementById("messagesAdminModal");
+  if (!modal) return;
+
+  const data = {
+    id: document.getElementById("adminMessageId")?.value || "",
+    titre: document.getElementById("adminMessageTitle")?.value || "",
+    message: document.getElementById("adminMessageText")?.value || "",
+    cible: document.getElementById("adminMessageTarget")?.value || "tous",
+    priorite: document.getElementById("adminMessagePriority")?.value || "normal",
+    actif: document.getElementById("adminMessageActive")?.checked || false
+  };
+
+  localStorage.setItem("admin_message_form", JSON.stringify(data));
+}
+
+function restoreMessageFormState() {
+  const saved = localStorage.getItem("admin_message_form");
+  if (!saved) return;
+
+  try {
+    const data = JSON.parse(saved);
+
+    document.getElementById("adminMessageId").value = data.id || "";
+    document.getElementById("adminMessageTitle").value = data.titre || "";
+    document.getElementById("adminMessageText").value = data.message || "";
+    document.getElementById("adminMessageTarget").value = data.cible || "tous";
+    document.getElementById("adminMessagePriority").value = data.priorite || "normal";
+    document.getElementById("adminMessageActive").checked = !!data.actif;
+  } catch (e) {}
+}
+
+function bindMessageFormStateEvents() {
+  [
+    "adminMessageTitle",
+    "adminMessageText",
+    "adminMessageTarget",
+    "adminMessagePriority",
+    "adminMessageActive"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    el.addEventListener("input", saveMessageFormState);
+    el.addEventListener("change", saveMessageFormState);
+  });
+}
+
+  
 
 function closeMessagesAdminModal() {
   const modal = document.getElementById("messagesAdminModal");
@@ -7069,8 +7125,15 @@ async function deleteMessageAdminForm() {
 });
 
     if (!res || !res.ok) {
-      throw new Error(res?.error || "DELETE_ERROR");
-    }
+  if (res?.error === "MESSAGE_INTROUVABLE") {
+    await refreshMessagesAdminFromServer_();
+    closeMessagesAdminModal();
+    showMessageAdminToast("✅ Message déjà supprimé");
+    return;
+  }
+
+  throw new Error(res?.error || "DELETE_ERROR");
+}
 
     await refreshMessagesAdminFromServer_();
 
@@ -7196,6 +7259,7 @@ async function saveMessageAdminForm() {
 
     await refreshMessagesAdminFromServer_();
 
+    localStorage.removeItem("admin_message_form");
     closeMessagesAdminModal();
     renderHomeReferent();
     showMessageAdminToast("✅ Message en ligne");
