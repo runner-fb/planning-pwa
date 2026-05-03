@@ -3211,6 +3211,8 @@ let autoRefreshTimer = null;
 let uiMinuteTimer = null;
 let syncHideTimer = null;
 let internalNavLock = false;
+let loadAppDataPromise = null;
+let lastGoodAppData = null;
   
 /*********************************
  * 04 - CACHE HELPERS
@@ -3332,6 +3334,53 @@ function isValidAppDataShape(data) {
   return true;
 }
 
+function getPeopleCountFromBundle(data) {
+  if (!data || typeof data !== "object") return 0;
+
+  let count = 0;
+
+  if (Array.isArray(data.people)) {
+    count += data.people.filter(p => p && p.id).length;
+  }
+
+  if (Array.isArray(data.contacts?.referents)) {
+    count += data.contacts.referents.filter(p => p && p.id).length;
+  }
+
+  if (Array.isArray(data.contacts?.autres)) {
+    count += data.contacts.autres.filter(p => p && p.id).length;
+  }
+
+  return count;
+}
+
+function hasUsableTeamData(data) {
+  return getPeopleCountFromBundle(data) > 0;
+}
+
+function isSafeBundleForCurrentContext(data) {
+  if (!isValidAppDataShape(data)) return false;
+
+  // En vue référent/admin référent, la Team est indispensable.
+  // Un bundle techniquement valide mais sans people/contacts ne doit jamais écraser
+  // le bon cache, sinon on obtient "personne introuvable" et une Team vide.
+  if (isReferentVisualMode() && !hasUsableTeamData(data)) {
+    return false;
+  }
+
+  return true;
+}
+
+function getBestAvailableAppData() {
+  if (APP_DATA && isValidAppDataShape(APP_DATA)) return APP_DATA;
+  if (lastGoodAppData && isValidAppDataShape(lastGoodAppData)) return lastGoodAppData;
+
+  const cache = loadCache();
+  if (cache && isValidAppDataShape(cache)) return cache;
+
+  return null;
+}
+
 function formatLastUpdateLabel(isoString) {
   if (!isoString) return "";
 
@@ -3423,13 +3472,18 @@ function startAutoRefresh() {
 
       if (["login", "select-user"].includes(state.currentView)) return;
 
+      if (!navigator.onLine) {
+        showSyncStatus("offline", getRealLastRefreshIso());
+        return;
+      }
+
       const scrollBefore = getMainScrollTop();
 
       if (typeof flushPendingSyncQueue === "function") {
         await flushPendingSyncQueue();
       }
 
-      await loadAppData(true);
+      await loadAppData(false);
 
       requestAnimationFrame(() => {
         setMainScrollTop(scrollBefore);
@@ -3494,10 +3548,10 @@ function addPendingSyncAction(action) {
 }
 
 async function flushPendingSyncQueue() {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) return false;
 
   const queue = getPendingSyncQueue();
-  if (!queue.length) return;
+  if (!queue.length) return false;
 
   const remaining = [];
   const pwd = state.password || localStorage.getItem("planning_password") || "";
@@ -3546,9 +3600,7 @@ async function flushPendingSyncQueue() {
 
   savePendingSyncQueue(remaining);
 
-  if (remaining.length === 0) {
-    await loadAppData(true);
-  }
+  return queue.length > 0 && remaining.length === 0;
 }
 
   /*********************************
@@ -3881,6 +3933,8 @@ function renderSafeError(targetId, message) {
     "directContent",
     "planningContent",
     "contactsContent",
+    "teamContent",
+    "teamPersonContent",
     "shiftDetailContent",
     "personDetailContent",
     "vehiculesContent"
@@ -4370,8 +4424,12 @@ function getAllPeopleForContacts() {
 }
 
 function getPersonById(personId) {
+  const targetId = String(personId || "");
   const map = getPeopleIndexFromAppData();
-  return map[personId] || null;
+
+  if (map[targetId]) return map[targetId];
+
+  return Object.values(map).find(p => String(p.id || "") === targetId) || null;
 }
 
 function getSelectedUserFirstName() {
@@ -4736,6 +4794,19 @@ function getBundleUserIdForCurrentVisualMode() {
 }
 
 async function loadAppData(forceRefresh = false) {
+  if (loadAppDataPromise) {
+    return loadAppDataPromise;
+  }
+
+  loadAppDataPromise = loadAppDataInternal(forceRefresh)
+    .finally(() => {
+      loadAppDataPromise = null;
+    });
+
+  return loadAppDataPromise;
+}
+
+async function loadAppDataInternal(forceRefresh = false) {
   let cache = loadCache();
   const cacheTime = loadCacheTime();
 
@@ -4744,25 +4815,20 @@ async function loadAppData(forceRefresh = false) {
     cache = null;
   }
 
-  if (cache && !isValidAppDataShape(cache)) {
-    clearCache();
+  if (cache && !isSafeBundleForCurrentContext(cache)) {
+    console.warn("Cache ignoré : structure ou contenu incomplet pour le contexte courant");
     cache = null;
   }
 
   if (cache) {
     try {
       APP_DATA = cache;
+      lastGoodAppData = cache;
       applyAppData(cache);
-
-      const cacheLastUpdate = getRealLastRefreshIso();
-
-      showSyncStatus(navigator.onLine ? "ok" : "offline", cacheLastUpdate);
-
+      showSyncStatus(navigator.onLine ? "ok" : "offline", getRealLastRefreshIso());
     } catch (e) {
       console.error("Erreur apply cache", e);
-      clearCache();
       cache = null;
-      APP_DATA = null;
     }
   }
 
@@ -4778,7 +4844,12 @@ async function loadAppData(forceRefresh = false) {
   if (!shouldRefresh) return;
 
   if (!navigator.onLine) {
-    if (cache) {
+    const fallback = cache || getBestAvailableAppData();
+
+    if (fallback) {
+      APP_DATA = fallback;
+      lastGoodAppData = fallback;
+      applyAppData(fallback);
       showSyncStatus("offline", getRealLastRefreshIso());
       return;
     }
@@ -4789,7 +4860,11 @@ async function loadAppData(forceRefresh = false) {
     return;
   }
 
-  showSyncStatus("loading");
+  // Si on a déjà affiché un cache exploitable, on évite de remplacer l'écran par
+  // un état "Mise à jour" agressif. Le refresh se fait en arrière-plan.
+  if (!cache && !APP_DATA) {
+    showSyncStatus("loading");
+  }
 
   try {
     const bundleUserId = getBundleUserIdForCurrentVisualMode();
@@ -4799,11 +4874,12 @@ async function loadAppData(forceRefresh = false) {
 
     const data = await apiGetBundle_(state.password, bundleUserId);
 
-    if (!isValidAppDataShape(data)) {
-      throw new Error("Structure bundle invalide");
+    if (!isSafeBundleForCurrentContext(data)) {
+      throw new Error("Bundle invalide ou incomplet pour le contexte courant");
     }
 
     APP_DATA = data;
+    lastGoodAppData = data;
     saveCache(data);
     applyAppData(data);
     showSyncStatus("ok", getRealLastRefreshIso());
@@ -4811,26 +4887,23 @@ async function loadAppData(forceRefresh = false) {
   } catch (err) {
     console.error("Erreur serveur loadAppData", err);
 
-    if (cache) {
+    const fallback = cache || getBestAvailableAppData();
+
+    if (fallback) {
       try {
-        APP_DATA = cache;
-        applyAppData(cache);
-
-        const cacheLastUpdate = getRealLastRefreshIso();
-
-        showSyncStatus("offline", cacheLastUpdate);
-
+        APP_DATA = fallback;
+        lastGoodAppData = fallback;
+        applyAppData(fallback);
+        showSyncStatus("offline", getRealLastRefreshIso());
+        return;
       } catch (e) {
         console.error("Erreur fallback cache failure", e);
-        APP_DATA = null;
-        renderOfflineEmptyState();
-        showSyncStatus("offline", null);
       }
-    } else {
-      APP_DATA = null;
-      renderOfflineEmptyState();
-      showSyncStatus("offline", null);
     }
+
+    APP_DATA = null;
+    renderOfflineEmptyState();
+    showSyncStatus("offline", null);
   }
 }
 
@@ -4840,6 +4913,7 @@ function applyAppData(data) {
   }
 
   APP_DATA = data;
+  lastGoodAppData = data;
 
   const incomingUser = data.user || {};
 
@@ -4847,13 +4921,13 @@ function applyAppData(data) {
     console.warn("APP_DATA sans utilisateur valide", incomingUser);
   }
 
-  // Mode référent visuel : on ne doit pas écraser le dernier bénévole choisi
+  // Mode référent visuel : on garde l'identité référent pour les clés de cache,
+  // mais on ne détruit jamais le dernier bénévole réel mémorisé.
   if (isReferentVisualMode()) {
     state.userId = "__REFERENT__";
     state.userLabel = incomingUser.label || "Référent";
     state.isRef = true;
   } else {
-    // Mode bénévole/admin : on restaure le dernier bénévole connu si besoin
     if (!state.userId || state.userId === "__REFERENT__") {
       restoreLastBenevoleIdentity();
     }
@@ -8396,8 +8470,16 @@ function loadContacts() {
   const container = document.getElementById("contactsContent");
   if (!container) return;
 
-  if (!APP_DATA || !APP_DATA.contacts) {
-    container.innerHTML = `<div class="card">Aucune donnée disponible</div>`;
+  if (!APP_DATA || !hasUsableTeamData(APP_DATA)) {
+    container.innerHTML = `
+      <div class="card empty-state-card">
+        <div class="empty-state-title">Team indisponible</div>
+        <div class="empty-state-subtitle">
+          Les données Team ne sont pas disponibles dans le cache actuel.
+          Reviens en ligne et recharge une fois.
+        </div>
+      </div>
+    `;
     return;
   }
 
@@ -8456,8 +8538,16 @@ function loadTeam() {
   const container = document.getElementById("teamContent");
   if (!container) return;
 
-  if (!APP_DATA || !APP_DATA.contacts) {
-    container.innerHTML = `<div class="card">Aucune donnée disponible</div>`;
+  if (!APP_DATA || !hasUsableTeamData(APP_DATA)) {
+    container.innerHTML = `
+      <div class="card empty-state-card">
+        <div class="empty-state-title">Team indisponible</div>
+        <div class="empty-state-subtitle">
+          Les données Team ne sont pas disponibles dans le cache actuel.
+          Reviens en ligne et recharge une fois.
+        </div>
+      </div>
+    `;
     return;
   }
 
@@ -8595,10 +8685,16 @@ function loadTeamPerson() {
   const person = getPersonById(personDetailState.personId);
 
   if (!person) {
+    const hasTeam = hasUsableTeamData(APP_DATA);
+
     container.innerHTML = `
       <div class="card">
-        <div class="home-main-title">Bénévole introuvable</div>
-        <div class="home-subline">Impossible de retrouver cette fiche.</div>
+        <div class="home-main-title">${hasTeam ? "Bénévole introuvable" : "Données Team indisponibles"}</div>
+        <div class="home-subline">
+          ${hasTeam
+            ? "Impossible de retrouver cette fiche dans les données chargées."
+            : "Le cache actuel ne contient pas la liste Team. Ne vide pas le cache : repasse en ligne et recharge une fois."}
+        </div>
         <button class="btn" onclick="showView('team')">Retour Team</button>
       </div>
     `;
@@ -9647,8 +9743,7 @@ async function boot() {
   try {
     let cache = loadCache();
 
-    if (shouldResetCache(cache) || (cache && !isValidAppDataShape(cache))) {
-      clearCache();
+    if (shouldResetCache(cache) || (cache && !isSafeBundleForCurrentContext(cache))) {
       cache = null;
     }
 
@@ -9686,7 +9781,6 @@ replaceHistoryRoot(targetView);
         return;
       } catch (e) {
         console.error("Erreur boot cache", e);
-        clearCache();
         APP_DATA = null;
       }
     }
@@ -9789,7 +9883,7 @@ function goToLogin() {
 function bootFromFallbackCacheOrLogin() {
   const fallbackCache = loadCache();
 
-  if (fallbackCache && isValidAppDataShape(fallbackCache) && state.userId) {
+  if (fallbackCache && isSafeBundleForCurrentContext(fallbackCache) && state.userId) {
     try {
       APP_DATA = fallbackCache;
       applyAppData(fallbackCache);
@@ -9827,10 +9921,6 @@ document.addEventListener("DOMContentLoaded", function () {
   bindUserSearchInput();
   bindGlobalErrorLogger();
   bindHistoryNavigation();
-
-  if (typeof flushPendingSyncQueue === "function") {
-    flushPendingSyncQueue();
-  }
 
   boot();
 });
@@ -9879,12 +9969,22 @@ function bindHistoryNavigation() {
 document.addEventListener("visibilitychange", async function () {
   if (document.visibilityState !== "visible") return;
 
-  if (navigator.onLine && state.password && state.userId) {
+  if (!state.password || !state.userId) return;
+
+  if (!navigator.onLine) {
+    showSyncStatus("offline", getRealLastRefreshIso());
+    return;
+  }
+
+  try {
     if (typeof flushPendingSyncQueue === "function") {
       await flushPendingSyncQueue();
     }
 
-    loadAppData(false);
+    await loadAppData(false);
+  } catch (e) {
+    console.warn("Retour visibilité : refresh échoué", e);
+    showSyncStatus("offline", getRealLastRefreshIso());
   }
 });
 
@@ -9895,12 +9995,17 @@ window.addEventListener("online", async function () {
     }
 
     if (state.password && state.userId) {
-      await loadAppData(true);
+      await loadAppData(false);
     }
 
   } catch (e) {
     console.warn("Retour en ligne : refresh échoué", e);
+    showSyncStatus("offline", getRealLastRefreshIso());
   }
+});
+
+window.addEventListener("offline", function () {
+  showSyncStatus("offline", getRealLastRefreshIso());
 });
 
 /*********************************
