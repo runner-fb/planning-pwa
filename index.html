@@ -3503,13 +3503,14 @@ async function flushPendingSyncQueue() {
   if (!queue.length) return;
 
   const remaining = [];
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
 
   for (const action of queue) {
     try {
       if (action.type === "updateVehicule") {
         await apiGet_({
           api: "updateVehicule",
-          pwd: state.password || localStorage.getItem("planning_password") || "",
+          pwd,
           id: action.id,
           field: action.field,
           value: action.value ? "true" : "false"
@@ -3521,7 +3522,7 @@ async function flushPendingSyncQueue() {
       if (action.type === "updateBenevolePlanningStatus") {
         await apiGet_({
           api: "updateBenevolePlanningStatus",
-          pwd: state.password || localStorage.getItem("planning_password") || "",
+          pwd,
           id: action.id,
           statutPlanning: action.statutPlanning
         });
