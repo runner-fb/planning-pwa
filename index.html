@@ -3302,8 +3302,8 @@ function clearCache() {
 function shouldResetCache(cache) {
   if (!cache || !cache.meta) return false;
 
-  // Si le serveur fournit une version, on la respecte.
-  // S'il n'en fournit pas, on ne détruit pas le cache pour rien.
+  // Le serveur peut ne pas fournir meta.version.
+  // Dans ce cas, on garde le cache au lieu de l'effacer à tort.
   if (cache.meta.version && cache.meta.version !== CACHE_VERSION) {
     return true;
   }
@@ -3314,10 +3314,7 @@ function shouldResetCache(cache) {
     "2026-07-10T23:59:59";
 
   const limit = new Date(resetAfter).getTime();
-
-  if (!isNaN(limit) && Date.now() > limit) {
-    return true;
-  }
+  if (!isNaN(limit) && Date.now() > limit) return true;
 
   return false;
 }
@@ -3508,7 +3505,7 @@ async function flushPendingSyncQueue() {
   for (const action of queue) {
     try {
       if (action.type === "updateVehicule") {
-        await apiGet_({
+        const res = await apiGet_({
           api: "updateVehicule",
           pwd,
           id: action.id,
@@ -3516,16 +3513,24 @@ async function flushPendingSyncQueue() {
           value: action.value ? "true" : "false"
         });
 
+        if (!res || !res.ok) {
+          throw new Error(res?.error || "UPDATE_VEHICULE_ERROR");
+        }
+
         continue;
       }
 
       if (action.type === "updateBenevolePlanningStatus") {
-        await apiGet_({
+        const res = await apiGet_({
           api: "updateBenevolePlanningStatus",
           pwd,
           id: action.id,
           statutPlanning: action.statutPlanning
         });
+
+        if (!res || !res.ok) {
+          throw new Error(res?.error || "UPDATE_STATUS_ERROR");
+        }
 
         continue;
       }
@@ -4772,13 +4777,26 @@ async function loadAppData(forceRefresh = false) {
 
   if (!shouldRefresh) return;
 
+  if (!navigator.onLine) {
+    if (cache) {
+      showSyncStatus("offline", getRealLastRefreshIso());
+      return;
+    }
+
+    APP_DATA = null;
+    renderOfflineEmptyState();
+    showSyncStatus("offline", null);
+    return;
+  }
+
   showSyncStatus("loading");
 
   try {
     const bundleUserId = getBundleUserIdForCurrentVisualMode();
     if (!bundleUserId) {
-  throw new Error("Aucun utilisateur actif pour charger les données.");
-}
+      throw new Error("Aucun utilisateur actif pour charger les données.");
+    }
+
     const data = await apiGetBundle_(state.password, bundleUserId);
 
     if (!isValidAppDataShape(data)) {
@@ -5206,10 +5224,10 @@ async function toggleVehiculeFlag(id, field, value) {
     field === "pleinAFaire" ? "Plein à faire" :
     "Modification véhicule";
 
-  const actionLabel = value ? "activer" : "désactiver";
-
   const ok = confirm(
-    `Confirmer la modification ?\n\n${fieldLabel} : ${value ? "Oui" : "Non"}`
+    `Confirmer la modification ?
+
+${fieldLabel} : ${value ? "Oui" : "Non"}`
   );
 
   if (!ok) {
@@ -5241,6 +5259,7 @@ async function toggleVehiculeFlag(id, field, value) {
 
       hideBlockingPopup();
       showSyncStatus("offline", getRealLastRefreshIso());
+      alert("Mode hors ligne : modification véhicule gardée en attente. Elle sera synchronisée au retour du réseau.");
       return;
     }
 
@@ -5282,7 +5301,8 @@ async function toggleVehiculeFlag(id, field, value) {
     loadVehicules();
 
     console.warn("Action véhicule gardée en attente", e);
-    alert("Erreur pendant la mise à jour véhicule : " + (e.message || e));
+    showSyncStatus("offline", getRealLastRefreshIso());
+    alert("Connexion impossible : modification véhicule gardée en attente. Elle sera synchronisée au retour du réseau.");
   }
 }
 
@@ -7067,8 +7087,6 @@ function renderMessagesBox() {
   pwd: pwd,
   _: Date.now()
 });
-    alert(JSON.stringify(res));
-
     if (!res || !res.ok) {
       throw new Error(res?.error || "LIST_MESSAGES_ERROR");
     }
@@ -8705,7 +8723,7 @@ async function setBenevolePlanningStatus(personId, status) {
   const raw = String(status || "")
     .toUpperCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 
   const cleanStatus =
     raw === "TEMPORAIRE" ? "TEMPORAIRE" :
@@ -8718,7 +8736,9 @@ async function setBenevolePlanningStatus(personId, status) {
     "Actif";
 
   const ok = confirm(
-    `Confirmer le changement de statut ?\n\nNouveau statut : ${label}`
+    `Confirmer le changement de statut ?
+
+Nouveau statut : ${label}`
   );
 
   if (!ok) {
@@ -8804,11 +8824,9 @@ async function setBenevolePlanningStatus(personId, status) {
 
     console.warn("Statut planning bénévole gardé en attente", e);
     showSyncStatus("offline", getRealLastRefreshIso());
-
     alert("Connexion impossible : statut gardé en attente. Il sera synchronisé au retour du réseau.");
   }
 }
-  
 function renderTeamActionButton(type, value, icon, label) {
   const clean = String(value || "").trim();
 
@@ -9199,25 +9217,33 @@ ${statusAdminBlock}
   `;
 }
 
-  async function toggleBenevolePlanningStatus(personId, targetStatus, checked) {
-  const people = []
-    .concat(APP_DATA?.contacts?.benevoles || [])
-    .concat(APP_DATA?.contacts?.referents || [])
-    .concat(APP_DATA?.people || []);
+async function toggleBenevolePlanningStatus(personId, targetStatus, checked) {
+  const newStatus = checked
+    ? (targetStatus === "demission" ? "DEMISSION" : "TEMPORAIRE")
+    : "ACTIF";
 
-  const person = people.find(p => String(p.id || "") === String(personId));
+  function patchPersonStatusEverywhere(obj) {
+    if (!obj) return;
 
-  let newStatus = "actif";
+    if (Array.isArray(obj)) {
+      obj.forEach(patchPersonStatusEverywhere);
+      return;
+    }
 
-  if (checked) {
-    newStatus = targetStatus === "demission" ? "démission" : "temporaire";
+    if (typeof obj === "object") {
+      if (String(obj.id || "") === String(personId)) {
+        obj.statutPlanning = newStatus;
+        obj.statut_planning = newStatus;
+        obj.statusPlanning = newStatus;
+      }
+
+      Object.keys(obj).forEach(function(key) {
+        patchPersonStatusEverywhere(obj[key]);
+      });
+    }
   }
 
-  if (person) {
-    person.statutPlanning = newStatus;
-    person.statut_planning = newStatus;
-  }
-
+  patchPersonStatusEverywhere(APP_DATA);
   saveCache(APP_DATA);
   loadPersonDetail();
 
@@ -9233,12 +9259,16 @@ ${statusAdminBlock}
   }
 
   try {
-    await apiGet_({
+    const res = await apiGet_({
       api: "updateBenevolePlanningStatus",
-      pwd: state.password,
+      pwd: state.password || localStorage.getItem("planning_password") || "",
       id: personId,
       statutPlanning: newStatus
     });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "UPDATE_STATUS_ERROR");
+    }
 
     await loadAppData(true);
     loadPersonDetail();
@@ -9254,6 +9284,7 @@ ${statusAdminBlock}
     loadPersonDetail();
 
     console.warn("Statut planning bénévole gardé en attente", e);
+    showSyncStatus("offline", getRealLastRefreshIso());
   }
 }
 
@@ -9845,10 +9876,14 @@ function bindHistoryNavigation() {
 /*********************************
  * 30 - VISIBILITY / ONLINE
  *********************************/
-document.addEventListener("visibilitychange", function () {
+document.addEventListener("visibilitychange", async function () {
   if (document.visibilityState !== "visible") return;
 
   if (navigator.onLine && state.password && state.userId) {
+    if (typeof flushPendingSyncQueue === "function") {
+      await flushPendingSyncQueue();
+    }
+
     loadAppData(false);
   }
 });
