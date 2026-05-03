@@ -7682,10 +7682,28 @@ function renderMesCreneaux(data) {
   const container = document.getElementById("mesCreneauxContent");
   if (!container) return;
 
+  if (!APP_DATA?.planningPublished && !isReferentVisualMode()) {
+    container.innerHTML = `
+      ${renderUserHeader()}
+
+      <div class="card empty-state-card">
+        <div class="empty-state-title">Créneaux non disponibles</div>
+        <div class="empty-state-subtitle">
+          Le planning n’est pas encore publié.
+          <br>
+          Reviens plus tard.
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   const list = Array.isArray(data?.creneaux) ? data.creneaux : [];
 
   if (!list.length) {
     container.innerHTML = `
+      ${renderUserHeader()}
+
       <div class="card empty-state-card">
         <div class="empty-state-title">Aucun créneau</div>
         <div class="empty-state-subtitle">Tu n’as aucun créneau assigné pour le moment.</div>
