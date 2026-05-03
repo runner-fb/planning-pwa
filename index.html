@@ -8104,6 +8104,22 @@ function togglePlanningShift(shiftId) {
 }
 
 function renderPlanning() {
+if (!APP_DATA?.planningPublished && !isReferentVisualMode()) {
+  const el = document.getElementById("mainContent"); // adapte si besoin
+
+  el.innerHTML = `
+    <div class="empty-state-card">
+      <div class="empty-state-title">Planning non disponible</div>
+      <div class="empty-state-subtitle">
+        Le planning n’est pas encore publié.
+        <br>
+        Reviens plus tard.
+      </div>
+    </div>
+  `;
+
+  return;
+}
   const container = document.getElementById("planningContent");
   if (!container) return;
 
