@@ -5762,6 +5762,7 @@ function renderInfos() {
     </div>
 
     ${isReferentVisualMode() ? renderMessagesAdminAccordion() : ""}
+    ${isReferentVisualMode() ? renderPlanningPublishSwitch() : ""}
   `;
 }
 
@@ -5808,6 +5809,115 @@ function renderMessagesAdminAccordion() {
   `;
 }
 
+let PLANNING_PUBLISH_BUSY = false;
+
+function renderPlanningPublishSwitch() {
+  const isPublished = APP_DATA?.planningPublished === true;
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Planning publié</div>
+
+      <div class="home-subline" style="margin-bottom:10px;">
+        ${isPublished
+          ? "Les bénévoles peuvent voir leurs créneaux et le planning."
+          : "Le planning est masqué pour les bénévoles. Les référents gardent l’accès."}
+      </div>
+
+      <div style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+      ">
+        <button
+          type="button"
+          onclick="setPlanningPublished(true)"
+          style="
+            padding:12px;
+            border:none;
+            border-radius:14px;
+            font-weight:1000;
+            background:${isPublished ? "#18443D" : "#EFE8DB"};
+            color:${isPublished ? "white" : "#18443D"};
+          "
+        >
+          Oui
+        </button>
+
+        <button
+          type="button"
+          onclick="setPlanningPublished(false)"
+          style="
+            padding:12px;
+            border:none;
+            border-radius:14px;
+            font-weight:1000;
+            background:${!isPublished ? "#b00000" : "#EFE8DB"};
+            color:${!isPublished ? "white" : "#18443D"};
+          "
+        >
+          Non
+        </button>
+      </div>
+
+      <div id="planningPublishLoader" style="
+        display:none;
+        margin-top:8px;
+        text-align:center;
+        font-weight:900;
+        color:#18443D;
+      ">
+        ⏳ Mise à jour du statut...
+      </div>
+    </div>
+  `;
+}
+
+async function setPlanningPublished(value) {
+  if (PLANNING_PUBLISH_BUSY) return;
+
+  const message = value
+    ? "Publier le planning ?\n\nLes bénévoles verront leurs créneaux et le planning dans l’application.\n\nÀ faire seulement si le planning est prêt."
+    : "Masquer le planning ?\n\nLes bénévoles ne verront plus leurs créneaux ni le planning.\n\nLes référents garderont l’accès pour contrôler et corriger.";
+
+  if (!confirm(message)) return;
+
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const loader = document.getElementById("planningPublishLoader");
+
+  try {
+    PLANNING_PUBLISH_BUSY = true;
+    if (loader) loader.style.display = "block";
+
+    const res = await apiGet_({
+      api: "setPlanningPublished",
+      pwd: pwd,
+      value: value ? "true" : "false",
+      _: Date.now()
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "SET_PLANNING_PUBLISHED_ERROR");
+    }
+
+    APP_DATA.planningPublished = res.planningPublished === true;
+
+    alert(
+      APP_DATA.planningPublished
+        ? "✅ Planning publié.\n\nLes bénévoles peuvent maintenant voir leurs créneaux."
+        : "🚫 Planning masqué.\n\nLes bénévoles ne verront plus leurs créneaux pour le moment."
+    );
+
+    renderInfos();
+
+  } catch (err) {
+    alert("Erreur changement publication planning : " + (err.message || err));
+  } finally {
+    PLANNING_PUBLISH_BUSY = false;
+    if (loader) loader.style.display = "none";
+  }
+}
+  
 function renderMessagesAdminInlineForm() {
   const existingOptions = ADMIN_MESSAGES.map(m => `
     <option value="${escapeHtml(m.id || "")}">
