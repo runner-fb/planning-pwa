@@ -6989,13 +6989,50 @@ function renderMessagesBox() {
           Message actif
         </label>
 
-        <button onclick="saveMessageAdminForm()" style="width:100%; margin-top:14px; padding:12px; border:none; border-radius:14px; background:#18443D; color:white; font-weight:1000; font-size:0.95rem;">
-          Enregistrer
-        </button>
+        <button
+  id="adminMessageSaveBtn"
+  onclick="saveMessageAdminForm()"
+  style="
+    width:100%;
+    margin-top:14px;
+    padding:12px;
+    border:none;
+    border-radius:14px;
+    background:#18443D;
+    color:white;
+    font-weight:1000;
+    font-size:0.95rem;
+  "
+>
+  Enregistrer
+</button>
 
-        <button onclick="deleteMessageAdminForm()" style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:14px; background:#b00000; color:white; font-weight:900;">
-          Supprimer le message
-        </button>
+<div id="adminMessageLoader" style="
+  display:none;
+  margin-top:8px;
+  text-align:center;
+  font-weight:900;
+  color:#18443D;
+">
+  ⏳ Traitement en cours...
+</div>
+
+       <button
+  id="adminMessageDeleteBtn"
+  onclick="deleteMessageAdminForm()"
+  style="
+    width:100%;
+    margin-top:8px;
+    padding:10px;
+    border:none;
+    border-radius:14px;
+    background:#b00000;
+    color:white;
+    font-weight:900;
+  "
+>
+  Supprimer le message
+</button>
       </div>
     </div>
   `;
@@ -7009,6 +7046,8 @@ function closeMessagesAdminModal() {
 }
 
 async function deleteMessageAdminForm() {
+  if (MESSAGE_ADMIN_BUSY) return;
+
   const pwd = state.password || localStorage.getItem("planning_password") || "";
   const id = document.getElementById("adminMessageId").value.trim();
 
@@ -7020,22 +7059,30 @@ async function deleteMessageAdminForm() {
   if (!confirm("Supprimer ce message ?")) return;
 
   try {
+    setMessageAdminBusy(true, "Suppression...");
+
     const res = await apiGet_({
       api: "saveMessage",
       pwd: pwd,
       id: id,
-      actif: "false"
+      actif: "false",
+      _: Date.now()
     });
 
     if (!res || !res.ok) {
       throw new Error(res?.error || "DELETE_ERROR");
     }
 
+    await refreshMessagesAdminFromServer_();
+
     closeMessagesAdminModal();
-    await loadAppData(true);
-    renderInfos();
+    renderHomeReferent();
+    showMessageAdminToast("✅ Message supprimé");
+
   } catch (err) {
     alert("Erreur suppression : " + (err.message || err));
+  } finally {
+    setMessageAdminBusy(false);
   }
 }
 
@@ -7053,7 +7100,68 @@ function fillMessageAdminForm() {
   document.getElementById("adminMessageActive").checked = msg ? msg.actif === true : true;
 }
 
+let MESSAGE_ADMIN_BUSY = false;
+
+function setMessageAdminBusy(isBusy, text) {
+  MESSAGE_ADMIN_BUSY = isBusy;
+
+  const saveBtn = document.getElementById("adminMessageSaveBtn");
+  const deleteBtn = document.getElementById("adminMessageDeleteBtn");
+  const loader = document.getElementById("adminMessageLoader");
+
+  if (saveBtn) {
+    saveBtn.disabled = isBusy;
+    saveBtn.style.opacity = isBusy ? "0.55" : "1";
+    saveBtn.textContent = isBusy ? (text || "Traitement...") : "Enregistrer";
+  }
+
+  if (deleteBtn) {
+    deleteBtn.disabled = isBusy;
+    deleteBtn.style.opacity = isBusy ? "0.55" : "1";
+  }
+
+  if (loader) {
+    loader.style.display = isBusy ? "block" : "none";
+  }
+}
+
+function showMessageAdminToast(text) {
+  const old = document.getElementById("messageAdminToast");
+  if (old) old.remove();
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="messageAdminToast" style="
+      position:fixed;
+      left:50%;
+      bottom:105px;
+      transform:translateX(-50%);
+      z-index:10000;
+      background:#18443D;
+      color:white;
+      padding:12px 16px;
+      border-radius:999px;
+      font-weight:1000;
+      box-shadow:0 8px 24px rgba(0,0,0,0.25);
+    ">
+      ${escapeHtml(text)}
+    </div>
+  `);
+
+  setTimeout(() => {
+    const el = document.getElementById("messageAdminToast");
+    if (el) el.remove();
+  }, 2200);
+}
+
+async function refreshMessagesAdminFromServer_() {
+  clearCache();
+  APP_DATA = null;
+  await loadAppData(true);
+}
+
 async function saveMessageAdminForm() {
+  if (MESSAGE_ADMIN_BUSY) return;
+
   const pwd = state.password || localStorage.getItem("planning_password") || "";
 
   const id = document.getElementById("adminMessageId").value.trim();
@@ -7069,6 +7177,8 @@ async function saveMessageAdminForm() {
   }
 
   try {
+    setMessageAdminBusy(true, "Mise en ligne...");
+
     const res = await apiGet_({
       api: "saveMessage",
       pwd: pwd,
@@ -7077,18 +7187,24 @@ async function saveMessageAdminForm() {
       message: message,
       cible: cible,
       priorite: priorite,
-      actif: actif ? "true" : "false"
+      actif: actif ? "true" : "false",
+      _: Date.now()
     });
 
     if (!res || !res.ok) {
       throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
     }
 
+    await refreshMessagesAdminFromServer_();
+
     closeMessagesAdminModal();
-    await loadAppData(true);
-    renderInfos();
+    renderHomeReferent();
+    showMessageAdminToast("✅ Message en ligne");
+
   } catch (err) {
     alert("Impossible d’enregistrer : " + (err.message || err));
+  } finally {
+    setMessageAdminBusy(false);
   }
 }
   
