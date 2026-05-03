@@ -6992,27 +6992,37 @@ function renderReferentReplacementList(currentEntry, nextEntry, id = "replacemen
 }
 function renderMessagesBox() {
   const messages = Array.isArray(APP_DATA?.messages) ? APP_DATA.messages : [];
-  const isReferentMode = isReferentVisualMode();
-
-  if (!messages.length && !isReferentMode) return "";
 
   return `
     <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-  <div class="home-main-title">Infos</div>
-
-""
-</div>
+      <div class="home-main-title">Messages / Infos</div>
 
       ${
         messages.length
-          ? messages.slice(0, 3).map(m => `
-            <div style="padding:6px 0;border-top:1px solid rgba(222,212,194,0.5);font-weight:${m.priorite === "important" ? "900" : "850"};color:${m.priorite === "important" ? "#9b1c1c" : "inherit"};">
-              ${m.priorite === "important" ? "⚠️ " : "ℹ️ "}
-              ${escapeHtml(m.message || "")}
+          ? messages.map(m => `
+              <div style="
+                margin-top:8px;
+                padding:10px;
+                border-radius:14px;
+                background:${m.priorite === "important" ? "rgba(185,28,28,0.08)" : "rgba(15,90,79,0.06)"};
+                border:1px solid rgba(222,212,194,0.72);
+              ">
+                ${m.titre ? `
+                  <div style="font-weight:1000; color:#18443D; margin-bottom:4px;">
+                    ${escapeHtml(m.titre)}
+                  </div>
+                ` : ""}
+
+                <div style="font-weight:850; color:#35524C; line-height:1.35;">
+                  ${escapeHtml(m.message || "")}
+                </div>
+              </div>
+            `).join("")
+          : `
+            <div class="empty-state-card" style="padding:14px 8px 6px;">
+              <div class="empty-state-title">Aucun message actif</div>
             </div>
-          `).join("")
-          : `<div class="home-subline">Aucun message actif.</div>`
+          `
       }
     </div>
   `;
