@@ -7126,21 +7126,21 @@ async function deleteMessageAdminForm() {
 });
 
     if (!res || !res.ok) {
-  if (res?.error === "MESSAGE_INTROUVABLE") {
-    await refreshMessagesAdminFromServer_();
-    closeMessagesAdminModal();
-    showMessageAdminToast("✅ Message déjà supprimé");
-    return;
-  }
+if (res?.error === "MESSAGE_INTROUVABLE") {
+  await reloadMessageAdminSelect_();
+  resetMessageAdminForm();
+
+  showMessageAdminToast("✅ Message déjà supprimé");
+  return;
+}
 
   throw new Error(res?.error || "DELETE_ERROR");
 }
 
-    await refreshMessagesAdminFromServer_();
+   await reloadMessageAdminSelect_();
+resetMessageAdminForm();
 
-    closeMessagesAdminModal();
-    renderHomeReferent();
-    showMessageAdminToast("✅ Message supprimé");
+showMessageAdminToast("✅ Message supprimé");
 
   } catch (err) {
     alert("Erreur suppression : " + (err.message || err));
@@ -7258,12 +7258,10 @@ async function saveMessageAdminForm() {
       throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
     }
 
-    await refreshMessagesAdminFromServer_();
+    await reloadMessageAdminSelect_();
+resetMessageAdminForm();
 
-    localStorage.removeItem("admin_message_form");
-    closeMessagesAdminModal();
-    renderHomeReferent();
-    showMessageAdminToast("✅ Message en ligne");
+showMessageAdminToast("✅ Message en ligne");
 
   } catch (err) {
     alert("Impossible d’enregistrer : " + (err.message || err));
