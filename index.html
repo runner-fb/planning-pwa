@@ -3210,6 +3210,11 @@ let autoRefreshTimer = null;
 let uiMinuteTimer = null;
 let syncHideTimer = null;
 let internalNavLock = false;
+
+  const infosState = {
+  openTerrainGroupId: "",
+  openMessagesAdmin: false
+};
 /*********************************
  * 04 - CACHE HELPERS
  *********************************/
@@ -5749,6 +5754,48 @@ function renderInfos() {
       </div>
     </div>
 
+    ${
+      isReferentVisualMode()
+        ? renderMessagesAdminAccordion()
+        : ""
+    }
+
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Messages terrain</div>
+      <div class="home-subline" style="margin-bottom:8px;">
+        Véhicules, absences, pleins à faire.
+      </div>
+
+      ${
+        terrainMessages.length
+          ? groupTerrainMessagesByTitle(terrainMessages).map(renderTerrainMessageGroup).join("")
+          : `
+            <div class="empty-state-card" style="padding:14px 8px 6px;">
+              <div class="empty-state-title">Aucun message terrain</div>
+              <div class="empty-state-subtitle">
+                Aucune alerte terrain active.
+              </div>
+            </div>
+          `
+      }
+    </div>
+  `;
+}
+
+function renderInfos() {
+  const el = document.getElementById("infosContent");
+  if (!el) return;
+
+  const terrainMessages = getTerrainMessagesForInfos();
+
+  el.innerHTML = `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Infos référent</div>
+      <div class="home-subline">
+        Messages terrain utiles aux référents.
+      </div>
+    </div>
+
     <div class="card home-card-raise" style="margin-bottom:8px;">
       <div class="home-main-title">Messages terrain</div>
       <div class="home-subline" style="margin-bottom:8px;">
@@ -5762,7 +5809,7 @@ function renderInfos() {
       <div class="empty-state-card" style="padding:14px 8px 6px;">
         <div class="empty-state-title">Aucun message terrain</div>
         <div class="empty-state-subtitle">
-          Aucun véhicule désactivé détecté.
+          Aucune alerte terrain active.
         </div>
       </div>
     `
@@ -5770,7 +5817,7 @@ function renderInfos() {
     </div>
   `;
 }
-
+  
 function toggleTerrainGroup(groupId) {
   infosState.openTerrainGroupId =
     infosState.openTerrainGroupId === groupId ? "" : groupId;
@@ -5939,7 +5986,7 @@ function buildTerrainConsequenceSentence(item) {
   return message.endsWith(".") ? message : message + ".";
 }
 
-  function getTerrainMessagesForInfos() {
+ function getTerrainMessagesForInfos() {
   const raw =
     Array.isArray(APP_DATA?.logCheck) ? APP_DATA.logCheck :
     Array.isArray(APP_DATA?.logcheck) ? APP_DATA.logcheck :
@@ -5959,10 +6006,26 @@ function buildTerrainConsequenceSentence(item) {
         ) ||
         type === "vehicule_desactive";
 
-      const isBlocVehicules =
-        !bloc || bloc === "vehicules";
+      const isPleinAFaire =
+        titre.includes("plein") ||
+        type === "plein_a_faire" ||
+        type === "pleinafaire";
 
-      return isVehiculeDesactive && isBlocVehicules;
+      const isAbsence =
+        bloc === "absences" ||
+        titre.includes("absence") ||
+        titre.includes("demission") ||
+        titre.includes("démission");
+
+      const isBlocTerrain =
+        bloc === "vehicules" ||
+        bloc === "absences";
+
+      return isBlocTerrain && (
+        isVehiculeDesactive ||
+        isPleinAFaire ||
+        isAbsence
+      );
     })
     .filter(item => {
       const statut = normalizeText(item.statut || item.status || "");
@@ -6746,28 +6809,7 @@ function renderMessagesBox() {
       <div style="display:flex; justify-content:space-between; align-items:center;">
   <div class="home-main-title">Infos</div>
 
-  ${
-    isReferentMode
-      ? `
-        <button
-          type="button"
-          onclick="openMessagesAdminModal()"
-          title="Gérer les messages"
-          style="
-            border:none;
-            border-radius:999px;
-            background:rgba(255,255,255,0.8);
-            width:34px;
-            height:34px;
-            font-size:18px;
-            cursor:pointer;
-          "
-        >
-          ⚙️
-        </button>
-      `
-      : ""
-  }
+""
 </div>
 
       ${
@@ -6921,8 +6963,7 @@ async function deleteMessageAdminForm() {
 
     closeMessagesAdminModal();
     await loadAppData(true);
-    renderHomeReferent();
-
+    renderInfos();
   } catch (err) {
     alert("Erreur suppression : " + (err.message || err));
   }
@@ -6975,8 +7016,7 @@ async function saveMessageAdminForm() {
 
     closeMessagesAdminModal();
     await loadAppData(true);
-    renderHomeReferent();
-
+    renderInfos();
   } catch (err) {
     alert("Impossible d’enregistrer : " + (err.message || err));
   }
