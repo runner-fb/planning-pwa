@@ -7222,6 +7222,36 @@ async function refreshMessagesAdminFromServer_() {
   await loadAppData(true);
 }
 
+async function reloadMessageAdminSelect_() {
+  const pwd = state.password || localStorage.getItem("planning_password") || "";
+
+  const res = await apiGet_({
+    api: "listMessages",
+    pwd: pwd,
+    _: Date.now()
+  });
+
+  if (!res || !res.ok) {
+    throw new Error(res?.error || "LIST_MESSAGES_ERROR");
+  }
+
+  ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
+
+  const select = document.getElementById("adminMessageSelect");
+  if (!select) return;
+
+  const options = ADMIN_MESSAGES.map(m => `
+    <option value="${escapeHtml(m.id || "")}">
+      ${m.actif ? "🟢" : "⚪"} ${escapeHtml((m.titre || m.message || "").slice(0, 40))}
+    </option>
+  `).join("");
+
+  select.innerHTML = `
+    <option value="">Nouveau message</option>
+    ${options}
+  `;
+}  
+  
 async function saveMessageAdminForm() {
   if (MESSAGE_ADMIN_BUSY) return;
 
