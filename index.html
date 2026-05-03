@@ -3518,89 +3518,233 @@ function stopUiMinuteRefresh() {
 /*********************************
  * 04B - QUEUE SYNC OFFLINE
  *********************************/
+const PENDING_SYNC_GLOBAL_KEY = "planning_pending_sync_global_v1";
+let pendingSyncFlushPromise = null;
+
 function getPendingSyncKey() {
-  return "planning_pending_sync_" + (state.userId || "global");
+  // Une seule queue globale pour éviter les actions orphelines
+  // quand on change de bénévole, de vue ou de mode avant le retour réseau.
+  return PENDING_SYNC_GLOBAL_KEY;
 }
 
-function getPendingSyncQueue() {
+function parsePendingSyncQueueFromKey_(key) {
   try {
-    const raw = localStorage.getItem(getPendingSyncKey());
+    const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
+    console.warn("Queue offline illisible ignorée", key, e);
     return [];
   }
 }
 
+function getLegacyPendingSyncKeys_() {
+  const keys = [];
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (!key.startsWith("planning_pending_sync_")) continue;
+      if (key === PENDING_SYNC_GLOBAL_KEY) continue;
+      keys.push(key);
+    }
+  } catch (e) {
+    console.warn("Lecture des anciennes queues offline impossible", e);
+  }
+
+  return keys;
+}
+
+function getPendingActionDedupKey_(action) {
+  if (!action || !action.type) return "unknown:" + Date.now() + ":" + Math.random();
+
+  if (action.type === "updateVehicule") {
+    return [
+      "updateVehicule",
+      String(action.id || ""),
+      String(action.field || "")
+    ].join("|");
+  }
+
+  if (action.type === "updateBenevolePlanningStatus") {
+    return [
+      "updateBenevolePlanningStatus",
+      String(action.id || "")
+    ].join("|");
+  }
+
+  return String(action.clientId || action.createdAt || Math.random());
+}
+
+function normalizePendingSyncAction_(action) {
+  const now = Date.now();
+  const createdAt = Number(action?.createdAt || now);
+
+  return {
+    ...action,
+    createdAt,
+    updatedAt: Number(action?.updatedAt || createdAt),
+    attempts: Number(action?.attempts || 0),
+    clientId: action?.clientId || ("sync_" + createdAt + "_" + Math.random().toString(36).slice(2))
+  };
+}
+
+function dedupePendingSyncQueue_(queue) {
+  const byKey = new Map();
+
+  (Array.isArray(queue) ? queue : []).forEach(rawAction => {
+    if (!rawAction || !rawAction.type) return;
+
+    const action = normalizePendingSyncAction_(rawAction);
+    const key = getPendingActionDedupKey_(action);
+    const previous = byKey.get(key);
+
+    // Pour une même cible, on garde la dernière intention utilisateur.
+    // Exemple : absent temporaire puis actif hors ligne => seul "ACTIF" doit partir.
+    if (!previous || Number(action.updatedAt || action.createdAt || 0) >= Number(previous.updatedAt || previous.createdAt || 0)) {
+      byKey.set(key, action);
+    }
+  });
+
+  return Array.from(byKey.values()).sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
+}
+
+function getPendingSyncQueue() {
+  const queues = [];
+
+  queues.push(...parsePendingSyncQueueFromKey_(PENDING_SYNC_GLOBAL_KEY));
+
+  const legacyKeys = getLegacyPendingSyncKeys_();
+  legacyKeys.forEach(key => {
+    queues.push(...parsePendingSyncQueueFromKey_(key));
+  });
+
+  const merged = dedupePendingSyncQueue_(queues);
+
+  // Migration douce : on rapatrie les anciennes queues par utilisateur vers la queue globale.
+  if (legacyKeys.length) {
+    savePendingSyncQueue(merged);
+    legacyKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn("Ancienne queue offline non supprimée", key, e);
+      }
+    });
+  }
+
+  return merged;
+}
+
 function savePendingSyncQueue(queue) {
-  localStorage.setItem(getPendingSyncKey(), JSON.stringify(queue || []));
+  const cleanQueue = dedupePendingSyncQueue_(queue || []);
+
+  if (!cleanQueue.length) {
+    localStorage.removeItem(PENDING_SYNC_GLOBAL_KEY);
+    return;
+  }
+
+  localStorage.setItem(PENDING_SYNC_GLOBAL_KEY, JSON.stringify(cleanQueue));
 }
 
 function addPendingSyncAction(action) {
   const queue = getPendingSyncQueue();
+  const now = Date.now();
 
-  queue.push({
+  const nextAction = normalizePendingSyncAction_({
     ...action,
-    createdAt: Date.now()
+    // Le mot de passe est déjà stocké côté app ; on le copie ici pour éviter
+    // qu'une action créée en mode référent soit rejouée plus tard avec le mauvais mode.
+    pwd: action?.pwd || state.password || localStorage.getItem("planning_password") || "",
+    createdAt: action?.createdAt || now,
+    updatedAt: now,
+    lastError: ""
   });
 
-  savePendingSyncQueue(queue);
+  const nextKey = getPendingActionDedupKey_(nextAction);
+  const filtered = queue.filter(item => getPendingActionDedupKey_(item) !== nextKey);
+  filtered.push(nextAction);
+
+  savePendingSyncQueue(filtered);
 }
 
 async function flushPendingSyncQueue() {
   if (!navigator.onLine) return false;
 
-  const queue = getPendingSyncQueue();
-  if (!queue.length) return false;
-
-  const remaining = [];
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
-
-  for (const action of queue) {
-    try {
-      if (action.type === "updateVehicule") {
-        const res = await apiGet_({
-          api: "updateVehicule",
-          pwd,
-          id: action.id,
-          field: action.field,
-          value: action.value ? "true" : "false"
-        });
-
-        if (!res || !res.ok) {
-          throw new Error(res?.error || "UPDATE_VEHICULE_ERROR");
-        }
-
-        continue;
-      }
-
-      if (action.type === "updateBenevolePlanningStatus") {
-        const res = await apiGet_({
-          api: "updateBenevolePlanningStatus",
-          pwd,
-          id: action.id,
-          statutPlanning: action.statutPlanning
-        });
-
-        if (!res || !res.ok) {
-          throw new Error(res?.error || "UPDATE_STATUS_ERROR");
-        }
-
-        continue;
-      }
-
-      console.warn("Action offline inconnue conservée", action);
-      remaining.push(action);
-
-    } catch (e) {
-      console.warn("Action offline non synchronisée, conservée", action, e);
-      remaining.push(action);
-    }
+  if (pendingSyncFlushPromise) {
+    return pendingSyncFlushPromise;
   }
 
-  savePendingSyncQueue(remaining);
+  pendingSyncFlushPromise = (async function() {
+    const queue = getPendingSyncQueue();
+    if (!queue.length) return false;
 
-  return queue.length > 0 && remaining.length === 0;
+    const remaining = [];
+    const fallbackPwd = state.password || localStorage.getItem("planning_password") || "";
+
+    for (const action of queue) {
+      try {
+        const pwd = action.pwd || fallbackPwd;
+
+        if (action.type === "updateVehicule") {
+          const res = await apiGet_({
+            api: "updateVehicule",
+            pwd,
+            id: action.id,
+            field: action.field,
+            value: action.value ? "true" : "false"
+          });
+
+          if (!res || !res.ok) {
+            throw new Error(res?.error || "UPDATE_VEHICULE_ERROR");
+          }
+
+          continue;
+        }
+
+        if (action.type === "updateBenevolePlanningStatus") {
+          const res = await apiGet_({
+            api: "updateBenevolePlanningStatus",
+            pwd,
+            id: action.id,
+            statutPlanning: action.statutPlanning
+          });
+
+          if (!res || !res.ok) {
+            throw new Error(res?.error || "UPDATE_STATUS_ERROR");
+          }
+
+          continue;
+        }
+
+        console.warn("Action offline inconnue conservée", action);
+        remaining.push({
+          ...action,
+          attempts: Number(action.attempts || 0) + 1,
+          lastError: "UNKNOWN_ACTION_TYPE"
+        });
+
+      } catch (e) {
+        console.warn("Action offline non synchronisée, conservée", action, e);
+        remaining.push({
+          ...action,
+          attempts: Number(action.attempts || 0) + 1,
+          lastError: e?.message || String(e || "SYNC_ERROR")
+        });
+      }
+    }
+
+    savePendingSyncQueue(remaining);
+
+    return queue.length > 0 && remaining.length === 0;
+  })();
+
+  try {
+    return await pendingSyncFlushPromise;
+  } finally {
+    pendingSyncFlushPromise = null;
+  }
 }
 
   /*********************************
@@ -7510,8 +7654,8 @@ function showMessageAdminToast(text) {
 }
 
 async function refreshMessagesAdminFromServer_() {
-  clearCache();
-  APP_DATA = null;
+  // Ne jamais vider le cache avant un appel serveur.
+  // Si le réseau ment (navigator.onLine=true mais fetch KO), on garde l'écran actuel.
   await loadAppData(true);
 }
 
@@ -8613,9 +8757,19 @@ function renderTeamListOnly() {
     });
 
   if (!people.length) {
+    const hasTeam = hasUsableTeamData(APP_DATA);
+    const hasQuery = !!q;
+
     listEl.innerHTML = `
       <div class="empty-state-card" style="padding:18px 8px 8px;">
-        <div class="empty-state-subtitle">Aucun bénévole trouvé.</div>
+        <div class="empty-state-title">
+          ${hasTeam ? "Aucun bénévole trouvé" : "Données Team indisponibles"}
+        </div>
+        <div class="empty-state-subtitle">
+          ${hasTeam
+            ? (hasQuery ? "Aucun résultat pour cette recherche." : "Aucun bénévole à afficher dans les données chargées.")
+            : "Le cache actuel ne contient pas la liste Team. Garde l'appli ouverte et repasse en ligne pour recharger."}
+        </div>
       </div>
     `;
     return;
@@ -9119,7 +9273,12 @@ function loadShiftDetail() {
   if (!container) return;
 
   if (!APP_DATA || !APP_DATA.planning) {
-    container.innerHTML = `<div class="card">Aucune donnée</div>`;
+    container.innerHTML = `
+      <div class="card">
+        <div class="home-main-title">Planning indisponible</div>
+        <div class="home-subline">Aucun cache planning exploitable pour afficher ce créneau.</div>
+      </div>
+    `;
     return;
   }
 
@@ -9181,13 +9340,29 @@ function loadPersonDetail() {
   if (!container) return;
 
   if (!APP_DATA) {
-    container.innerHTML = `<div class="card">Aucune donnée</div>`;
+    container.innerHTML = `
+      <div class="card">
+        <div class="home-main-title">Données indisponibles</div>
+        <div class="home-subline">Aucun cache exploitable pour afficher cette fiche.</div>
+      </div>
+    `;
     return;
   }
 
   const person = getPersonById(personDetailState.personId);
   if (!person) {
-    container.innerHTML = `<div class="card">Bénévole introuvable</div>`;
+    const hasTeam = hasUsableTeamData(APP_DATA);
+
+    container.innerHTML = `
+      <div class="card">
+        <div class="home-main-title">${hasTeam ? "Bénévole introuvable" : "Données Team indisponibles"}</div>
+        <div class="home-subline">
+          ${hasTeam
+            ? "Impossible de retrouver cette fiche dans les données chargées."
+            : "Le cache actuel ne contient pas la liste Team. Garde l'appli ouverte et repasse en ligne pour recharger."}
+        </div>
+      </div>
+    `;
     return;
   }
 
