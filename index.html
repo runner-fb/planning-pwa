@@ -5172,40 +5172,76 @@ function loadVehicules() {
 }
 
 async function toggleVehiculeFlag(id, field, value) {
-  const vehicule = APP_DATA?.vehicules?.find(v => String(v.id) === String(id));
+  const fieldLabel =
+    field === "desactive" ? "Véhicule désactivé" :
+    field === "pleinAFaire" ? "Plein à faire" :
+    "Modification véhicule";
 
-  if (vehicule) {
-    if (field === "desactive") vehicule.desactive = value;
-    if (field === "pleinAFaire") vehicule.pleinAFaire = value;
-  }
+  const actionLabel = value ? "activer" : "désactiver";
 
-  saveCache(APP_DATA);
-  loadVehicules();
+  const ok = confirm(
+    `Confirmer la modification ?\n\n${fieldLabel} : ${value ? "Oui" : "Non"}`
+  );
 
-  if (!navigator.onLine) {
-    addPendingSyncAction({
-      type: "updateVehicule",
-      id,
-      field,
-      value
-    });
-
-    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+  if (!ok) {
+    await loadAppData(true);
+    loadVehicules();
     return;
   }
 
+  showBlockingPopup("Mise à jour du véhicule...");
+
   try {
-    await apiGet_({
+    const vehicule = APP_DATA?.vehicules?.find(v => String(v.id) === String(id));
+
+    if (vehicule) {
+      if (field === "desactive") vehicule.desactive = value;
+      if (field === "pleinAFaire") vehicule.pleinAFaire = value;
+    }
+
+    saveCache(APP_DATA);
+    loadVehicules();
+
+    if (!navigator.onLine) {
+      addPendingSyncAction({
+        type: "updateVehicule",
+        id,
+        field,
+        value
+      });
+
+      hideBlockingPopup();
+      showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+      return;
+    }
+
+    const res = await apiGet_({
       api: "updateVehicule",
-      pwd: state.password,
+      pwd: state.password || localStorage.getItem("planning_password") || "",
       id,
       field,
       value: value ? "true" : "false"
     });
 
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "UPDATE_VEHICULE_ERROR");
+    }
+
+    showBlockingPopup("Véhicule enregistré. Rechargement des données...");
+
     await loadAppData(true);
 
+    loadVehicules();
+
+    showBlockingPopup("Données véhicule à jour.");
+
+    setTimeout(function() {
+      hideBlockingPopup();
+    }, 600);
+
   } catch (e) {
+    hideBlockingPopup();
+
     addPendingSyncAction({
       type: "updateVehicule",
       id,
@@ -5217,6 +5253,7 @@ async function toggleVehiculeFlag(id, field, value) {
     loadVehicules();
 
     console.warn("Action véhicule gardée en attente", e);
+    alert("Erreur pendant la mise à jour véhicule : " + (e.message || e));
   }
 }
 
