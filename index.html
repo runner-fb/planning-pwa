@@ -3301,7 +3301,12 @@ function clearCache() {
 
 function shouldResetCache(cache) {
   if (!cache || !cache.meta) return false;
-  if (cache.meta.version !== CACHE_VERSION) return true;
+
+  // Si le serveur fournit une version, on la respecte.
+  // S'il n'en fournit pas, on ne détruit pas le cache pour rien.
+  if (cache.meta.version && cache.meta.version !== CACHE_VERSION) {
+    return true;
+  }
 
   const resetAfter =
     cache.meta.cacheResetAfter ||
@@ -3309,7 +3314,10 @@ function shouldResetCache(cache) {
     "2026-07-10T23:59:59";
 
   const limit = new Date(resetAfter).getTime();
-  if (!isNaN(limit) && Date.now() > limit) return true;
+
+  if (!isNaN(limit) && Date.now() > limit) {
+    return true;
+  }
 
   return false;
 }
@@ -3501,13 +3509,31 @@ async function flushPendingSyncQueue() {
       if (action.type === "updateVehicule") {
         await apiGet_({
           api: "updateVehicule",
-          pwd: state.password,
+          pwd: state.password || localStorage.getItem("planning_password") || "",
           id: action.id,
           field: action.field,
           value: action.value ? "true" : "false"
         });
+
+        continue;
       }
+
+      if (action.type === "updateBenevolePlanningStatus") {
+        await apiGet_({
+          api: "updateBenevolePlanningStatus",
+          pwd: state.password || localStorage.getItem("planning_password") || "",
+          id: action.id,
+          statutPlanning: action.statutPlanning
+        });
+
+        continue;
+      }
+
+      console.warn("Action offline inconnue conservée", action);
+      remaining.push(action);
+
     } catch (e) {
+      console.warn("Action offline non synchronisée, conservée", action, e);
       remaining.push(action);
     }
   }
@@ -5213,7 +5239,7 @@ async function toggleVehiculeFlag(id, field, value) {
       });
 
       hideBlockingPopup();
-      showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+      showSyncStatus("offline", getRealLastRefreshIso());
       return;
     }
 
@@ -9175,7 +9201,7 @@ ${statusAdminBlock}
       statutPlanning: newStatus
     });
 
-    showSyncStatus("offline", APP_DATA?.meta?.lastUpdate || null);
+    showSyncStatus("offline", getRealLastRefreshIso());
     return;
   }
 
