@@ -8752,6 +8752,20 @@ async function setBenevolePlanningStatus(personId, status) {
   try {
     patchPersonStatusEverywhere(APP_DATA);
     saveCache(APP_DATA);
+    loadTeamPerson();
+
+    if (!navigator.onLine) {
+      addPendingSyncAction({
+        type: "updateBenevolePlanningStatus",
+        id: personId,
+        statutPlanning: cleanStatus
+      });
+
+      hideBlockingPopup();
+      showSyncStatus("offline", getRealLastRefreshIso());
+      alert("Mode hors ligne : statut gardé en attente. Il sera synchronisé au retour du réseau.");
+      return;
+    }
 
     const res = await apiGet_({
       api: "updateBenevolePlanningStatus",
@@ -8778,11 +8792,23 @@ async function setBenevolePlanningStatus(personId, status) {
 
   } catch (e) {
     hideBlockingPopup();
-    console.warn("Erreur changement statut planning", e);
-    alert("Erreur pendant la mise à jour : " + (e.message || e));
+
+    addPendingSyncAction({
+      type: "updateBenevolePlanningStatus",
+      id: personId,
+      statutPlanning: cleanStatus
+    });
+
+    saveCache(APP_DATA);
     loadTeamPerson();
+
+    console.warn("Statut planning bénévole gardé en attente", e);
+    showSyncStatus("offline", getRealLastRefreshIso());
+
+    alert("Connexion impossible : statut gardé en attente. Il sera synchronisé au retour du réseau.");
   }
 }
+  
 function renderTeamActionButton(type, value, icon, label) {
   const clean = String(value || "").trim();
 
