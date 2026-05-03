@@ -6906,7 +6906,7 @@ function renderMessagesBox() {
     const res = await apiGet_({
   api: "listMessages",
   pwd: pwd,
-  _: Date.now()+
+  _: Date.now()
 });
 
     if (!res || !res.ok) {
