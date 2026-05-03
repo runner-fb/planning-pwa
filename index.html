@@ -5778,6 +5778,77 @@ function renderInfos() {
     </div>
   `;
 }
+
+  function renderMessagesAdminAccordion() {
+  const isOpen = infosState.openMessagesAdmin === true;
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <button
+        type="button"
+        onclick="toggleMessagesAdminAccordion()"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          padding:0;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+          text-align:left;
+          color:#18443D;
+        "
+      >
+        <div>
+          <div class="home-main-title">Gérer et/ou diffuser un message</div>
+          <div class="home-subline">
+            Créer, modifier ou désactiver un message visible dans l’application.
+          </div>
+        </div>
+
+        <div style="
+          font-weight:1000;
+          font-size:0.9rem;
+          transform:${isOpen ? "rotate(180deg)" : "rotate(0deg)"};
+          transition:transform 0.15s ease;
+        ">
+          ▼
+        </div>
+      </button>
+
+      ${
+        isOpen
+          ? `
+            <div style="margin-top:12px;">
+              <button
+                type="button"
+                onclick="openMessagesAdminModal()"
+                style="
+                  width:100%;
+                  border:none;
+                  border-radius:14px;
+                  padding:11px 12px;
+                  background:#18443D;
+                  color:white;
+                  font-weight:1000;
+                  font-size:0.95rem;
+                "
+              >
+                ⚙️ Ouvrir la configuration des messages
+              </button>
+            </div>
+          `
+          : ""
+      }
+    </div>
+  `;
+}
+
+function toggleMessagesAdminAccordion() {
+  infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
+  renderInfos();
+}
   
 function toggleTerrainGroup(groupId) {
   infosState.openTerrainGroupId =
