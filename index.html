@@ -3197,7 +3197,8 @@ let vehiculesState = {
 };
 
   let infosState = {
-  openTerrainGroupId: ""
+  openTerrainGroupId: "",
+  openMessagesAdmin: false
 };
 
 /*********************************
@@ -3210,11 +3211,8 @@ let autoRefreshTimer = null;
 let uiMinuteTimer = null;
 let syncHideTimer = null;
 let internalNavLock = false;
-
-  const infosState = {
-  openTerrainGroupId: "",
-  openMessagesAdmin: false
-};
+let ADMIN_MESSAGES = [];
+  
 /*********************************
  * 04 - CACHE HELPERS
  *********************************/
@@ -5778,42 +5776,6 @@ function renderInfos() {
             </div>
           `
       }
-    </div>
-  `;
-}
-
-function renderInfos() {
-  const el = document.getElementById("infosContent");
-  if (!el) return;
-
-  const terrainMessages = getTerrainMessagesForInfos();
-
-  el.innerHTML = `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Infos référent</div>
-      <div class="home-subline">
-        Messages terrain utiles aux référents.
-      </div>
-    </div>
-
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Messages terrain</div>
-      <div class="home-subline" style="margin-bottom:8px;">
-        Véhicules, absences, pleins à faire.
-      </div>
-
-     ${
-  terrainMessages.length
-    ? groupTerrainMessagesByTitle(terrainMessages).map(renderTerrainMessageGroup).join("")
-    : `
-      <div class="empty-state-card" style="padding:14px 8px 6px;">
-        <div class="empty-state-title">Aucun message terrain</div>
-        <div class="empty-state-subtitle">
-          Aucune alerte terrain active.
-        </div>
-      </div>
-    `
-}
     </div>
   `;
 }
