@@ -7062,12 +7062,11 @@ async function deleteMessageAdminForm() {
     setMessageAdminBusy(true, "Suppression...");
 
     const res = await apiGet_({
-      api: "saveMessage",
-      pwd: pwd,
-      id: id,
-      actif: "false",
-      _: Date.now()
-    });
+  api: "deleteMessage",
+  pwd: pwd,
+  id: id,
+  _: Date.now()
+});
 
     if (!res || !res.ok) {
       throw new Error(res?.error || "DELETE_ERROR");
