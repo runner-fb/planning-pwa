@@ -8069,6 +8069,49 @@ const planningStatus =
   `;
 }
 
+  function showBlockingPopup(message) {
+  let existing = document.getElementById("blockingPopup");
+  if (existing) existing.remove();
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div
+      id="blockingPopup"
+      style="
+        position:fixed;
+        inset:0;
+        z-index:99999;
+        background:rgba(0,0,0,0.35);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+      "
+    >
+      <div
+        style="
+          background:#FFFDF7;
+          color:#18443D;
+          border-radius:22px;
+          padding:22px;
+          width:100%;
+          max-width:360px;
+          text-align:center;
+          font-weight:900;
+          box-shadow:0 12px 35px rgba(0,0,0,0.25);
+        "
+      >
+        <div style="font-size:2rem; margin-bottom:8px;">⏳</div>
+        <div>${escapeHtml(message || "Mise à jour...")}</div>
+      </div>
+    </div>
+  `);
+}
+
+function hideBlockingPopup() {
+  const el = document.getElementById("blockingPopup");
+  if (el) el.remove();
+}
+  
 async function setBenevolePlanningStatus(personId, status) {
   const raw = String(status || "")
     .toUpperCase()
@@ -8079,6 +8122,20 @@ async function setBenevolePlanningStatus(personId, status) {
     raw === "TEMPORAIRE" ? "TEMPORAIRE" :
     raw === "DEMISSION" ? "DEMISSION" :
     "ACTIF";
+
+  const label =
+    cleanStatus === "TEMPORAIRE" ? "Absent temporaire" :
+    cleanStatus === "DEMISSION" ? "Démission" :
+    "Actif";
+
+  const ok = confirm(
+    `Confirmer le changement de statut ?\n\nNouveau statut : ${label}`
+  );
+
+  if (!ok) {
+    loadTeamPerson();
+    return;
+  }
 
   function patchPersonStatusEverywhere(obj) {
     if (!obj) return;
@@ -8101,19 +8158,12 @@ async function setBenevolePlanningStatus(personId, status) {
     }
   }
 
-  patchPersonStatusEverywhere(APP_DATA);
-
-  const select = document.querySelector(
-    `select[data-person-status-id="${CSS.escape(String(personId))}"]`
-  );
-
-  if (select) {
-    select.value = cleanStatus;
-  }
-
-  saveCache(APP_DATA);
+  showBlockingPopup("Mise à jour du statut...");
 
   try {
+    patchPersonStatusEverywhere(APP_DATA);
+    saveCache(APP_DATA);
+
     const res = await apiGet_({
       api: "updateBenevolePlanningStatus",
       pwd: state.password || localStorage.getItem("planning_password") || "",
@@ -8125,32 +8175,23 @@ async function setBenevolePlanningStatus(personId, status) {
       throw new Error(res?.error || "UPDATE_STATUS_ERROR");
     }
 
-await loadAppData(true);
-const freshPerson = (APP_DATA.people || []).find(p => p.id === personId);
+    showBlockingPopup("Statut enregistré. Rechargement du planning...");
 
-if (freshPerson) {
-  const serverStatus = String(
-    freshPerson.statutPlanning ||
-    freshPerson.statut_planning ||
-    freshPerson.statusPlanning ||
-    "ACTIF"
-  ).toUpperCase();
-
-  freshPerson.statutPlanning = serverStatus;
-  freshPerson.statut_planning = serverStatus;
-  freshPerson.statusPlanning = serverStatus;
-}
-
-saveCache(APP_DATA);
-loadTeamPerson();
-    patchPersonStatusEverywhere(APP_DATA);
-    saveCache(APP_DATA);
+    await loadAppData(true);
 
     loadTeamPerson();
 
+    showBlockingPopup("Données à jour.");
+
+    setTimeout(function() {
+      hideBlockingPopup();
+    }, 600);
+
   } catch (e) {
+    hideBlockingPopup();
     console.warn("Erreur changement statut planning", e);
-    alert("Statut changé en local, mais pas enregistré côté serveur : " + (e.message || e));
+    alert("Erreur pendant la mise à jour : " + (e.message || e));
+    loadTeamPerson();
   }
 }
 function renderTeamActionButton(type, value, icon, label) {
