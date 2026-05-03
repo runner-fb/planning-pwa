@@ -5737,6 +5737,37 @@ function renderPlanningTabsBlock() {
   `;
 }
 
+function renderInfos() {
+  const el = document.getElementById("infosContent");
+  if (!el) return;
+
+  const terrainMessages = getTerrainMessagesForInfos();
+
+  el.innerHTML = `
+    ${isReferentVisualMode() ? renderMessagesAdminAccordion() : ""}
+
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <div class="home-main-title">Messages terrain</div>
+      <div class="home-subline" style="margin-bottom:8px;">
+        Absences bénévoles, infos véhicules
+      </div>
+
+      ${
+        terrainMessages.length
+          ? groupTerrainMessagesByTitle(terrainMessages).map(renderTerrainMessageGroup).join("")
+          : `
+            <div class="empty-state-card" style="padding:14px 8px 6px;">
+              <div class="empty-state-title">Aucun message terrain</div>
+              <div class="empty-state-subtitle">
+                Aucune alerte terrain active.
+              </div>
+            </div>
+          `
+      }
+    </div>
+  `;
+}
+
 function renderMessagesAdminAccordion() {
   const isOpen = infosState.openMessagesAdmin === true;
 
@@ -5775,87 +5806,12 @@ function renderMessagesAdminAccordion() {
         </div>
       </button>
 
-      ${
-        isOpen
-          ? `
-            <div style="margin-top:12px;">
-              <button
-                type="button"
-                onclick="openMessagesAdminModal()"
-                style="
-                  width:100%;
-                  border:none;
-                  border-radius:14px;
-                  padding:11px 12px;
-                  background:#18443D;
-                  color:white;
-                  font-weight:1000;
-                  font-size:0.95rem;
-                "
-              >
-                ⚙️ Ouvrir la configuration des messages
-              </button>
-            </div>
-          `
-          : ""
-      }
+      ${isOpen ? renderMessagesAdminInlineForm() : ""}
     </div>
   `;
 }
 
-function toggleMessagesAdminAccordion() {
-  infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
-  renderInfos();
-}
-
-  function renderMessagesAdminAccordion() {
-  const isOpen = infosState.openMessagesAdmin === true;
-
-  return `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <button
-        type="button"
-        onclick="toggleMessagesAdminAccordion()"
-        style="
-          width:100%;
-          border:none;
-          background:transparent;
-          padding:0;
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:10px;
-          text-align:left;
-          color:#18443D;
-        "
-      >
-        <div>
-          <div class="home-main-title">Gérer et/ou diffuser un message</div>
-          <div class="home-subline">
-            Créer, modifier ou désactiver un message visible dans l’application.
-          </div>
-        </div>
-
-        <div style="
-          font-weight:1000;
-          font-size:0.9rem;
-          transform:${isOpen ? "rotate(180deg)" : "rotate(0deg)"};
-          transition:transform 0.15s ease;
-        ">
-          ▼
-        </div>
-      </button>
-
-      ${
-        isOpen
-          ? renderMessagesAdminInlineForm()
-          : ""
-      }
-    </div>
-  `;
-}
-
-  function renderMessagesAdminInlineForm() {
+function renderMessagesAdminInlineForm() {
   const existingOptions = ADMIN_MESSAGES.map(m => `
     <option value="${escapeHtml(m.id || "")}">
       ${m.actif ? "🟢" : "⚪"} ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
@@ -5912,7 +5868,7 @@ function toggleMessagesAdminAccordion() {
     </div>
   `;
 }
-  
+
 async function toggleMessagesAdminAccordion() {
   infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
 
