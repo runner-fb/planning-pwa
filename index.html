@@ -3574,6 +3574,20 @@ function getPendingActionDedupKey_(action) {
     ].join("|");
   }
 
+  if (action.type === "saveMessage") {
+    return [
+      "saveMessage",
+      String(action.id || action.clientId || "")
+    ].join("|");
+  }
+
+  if (action.type === "deleteMessage") {
+    return [
+      "deleteMessage",
+      String(action.id || "")
+    ].join("|");
+  }
+
   return String(action.clientId || action.createdAt || Math.random());
 }
 
@@ -3713,6 +3727,53 @@ async function flushPendingSyncQueue() {
 
           if (!res || !res.ok) {
             throw new Error(res?.error || "UPDATE_STATUS_ERROR");
+          }
+
+          continue;
+        }
+
+        if (action.type === "saveMessage") {
+          const sendId = String(action.id || "").startsWith("local_msg_") ? "" : String(action.id || "");
+
+          const res = await apiGet_({
+            api: "saveMessage",
+            pwd,
+            id: sendId,
+            titre: action.titre || "",
+            message: action.message || "",
+            cible: action.cible || "tous",
+            priorite: action.priorite || "normal",
+            actif: action.actif ? "true" : "false",
+            _: Date.now()
+          });
+
+          if (!res || !res.ok) {
+            throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
+          }
+
+          continue;
+        }
+
+        if (action.type === "deleteMessage") {
+          const id = String(action.id || "");
+
+          // Un message créé uniquement en local puis supprimé avant synchro n'existe pas serveur.
+          if (!id || id.startsWith("local_msg_")) {
+            continue;
+          }
+
+          const res = await apiGet_({
+            api: "deleteMessage",
+            pwd,
+            id,
+            _: Date.now()
+          });
+
+          if (!res || !res.ok) {
+            if (res?.error === "MESSAGE_INTROUVABLE") {
+              continue;
+            }
+            throw new Error(res?.error || "DELETE_MESSAGE_ERROR");
           }
 
           continue;
@@ -6263,9 +6324,18 @@ async function toggleMessagesAdminAccordion() {
     const pwd = state.password || localStorage.getItem("planning_password") || "";
 
     try {
+      if (!navigator.onLine) {
+        setAdminMessagesFromCache_();
+        showSyncStatus("offline", getRealLastRefreshIso());
+        renderInfos();
+        showMessageAdminToast("Mode hors ligne : messages chargés depuis le cache.");
+        return;
+      }
+
       const res = await apiGet_({
         api: "listMessages",
-        pwd: pwd
+        pwd: pwd,
+        _: Date.now()
       });
 
       if (!res || !res.ok) {
@@ -6275,7 +6345,10 @@ async function toggleMessagesAdminAccordion() {
       ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
 
     } catch (err) {
-      alert("Impossible de charger les messages admin : " + (err.message || err));
+      console.warn("Chargement messages admin impossible, fallback cache", err);
+      setAdminMessagesFromCache_();
+      showSyncStatus("offline", getRealLastRefreshIso());
+      showMessageAdminToast("Messages admin chargés depuis le cache.");
     }
   }
 
@@ -7300,11 +7373,16 @@ function renderMessagesBox() {
   const pwd = state.password || localStorage.getItem("planning_password") || "";
 
   try {
+    if (!navigator.onLine) {
+      throw new Error("OFFLINE");
+    }
+
     const res = await apiGet_({
-  api: "listMessages",
-  pwd: pwd,
-  _: Date.now()
-});
+      api: "listMessages",
+      pwd: pwd,
+      _: Date.now()
+    });
+
     if (!res || !res.ok) {
       throw new Error(res?.error || "LIST_MESSAGES_ERROR");
     }
@@ -7312,13 +7390,15 @@ function renderMessagesBox() {
     ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
 
   } catch (err) {
-    alert("Impossible de charger les messages admin : " + (err.message || err));
-    return;
+    console.warn("Messages admin modal chargés depuis cache", err);
+    setAdminMessagesFromCache_();
+    showSyncStatus("offline", getRealLastRefreshIso());
+    showMessageAdminToast("Mode hors ligne : messages chargés depuis le cache.");
   }
 
   const existingOptions = ADMIN_MESSAGES.map(m => `
     <option value="${escapeHtml(m.id || "")}">
-      ${m.actif ? "🟢" : "⚪"} ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
+      ${m.pendingSync ? "🟡" : (m.actif ? "🟢" : "⚪")} ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
     </option>
   `).join("");
 
@@ -7390,57 +7470,57 @@ function renderMessagesBox() {
         </label>
 
         <button
-  id="adminMessageSaveBtn"
-  onclick="saveMessageAdminForm()"
-  style="
-    width:100%;
-    margin-top:14px;
-    padding:12px;
-    border:none;
-    border-radius:14px;
-    background:#18443D;
-    color:white;
-    font-weight:1000;
-    font-size:0.95rem;
-  "
->
-  Enregistrer
-</button>
+          id="adminMessageSaveBtn"
+          onclick="saveMessageAdminForm()"
+          style="
+            width:100%;
+            margin-top:14px;
+            padding:12px;
+            border:none;
+            border-radius:14px;
+            background:#18443D;
+            color:white;
+            font-weight:1000;
+            font-size:0.95rem;
+          "
+        >
+          Enregistrer
+        </button>
 
-<div id="adminMessageLoader" style="
-  display:none;
-  margin-top:8px;
-  text-align:center;
-  font-weight:900;
-  color:#18443D;
-">
-  ⏳ Traitement en cours...
-</div>
+        <div id="adminMessageLoader" style="
+          display:none;
+          margin-top:8px;
+          text-align:center;
+          font-weight:900;
+          color:#18443D;
+        ">
+          ⏳ Traitement en cours...
+        </div>
 
-       <button
-  id="adminMessageDeleteBtn"
-  onclick="deleteMessageAdminForm()"
-  style="
-    width:100%;
-    margin-top:8px;
-    padding:10px;
-    border:none;
-    border-radius:14px;
-    background:#b00000;
-    color:white;
-    font-weight:900;
-  "
->
-  Supprimer le message
-</button>
+        <button
+          id="adminMessageDeleteBtn"
+          onclick="deleteMessageAdminForm()"
+          style="
+            width:100%;
+            margin-top:8px;
+            padding:10px;
+            border:none;
+            border-radius:14px;
+            background:#b00000;
+            color:white;
+            font-weight:900;
+          "
+        >
+          Supprimer le message
+        </button>
       </div>
     </div>
   `;
 
-document.body.insertAdjacentHTML("beforeend", html);
+  document.body.insertAdjacentHTML("beforeend", html);
 
-restoreMessageFormState();
-bindMessageFormStateEvents();
+  restoreMessageFormState();
+  bindMessageFormStateEvents();
 }
   function saveMessageFormState() {
   const modal = document.getElementById("messagesAdminModal");
@@ -7501,7 +7581,7 @@ async function deleteMessageAdminForm() {
   if (MESSAGE_ADMIN_BUSY) return;
 
   const pwd = state.password || localStorage.getItem("planning_password") || "";
-  const id = document.getElementById("adminMessageId").value.trim();
+  const id = document.getElementById("adminMessageId")?.value.trim() || "";
 
   if (!id) {
     alert("Sélectionne un message à supprimer.");
@@ -7511,34 +7591,74 @@ async function deleteMessageAdminForm() {
   if (!confirm("Supprimer ce message ?")) return;
 
   try {
-    setMessageAdminBusy(true, "Suppression...");
+    setMessageAdminBusy(true, navigator.onLine ? "Suppression..." : "Suppression gardée hors ligne...");
+
+    if (!navigator.onLine) {
+      applyLocalMessageDelete_(id);
+
+      const wasLocalOnly = removePendingMessageSaveIfLocalOnly_(id);
+      if (!wasLocalOnly) {
+        addPendingSyncAction({
+          type: "deleteMessage",
+          id,
+          pwd
+        });
+      }
+
+      saveCache(APP_DATA);
+      refreshAdminMessageSelectFromLocal_();
+      resetMessageAdminForm();
+      renderInfos();
+      showSyncStatus("offline", getRealLastRefreshIso());
+      showMessageAdminToast("Suppression gardée hors ligne. Elle sera synchronisée au retour du réseau.");
+      return;
+    }
 
     const res = await apiGet_({
-  api: "deleteMessage",
-  pwd: pwd,
-  id: id,
-  _: Date.now()
-});
+      api: "deleteMessage",
+      pwd: pwd,
+      id: id,
+      _: Date.now()
+    });
 
     if (!res || !res.ok) {
-if (res?.error === "MESSAGE_INTROUVABLE") {
-  await reloadMessageAdminSelect_();
-  resetMessageAdminForm();
+      if (res?.error === "MESSAGE_INTROUVABLE") {
+        await reloadMessageAdminSelect_();
+        resetMessageAdminForm();
+        showMessageAdminToast("Message déjà supprimé");
+        return;
+      }
 
-  alert("✅ Message déjà supprimé");
-  return;
-}
+      throw new Error(res?.error || "DELETE_ERROR");
+    }
 
-  throw new Error(res?.error || "DELETE_ERROR");
-}
-
-   await reloadMessageAdminSelect_();
-resetMessageAdminForm();
-
-alert("✅ Message supprimé");
+    await reloadMessageAdminSelect_();
+    resetMessageAdminForm();
+    showMessageAdminToast("Message supprimé");
+    await loadAppData(false);
+    renderInfos();
 
   } catch (err) {
-    alert("Erreur suppression : " + (err.message || err));
+    console.warn("Suppression message impossible, passage en attente", err);
+
+    applyLocalMessageDelete_(id);
+
+    const wasLocalOnly = removePendingMessageSaveIfLocalOnly_(id);
+    if (!wasLocalOnly) {
+      addPendingSyncAction({
+        type: "deleteMessage",
+        id,
+        pwd
+      });
+    }
+
+    saveCache(APP_DATA);
+    refreshAdminMessageSelectFromLocal_();
+    resetMessageAdminForm();
+    renderInfos();
+    showSyncStatus("offline", getRealLastRefreshIso());
+    showMessageAdminToast("Connexion instable : suppression gardée en attente.");
+
   } finally {
     setMessageAdminBusy(false);
   }
@@ -7556,6 +7676,8 @@ function fillMessageAdminForm() {
   document.getElementById("adminMessageTarget").value = msg?.cible || "tous";
   document.getElementById("adminMessagePriority").value = msg?.priorite || "normal";
   document.getElementById("adminMessageActive").checked = msg ? msg.actif === true : true;
+
+  saveMessageFormState();
 }
 
 let MESSAGE_ADMIN_BUSY = false;
@@ -7653,6 +7775,107 @@ function showMessageAdminToast(text) {
   }, 2200);
 }
 
+
+
+function getCachedAdminMessages_() {
+  if (Array.isArray(ADMIN_MESSAGES) && ADMIN_MESSAGES.length) {
+    return ADMIN_MESSAGES;
+  }
+
+  if (Array.isArray(APP_DATA?.messages)) {
+    return APP_DATA.messages;
+  }
+
+  return [];
+}
+
+function setAdminMessagesFromCache_() {
+  ADMIN_MESSAGES = getCachedAdminMessages_().map(m => ({ ...m }));
+  return ADMIN_MESSAGES;
+}
+
+function getPendingMessageActions_() {
+  return getPendingSyncQueue().filter(action =>
+    action && (action.type === "saveMessage" || action.type === "deleteMessage")
+  );
+}
+
+function getMessageIdForLocalUse_(id) {
+  const clean = String(id || "").trim();
+  if (clean) return clean;
+
+  return "local_msg_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+}
+
+function applyLocalMessageSave_(payload) {
+  if (!APP_DATA) APP_DATA = {};
+  if (!Array.isArray(APP_DATA.messages)) APP_DATA.messages = [];
+  if (!Array.isArray(ADMIN_MESSAGES)) ADMIN_MESSAGES = [];
+
+  const id = getMessageIdForLocalUse_(payload.id);
+  const msg = {
+    id,
+    titre: payload.titre || "",
+    message: payload.message || "",
+    cible: payload.cible || "tous",
+    priorite: payload.priorite || "normal",
+    actif: payload.actif === true,
+    pendingSync: payload.pendingSync === true
+  };
+
+  function upsert(list) {
+    const idx = list.findIndex(item => String(item.id || "") === String(id));
+    if (idx >= 0) list[idx] = { ...list[idx], ...msg };
+    else list.unshift(msg);
+  }
+
+  upsert(APP_DATA.messages);
+  upsert(ADMIN_MESSAGES);
+
+  return msg;
+}
+
+function applyLocalMessageDelete_(id) {
+  const cleanId = String(id || "").trim();
+  if (!cleanId) return;
+
+  if (Array.isArray(APP_DATA?.messages)) {
+    APP_DATA.messages = APP_DATA.messages.filter(m => String(m.id || "") !== cleanId);
+  }
+
+  if (Array.isArray(ADMIN_MESSAGES)) {
+    ADMIN_MESSAGES = ADMIN_MESSAGES.filter(m => String(m.id || "") !== cleanId);
+  }
+}
+
+function removePendingMessageSaveIfLocalOnly_(id) {
+  const cleanId = String(id || "").trim();
+  if (!cleanId || !cleanId.startsWith("local_msg_")) return false;
+
+  const queue = getPendingSyncQueue();
+  const next = queue.filter(action => !(action.type === "saveMessage" && String(action.id || "") === cleanId));
+  savePendingSyncQueue(next);
+  return next.length !== queue.length;
+}
+
+function refreshAdminMessageSelectFromLocal_() {
+  const select = document.getElementById("adminMessageSelect");
+  if (!select) return;
+
+  const currentValue = select.value || "";
+  const options = (Array.isArray(ADMIN_MESSAGES) ? ADMIN_MESSAGES : []).map(m => `
+    <option value="${escapeHtml(m.id || "")}">
+      ${m.pendingSync ? "🟡" : (m.actif ? "🟢" : "⚪")} ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
+    </option>
+  `).join("");
+
+  select.innerHTML = `
+    <option value="">Nouveau message</option>
+    ${options}
+  `;
+
+  if (currentValue) select.value = currentValue;
+}
 async function refreshMessagesAdminFromServer_() {
   // Ne jamais vider le cache avant un appel serveur.
   // Si le réseau ment (navigator.onLine=true mais fetch KO), on garde l'écran actuel.
@@ -7662,31 +7885,30 @@ async function refreshMessagesAdminFromServer_() {
 async function reloadMessageAdminSelect_() {
   const pwd = state.password || localStorage.getItem("planning_password") || "";
 
-  const res = await apiGet_({
-    api: "listMessages",
-    pwd: pwd,
-    _: Date.now()
-  });
+  try {
+    if (!navigator.onLine) {
+      throw new Error("OFFLINE");
+    }
 
-  if (!res || !res.ok) {
-    throw new Error(res?.error || "LIST_MESSAGES_ERROR");
+    const res = await apiGet_({
+      api: "listMessages",
+      pwd: pwd,
+      _: Date.now()
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "LIST_MESSAGES_ERROR");
+    }
+
+    ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
+
+  } catch (err) {
+    console.warn("Liste messages admin indisponible, utilisation du cache", err);
+    setAdminMessagesFromCache_();
+    showSyncStatus("offline", getRealLastRefreshIso());
   }
 
-  ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
-
-  const select = document.getElementById("adminMessageSelect");
-  if (!select) return;
-
-  const options = ADMIN_MESSAGES.map(m => `
-    <option value="${escapeHtml(m.id || "")}">
-      ${m.actif ? "🟢" : "⚪"} ${escapeHtml((m.titre || m.message || "").slice(0, 40))}
-    </option>
-  `).join("");
-
-  select.innerHTML = `
-    <option value="">Nouveau message</option>
-    ${options}
-  `;
+  refreshAdminMessageSelectFromLocal_();
 }  
   
 async function saveMessageAdminForm() {
@@ -7694,20 +7916,54 @@ async function saveMessageAdminForm() {
 
   const pwd = state.password || localStorage.getItem("planning_password") || "";
 
-  const id = document.getElementById("adminMessageId").value.trim();
-  const titre = document.getElementById("adminMessageTitle").value.trim();
-  const message = document.getElementById("adminMessageText").value.trim();
-  const cible = document.getElementById("adminMessageTarget").value;
-  const priorite = document.getElementById("adminMessagePriority").value;
-  const actif = document.getElementById("adminMessageActive").checked;
+  const id = document.getElementById("adminMessageId")?.value.trim() || "";
+  const titre = document.getElementById("adminMessageTitle")?.value.trim() || "";
+  const message = document.getElementById("adminMessageText")?.value.trim() || "";
+  const cible = document.getElementById("adminMessageTarget")?.value || "tous";
+  const priorite = document.getElementById("adminMessagePriority")?.value || "normal";
+  const actif = document.getElementById("adminMessageActive")?.checked === true;
 
   if (!message) {
     alert("Le message est vide.");
     return;
   }
 
+  const payload = {
+    id: getMessageIdForLocalUse_(id),
+    titre,
+    message,
+    cible,
+    priorite,
+    actif,
+    pendingSync: false
+  };
+
   try {
-    setMessageAdminBusy(true, "Mise en ligne...");
+    setMessageAdminBusy(true, navigator.onLine ? "Mise en ligne..." : "Gardé hors ligne...");
+
+    if (!navigator.onLine) {
+      payload.pendingSync = true;
+      const localMsg = applyLocalMessageSave_(payload);
+
+      addPendingSyncAction({
+        type: "saveMessage",
+        id: localMsg.id,
+        titre,
+        message,
+        cible,
+        priorite,
+        actif,
+        pwd
+      });
+
+      saveCache(APP_DATA);
+      refreshAdminMessageSelectFromLocal_();
+      resetMessageAdminForm();
+      renderInfos();
+      showSyncStatus("offline", getRealLastRefreshIso());
+      showMessageAdminToast("Message gardé hors ligne. Il sera envoyé au retour du réseau.");
+      return;
+    }
 
     const res = await apiGet_({
       api: "saveMessage",
@@ -7726,11 +7982,35 @@ async function saveMessageAdminForm() {
     }
 
     await reloadMessageAdminSelect_();
-resetMessageAdminForm();
-alert("✅ Message en ligne");
-    
+    resetMessageAdminForm();
+    showMessageAdminToast("Message en ligne");
+    await loadAppData(false);
+    renderInfos();
+
   } catch (err) {
-    alert("Impossible d’enregistrer : " + (err.message || err));
+    console.warn("Enregistrement message impossible, passage en attente", err);
+
+    payload.pendingSync = true;
+    const localMsg = applyLocalMessageSave_(payload);
+
+    addPendingSyncAction({
+      type: "saveMessage",
+      id: localMsg.id,
+      titre,
+      message,
+      cible,
+      priorite,
+      actif,
+      pwd
+    });
+
+    saveCache(APP_DATA);
+    refreshAdminMessageSelectFromLocal_();
+    resetMessageAdminForm();
+    renderInfos();
+    showSyncStatus("offline", getRealLastRefreshIso());
+    showMessageAdminToast("Connexion instable : message gardé en attente.");
+
   } finally {
     setMessageAdminBusy(false);
   }
