@@ -10652,17 +10652,17 @@ function hideLoader() {
     <script>
 (function registerPwaServiceWorker() {
   if (!("serviceWorker" in navigator)) {
-    console.warn("Service Worker non supporté par ce navigateur.");
+    console.warn("Service Worker non supporté.");
     return;
   }
 
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("?file=sw")
+    navigator.serviceWorker.register("./sw.js")
       .then(function (registration) {
-        console.log("PWA Service Worker enregistré :", registration.scope);
+        console.log("Service Worker enregistré :", registration.scope);
       })
       .catch(function (error) {
-        console.error("Erreur enregistrement Service Worker :", error);
+        console.error("Erreur Service Worker :", error);
       });
   });
 })();
