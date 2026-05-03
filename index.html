@@ -5737,49 +5737,7 @@ function renderPlanningTabsBlock() {
   `;
 }
 
-function renderInfos() {
-  const el = document.getElementById("infosContent");
-  if (!el) return;
-
-  const terrainMessages = getTerrainMessagesForInfos();
-
-  el.innerHTML = `
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Infos référent</div>
-      <div class="home-subline">
-        Messages terrain utiles aux référents.
-      </div>
-    </div>
-
-    ${
-      isReferentVisualMode()
-        ? renderMessagesAdminAccordion()
-        : ""
-    }
-
-    <div class="card home-card-raise" style="margin-bottom:8px;">
-      <div class="home-main-title">Messages terrain</div>
-      <div class="home-subline" style="margin-bottom:8px;">
-        Véhicules, absences, pleins à faire.
-      </div>
-
-      ${
-        terrainMessages.length
-          ? groupTerrainMessagesByTitle(terrainMessages).map(renderTerrainMessageGroup).join("")
-          : `
-            <div class="empty-state-card" style="padding:14px 8px 6px;">
-              <div class="empty-state-title">Aucun message terrain</div>
-              <div class="empty-state-subtitle">
-                Aucune alerte terrain active.
-              </div>
-            </div>
-          `
-      }
-    </div>
-  `;
-}
-
-  function renderMessagesAdminAccordion() {
+function renderMessagesAdminAccordion() {
   const isOpen = infosState.openMessagesAdmin === true;
 
   return `
@@ -5847,6 +5805,137 @@ function renderInfos() {
 
 function toggleMessagesAdminAccordion() {
   infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
+  renderInfos();
+}
+
+  function renderMessagesAdminAccordion() {
+  const isOpen = infosState.openMessagesAdmin === true;
+
+  return `
+    <div class="card home-card-raise" style="margin-bottom:8px;">
+      <button
+        type="button"
+        onclick="toggleMessagesAdminAccordion()"
+        style="
+          width:100%;
+          border:none;
+          background:transparent;
+          padding:0;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+          text-align:left;
+          color:#18443D;
+        "
+      >
+        <div>
+          <div class="home-main-title">Gérer et/ou diffuser un message</div>
+          <div class="home-subline">
+            Créer, modifier ou désactiver un message visible dans l’application.
+          </div>
+        </div>
+
+        <div style="
+          font-weight:1000;
+          font-size:0.9rem;
+          transform:${isOpen ? "rotate(180deg)" : "rotate(0deg)"};
+          transition:transform 0.15s ease;
+        ">
+          ▼
+        </div>
+      </button>
+
+      ${
+        isOpen
+          ? renderMessagesAdminInlineForm()
+          : ""
+      }
+    </div>
+  `;
+}
+
+  function renderMessagesAdminInlineForm() {
+  const existingOptions = ADMIN_MESSAGES.map(m => `
+    <option value="${escapeHtml(m.id || "")}">
+      ${m.actif ? "🟢" : "⚪"} ${escapeHtml((m.titre || m.message || m.id || "").slice(0, 40))}
+    </option>
+  `).join("");
+
+  return `
+    <div style="margin-top:12px;">
+      <label style="font-weight:900;">Modifier un message existant</label>
+      <select id="adminMessageSelect" onchange="fillMessageAdminForm()" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;">
+        <option value="">Nouveau message</option>
+        ${existingOptions}
+      </select>
+
+      <input id="adminMessageId" type="hidden">
+
+      <label style="font-weight:900;">Titre</label>
+      <input id="adminMessageTitle" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;" placeholder="Info, Rappel, Urgence...">
+
+      <label style="font-weight:900;">Message</label>
+      <textarea id="adminMessageText" rows="3" style="width:100%; margin:6px 0 10px; padding:10px; border-radius:12px;" placeholder="Texte du message"></textarea>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div>
+          <label style="font-weight:900;">Cible</label>
+          <select id="adminMessageTarget" style="width:100%; margin-top:6px; padding:10px; border-radius:12px;">
+            <option value="tous">Tous</option>
+            <option value="benevoles">Bénévoles</option>
+            <option value="referents">Référents</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-weight:900;">Priorité</label>
+          <select id="adminMessagePriority" style="width:100%; margin-top:6px; padding:10px; border-radius:12px;">
+            <option value="normal">Standard</option>
+            <option value="important">Important</option>
+          </select>
+        </div>
+      </div>
+
+      <label style="display:flex; gap:8px; align-items:center; margin-top:12px; font-weight:900;">
+        <input id="adminMessageActive" type="checkbox" checked>
+        Message actif
+      </label>
+
+      <button onclick="saveMessageAdminForm()" style="width:100%; margin-top:14px; padding:12px; border:none; border-radius:14px; background:#18443D; color:white; font-weight:1000;">
+        Enregistrer
+      </button>
+
+      <button onclick="deleteMessageAdminForm()" style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:14px; background:#b00000; color:white; font-weight:900;">
+        Supprimer le message
+      </button>
+    </div>
+  `;
+}
+  
+async function toggleMessagesAdminAccordion() {
+  infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
+
+  if (infosState.openMessagesAdmin) {
+    const pwd = state.password || localStorage.getItem("planning_password") || "";
+
+    try {
+      const res = await apiGet_({
+        api: "listMessages",
+        pwd: pwd
+      });
+
+      if (!res || !res.ok) {
+        throw new Error(res?.error || "LIST_MESSAGES_ERROR");
+      }
+
+      ADMIN_MESSAGES = Array.isArray(res.data) ? res.data : [];
+
+    } catch (err) {
+      alert("Impossible de charger les messages admin : " + (err.message || err));
+    }
+  }
+
   renderInfos();
 }
   
@@ -5943,9 +6032,6 @@ function renderTerrainMessageGroup(group) {
               ${escapeHtml(group.titre)}
             </div>
 
-            <div class="mini-note" style="margin-top:4px;">
-              ${count} conséquence${count > 1 ? "s" : ""}
-            </div>
           </div>
         </div>
 
@@ -5996,26 +6082,22 @@ function renderTerrainMessageConsequence(item) {
 }
 
 function buildTerrainConsequenceSentence(item) {
+  const titre = normalizeText(item.titre || item.sujet || "");
   const message = String(item.message || "").trim();
   const action = String(item.action || "").trim();
 
-  if (!message) return "";
-
-  const cleanAction = normalizeText(action);
-
-  if (cleanAction.includes("devenu chargeur")) {
-    return message + " est devenu chargeur.";
+  if (titre.includes("absence temporaire")) {
+    return `${item.benevole || "Alain Fossé"} est absent(e) temporairement, déjà remplacé(e) par un chargeur. Manque 1 Runner.`;
   }
 
-  if (cleanAction.includes("laisser sans vehicule")) {
-    return message + " est laissé sans véhicule / chargeur.";
+  if (titre.includes("demission") || titre.includes("démission")) {
+    return `${item.benevole || "Alain Fossé"} a démissionné(e), déjà remplacé(e) par un chargeur. Manque 1 Runner.`;
   }
 
-  if (action) {
-    return message + " — " + action + ".";
-  }
+  if (message && action) return message + " — " + action + ".";
+  if (message) return message.endsWith(".") ? message : message + ".";
 
-  return message.endsWith(".") ? message : message + ".";
+  return "";
 }
 
  function getTerrainMessagesForInfos() {
