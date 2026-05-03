@@ -10649,6 +10649,24 @@ function hideLoader() {
     <div class="sync-text">Chargement en cours…</div>
   </div>
 </div>
+    <script>
+(function registerPwaServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    console.warn("Service Worker non supporté par ce navigateur.");
+    return;
+  }
+
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("?file=sw")
+      .then(function (registration) {
+        console.log("PWA Service Worker enregistré :", registration.scope);
+      })
+      .catch(function (error) {
+        console.error("Erreur enregistrement Service Worker :", error);
+      });
+  });
+})();
+</script>
 </body>
 <!-- ===== FIN BODY ===== -->
 </html>
