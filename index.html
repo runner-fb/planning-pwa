@@ -8104,11 +8104,13 @@ function togglePlanningShift(shiftId) {
 }
 
 function renderPlanning() {
-if (!APP_DATA?.planningPublished && !isReferentVisualMode()) {
-  const el = document.getElementById("mainContent"); // adapte si besoin
+const container = document.getElementById("planningContent");
+if (!container) return;
 
-  el.innerHTML = `
-    <div class="empty-state-card">
+if (!APP_DATA?.planningPublished && !isReferentVisualMode()) {
+
+container.innerHTML = `
+<div class="empty-state-card">
       <div class="empty-state-title">Planning non disponible</div>
       <div class="empty-state-subtitle">
         Le planning n’est pas encore publié.
@@ -8120,8 +8122,6 @@ if (!APP_DATA?.planningPublished && !isReferentVisualMode()) {
 
   return;
 }
-  const container = document.getElementById("planningContent");
-  if (!container) return;
 
   const shifts = planningState.byDay[planningState.selectedDay] || [];
 
