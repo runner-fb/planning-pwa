@@ -5744,8 +5744,6 @@ function renderInfos() {
   const terrainMessages = getTerrainMessagesForInfos();
 
   el.innerHTML = `
-    ${isReferentVisualMode() ? renderMessagesAdminAccordion() : ""}
-
     <div class="card home-card-raise" style="margin-bottom:8px;">
       <div class="home-main-title">Messages terrain</div>
       <div class="home-subline" style="margin-bottom:8px;">
@@ -5758,13 +5756,12 @@ function renderInfos() {
           : `
             <div class="empty-state-card" style="padding:14px 8px 6px;">
               <div class="empty-state-title">Aucun message terrain</div>
-              <div class="empty-state-subtitle">
-                Aucune alerte terrain active.
-              </div>
             </div>
           `
       }
     </div>
+
+    ${isReferentVisualMode() ? renderMessagesAdminAccordion() : ""}
   `;
 }
 
@@ -5858,13 +5855,28 @@ function renderMessagesAdminInlineForm() {
         Message actif
       </label>
 
-      <button onclick="saveMessageAdminForm()" style="width:100%; margin-top:14px; padding:12px; border:none; border-radius:14px; background:#18443D; color:white; font-weight:1000;">
-        Enregistrer
-      </button>
+      <button
+  id="adminMessageSaveBtn"
+  onclick="saveMessageAdminForm()"
+  style="width:100%; margin-top:14px; padding:12px; border:none; border-radius:14px; background:#18443D; color:white; font-weight:1000;"
+>
+  Enregistrer
+</button>
 
-      <button onclick="deleteMessageAdminForm()" style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:14px; background:#b00000; color:white; font-weight:900;">
-        Supprimer le message
-      </button>
+<div
+  id="adminMessageLoader"
+  style="display:none; margin-top:8px; text-align:center; font-weight:900; color:#18443D;"
+>
+  ⏳ Traitement en cours...
+</div>
+
+<button
+  id="adminMessageDeleteBtn"
+  onclick="deleteMessageAdminForm()"
+  style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:14px; background:#b00000; color:white; font-weight:900;"
+>
+  Supprimer le message
+</button>
     </div>
   `;
 }
@@ -7130,7 +7142,7 @@ if (res?.error === "MESSAGE_INTROUVABLE") {
   await reloadMessageAdminSelect_();
   resetMessageAdminForm();
 
-  showMessageAdminToast("✅ Message déjà supprimé");
+  alert("✅ Message déjà supprimé");
   return;
 }
 
@@ -7140,7 +7152,7 @@ if (res?.error === "MESSAGE_INTROUVABLE") {
    await reloadMessageAdminSelect_();
 resetMessageAdminForm();
 
-showMessageAdminToast("✅ Message supprimé");
+alert("✅ Message supprimé");
 
   } catch (err) {
     alert("Erreur suppression : " + (err.message || err));
@@ -7185,6 +7197,27 @@ let MESSAGE_ADMIN_BUSY = false;
 
   localStorage.removeItem("admin_message_form");
 } 
+
+  function resetMessageAdminForm() {
+  const select = document.getElementById("adminMessageSelect");
+  if (select) select.value = "";
+
+  const id = document.getElementById("adminMessageId");
+  const title = document.getElementById("adminMessageTitle");
+  const text = document.getElementById("adminMessageText");
+  const target = document.getElementById("adminMessageTarget");
+  const priority = document.getElementById("adminMessagePriority");
+  const active = document.getElementById("adminMessageActive");
+
+  if (id) id.value = "";
+  if (title) title.value = "";
+  if (text) text.value = "";
+  if (target) target.value = "tous";
+  if (priority) priority.value = "normal";
+  if (active) active.checked = true;
+
+  localStorage.removeItem("admin_message_form");
+}
   
 function setMessageAdminBusy(isBusy, text) {
   MESSAGE_ADMIN_BUSY = isBusy;
@@ -7311,9 +7344,8 @@ async function saveMessageAdminForm() {
 
     await reloadMessageAdminSelect_();
 resetMessageAdminForm();
-
-showMessageAdminToast("✅ Message en ligne");
-
+alert("✅ Message en ligne");
+    
   } catch (err) {
     alert("Impossible d’enregistrer : " + (err.message || err));
   } finally {
