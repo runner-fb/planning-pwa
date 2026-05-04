@@ -686,56 +686,66 @@
     </footer>
   </div>
 
-  <script>
-    (function initAccordions() {
-      const mainCards = Array.from(document.querySelectorAll("[data-accordion]"));
-      const installChoices = Array.from(document.querySelectorAll("[data-install]"));
+ <script>
+  (function initAccordions() {
+    const mainCards = Array.from(document.querySelectorAll("[data-accordion]"));
+    const installChoices = Array.from(document.querySelectorAll("[data-install]"));
 
-      function openMainAccordion(name) {
-        mainCards.forEach(card => {
-          const isTarget = card.dataset.accordion === name;
-          card.classList.toggle("is-open", isTarget);
-        });
+    function toggleMainAccordion(name) {
+      const targetCard = document.querySelector('[data-accordion="' + name + '"]');
+      if (!targetCard) return;
 
-        const targetCard = document.querySelector('[data-accordion="' + name + '"]');
-        if (targetCard) {
-          targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }
-
-      function openInstallChoice(name) {
-        installChoices.forEach(choice => {
-          const isTarget = choice.dataset.install === name;
-          choice.classList.toggle("is-open", isTarget);
-        });
-      }
+      const wasOpen = targetCard.classList.contains("is-open");
 
       mainCards.forEach(card => {
-        const toggle = card.querySelector(".accordion-toggle");
-        if (!toggle) return;
-
-        toggle.addEventListener("click", () => {
-          const name = card.dataset.accordion;
-          openMainAccordion(name);
-        });
+        card.classList.remove("is-open");
       });
+
+      if (!wasOpen) {
+        targetCard.classList.add("is-open");
+        targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function toggleInstallChoice(name) {
+      const targetChoice = document.querySelector('[data-install="' + name + '"]');
+      if (!targetChoice) return;
+
+      const wasOpen = targetChoice.classList.contains("is-open");
 
       installChoices.forEach(choice => {
-        const toggle = choice.querySelector(".install-toggle");
-        if (!toggle) return;
-
-        toggle.addEventListener("click", () => {
-          const name = choice.dataset.install;
-          openInstallChoice(name);
-        });
+        choice.classList.remove("is-open");
       });
 
-      document.querySelectorAll("[data-open-main]").forEach(button => {
-        button.addEventListener("click", () => {
-          openMainAccordion(button.dataset.openMain);
-        });
+      if (!wasOpen) {
+        targetChoice.classList.add("is-open");
+      }
+    }
+
+    mainCards.forEach(card => {
+      const toggle = card.querySelector(".accordion-toggle");
+      if (!toggle) return;
+
+      toggle.addEventListener("click", () => {
+        toggleMainAccordion(card.dataset.accordion);
       });
-    })();
-  </script>
+    });
+
+    installChoices.forEach(choice => {
+      const toggle = choice.querySelector(".install-toggle");
+      if (!toggle) return;
+
+      toggle.addEventListener("click", () => {
+        toggleInstallChoice(choice.dataset.install);
+      });
+    });
+
+    document.querySelectorAll("[data-open-main]").forEach(button => {
+      button.addEventListener("click", () => {
+        toggleMainAccordion(button.dataset.openMain);
+      });
+    });
+  })();
+</script>
 </body>
 </html>
