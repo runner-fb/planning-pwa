@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Runner FB26 — Guide bénévole</title>
+
+  <title>Appli runner FB26 — Guide</title>
   <meta name="theme-color" content="#111827">
 
   <style>
@@ -11,7 +12,6 @@
       --green-dark: #0b3d36;
       --green-deep: #062b27;
       --cream: #f3ecdf;
-      --cream-2: #fff9ee;
       --text: #103b35;
       --muted: #74685d;
       --brown: #8a4b24;
@@ -22,7 +22,10 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     body {
       margin: 0;
@@ -61,7 +64,10 @@
       pointer-events: none;
     }
 
-    .hero-content { position: relative; z-index: 1; }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
 
     .brand-kicker {
       margin: 0 0 4px;
@@ -86,29 +92,6 @@
       color: #d7bd86;
       font-size: 22px;
       font-weight: 950;
-    }
-
-    .hero-pill {
-      margin-top: 28px;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      max-width: 100%;
-      padding: 13px 16px;
-      border-radius: 999px;
-      background: rgba(245, 239, 226, 0.9);
-      color: var(--text);
-      box-shadow: 0 12px 26px rgba(0,0,0,0.2);
-      font-weight: 950;
-    }
-
-    .hero-pill span:first-child {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: rgba(255,255,255,0.75);
     }
 
     main {
@@ -144,24 +127,40 @@
       background: linear-gradient(180deg, var(--brown), var(--gold));
     }
 
-    .intro-title {
-      margin: 0;
-      padding-left: 14px;
-      color: var(--brown);
-      font-size: 25px;
-      line-height: 1.05;
-      font-weight: 950;
-      letter-spacing: 0.035em;
-      text-transform: uppercase;
+    .intro-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-left: 10px;
     }
 
-    .intro-text {
-      margin: 11px 0 0;
-      padding-left: 14px;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.45;
-      font-weight: 680;
+    .intro-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.72);
+      font-size: 22px;
+      flex: 0 0 auto;
+    }
+
+    .intro-main {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 950;
+      color: var(--green-dark);
+      line-height: 1.05;
+    }
+
+    .intro-title {
+      margin: 4px 0 0;
+      color: var(--brown);
+      font-size: 17px;
+      line-height: 1.1;
+      font-weight: 950;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     .accordion-list {
@@ -170,7 +169,9 @@
       margin-top: 18px;
     }
 
-    .accordion-card { overflow: hidden; }
+    .accordion-card {
+      overflow: hidden;
+    }
 
     .accordion-toggle {
       appearance: none;
@@ -227,14 +228,18 @@
       transition: transform 0.2s ease;
     }
 
-    .accordion-card.is-open .accordion-arrow { transform: rotate(90deg); }
+    .accordion-card.is-open .accordion-arrow {
+      transform: rotate(90deg);
+    }
 
     .accordion-content {
       display: none;
       padding: 0 18px 20px;
     }
 
-    .accordion-card.is-open .accordion-content { display: block; }
+    .accordion-card.is-open .accordion-content {
+      display: block;
+    }
 
     .inner-card {
       padding: 16px;
@@ -361,14 +366,18 @@
       transition: transform 0.2s ease;
     }
 
-    .install-choice.is-open .install-arrow { transform: rotate(90deg); }
+    .install-choice.is-open .install-arrow {
+      transform: rotate(90deg);
+    }
 
     .install-content {
       display: none;
       padding: 0 14px 14px;
     }
 
-    .install-choice.is-open .install-content { display: block; }
+    .install-choice.is-open .install-content {
+      display: block;
+    }
 
     .warning {
       margin-top: 14px;
@@ -396,7 +405,9 @@
       padding: 12px;
     }
 
-    .slide.is-active { display: block; }
+    .slide.is-active {
+      display: block;
+    }
 
     .slide img {
       display: block;
@@ -425,8 +436,13 @@
       z-index: 5;
     }
 
-    .slider-nav.prev { left: 16px; }
-    .slider-nav.next { right: 16px; }
+    .slider-nav.prev {
+      left: 16px;
+    }
+
+    .slider-nav.next {
+      right: 16px;
+    }
 
     .slider-dots {
       display: flex;
@@ -449,8 +465,7 @@
       background: var(--brown);
     }
 
-    .main-btn,
-    .ghost-btn {
+    .main-btn {
       appearance: none;
       width: 100%;
       min-height: 54px;
@@ -466,42 +481,10 @@
       border: none;
       cursor: pointer;
       margin-top: 14px;
-    }
-
-    .main-btn {
       color: #fff;
       background: var(--brown);
       box-shadow: 0 14px 24px rgba(138, 75, 36, 0.28);
     }
-
-    .ghost-btn {
-      color: var(--text);
-      background: rgba(255,255,255,0.68);
-      border: 1px solid rgba(20, 50, 45, 0.1);
-    }
-
-    .intro-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.intro-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: rgba(255,255,255,0.7);
-  font-size: 22px;
-}
-
-.intro-main {
-  font-size: 30px;
-  font-weight: 900;
-  color: var(--green-dark);
-  line-height: 1.1;
-}
 
     footer {
       padding: 22px 22px 0;
@@ -525,17 +508,15 @@
     </header>
 
     <main>
-     <section class="intro-card">
-
-  <div class="intro-header">
-    <span class="intro-icon">🚐</span>
-    <div>
-      <div class="intro-main">Appli Runner FB26</div>
-      <h2 class="intro-title">Guide - 3 étapes simples</h2>
-    </div>
-  </div>
-
-</section>
+      <section class="intro-card">
+        <div class="intro-header">
+          <span class="intro-icon">🚐</span>
+          <div>
+            <div class="intro-main">Appli Runner FB26</div>
+            <h2 class="intro-title">Guide — 3 étapes simples</h2>
+          </div>
+        </div>
+      </section>
 
       <section class="accordion-list">
 
@@ -556,7 +537,7 @@
               <div class="steps">
                 <div class="step">
                   <div>
-                    <strong>Remplis les infos demandées.</strong>
+                    <strong>Remplis les informations demandées.</strong>
                     <span>Indique tes préférences et tes souhaits.</span>
                   </div>
                 </div>
@@ -614,14 +595,14 @@
                       <div class="step">
                         <div>
                           <strong>Ouvre le lien avec ton navigateur.</strong>
-                          <span>Si possible, utilise Chrome pour éviter les surprises.</span>
+                          <span>Si possible, utilise Chrome pour éviter les mauvaises surprises.</span>
                         </div>
                       </div>
 
                       <div class="step">
                         <div>
                           <strong>Appuie sur le menu ⋮.</strong>
-                          <span>Ce sont les trois petits points en haut ou en bas selon le téléphone.</span>
+                          <span>Ce sont les trois petits points, en haut ou en bas selon le téléphone.</span>
                         </div>
                       </div>
 
@@ -702,57 +683,55 @@
           </div>
         </article>
 
-       <article class="accordion-card" data-accordion="utilisation">
-  <button class="accordion-toggle" type="button">
-    <span class="accordion-icon">🚐</span>
-    <span>
-      <span class="accordion-title">Étape 3 — Utilisation</span>
-      <span class="accordion-subtitle">Guide visuel de l’application.</span>
-    </span>
-    <span class="accordion-arrow">›</span>
-  </button>
+        <article class="accordion-card" data-accordion="utilisation">
+          <button class="accordion-toggle" type="button">
+            <span class="accordion-icon">🚐</span>
+            <span>
+              <span class="accordion-title">Étape 3 — Utilisation</span>
+              <span class="accordion-subtitle">Guide visuel de l’application.</span>
+            </span>
+            <span class="accordion-arrow">›</span>
+          </button>
 
-  <div class="accordion-content">
-    <div class="inner-card">
-      <h3 class="inner-title">Utiliser Runner FB26</h3>
+          <div class="accordion-content">
+            <div class="inner-card">
+              <h3 class="inner-title">Utiliser Runner FB26</h3>
 
-      <div class="slider" data-slider="guide-utilisation">
-        <div class="slide is-active">
-          <img src="./Accueil.png" alt="Accueil Runner FB26">
-        </div>
+              <div class="slider" data-slider="guide-utilisation">
+                <div class="slide is-active">
+                  <img src="./Accueil.png" alt="Accueil Runner FB26">
+                </div>
 
-        <div class="slide">
-          <img src="./Mes_creneaux.png" alt="Mes créneaux Runner FB26">
-        </div>
+                <div class="slide">
+                  <img src="./Mes_creneaux.png" alt="Mes créneaux Runner FB26">
+                </div>
 
-        <div class="slide">
-          <img src="./Planning.png" alt="Planning Runner FB26">
-        </div>
+                <div class="slide">
+                  <img src="./Planning.png" alt="Planning Runner FB26">
+                </div>
 
-        <div class="slide">
-          <img src="./Contacts.png" alt="Contacts Runner FB26">
-        </div>
+                <div class="slide">
+                  <img src="./Contacts.png" alt="Contacts Runner FB26">
+                </div>
 
-        <button class="slider-nav prev" type="button" aria-label="Image précédente">‹</button>
-        <button class="slider-nav next" type="button" aria-label="Image suivante">›</button>
-        <div class="slider-dots" aria-label="Navigation du guide visuel"></div>
-      </div>
+                <button class="slider-nav prev" type="button" aria-label="Image précédente">‹</button>
+                <button class="slider-nav next" type="button" aria-label="Image suivante">›</button>
+                <div class="slider-dots" aria-label="Navigation du guide visuel"></div>
+              </div>
 
-      <a class="main-btn" href="./">
-        🚐 Lancer Runner FB26
-      </a>
-      
-    </div>
-  </div>
-</article>
+              <a class="main-btn" href="./">
+                🚐 Lancer Runner FB26
+              </a>
+            </div>
+          </div>
+        </article>
 
       </section>
     </main>
 
     <footer>
       Runner FB26 — Planning runners Beauregard par Anthony Bodereau<br>
-      En cas de souci : envoi moi un mail à bodereaua@gmail.com
-     
+      En cas de souci : envoie-moi un mail à bodereaua@gmail.com
     </footer>
   </div>
 
@@ -812,12 +791,6 @@
         });
       });
 
-      document.querySelectorAll("[data-open-main]").forEach(button => {
-        button.addEventListener("click", () => {
-          toggleMainAccordion(button.dataset.openMain);
-        });
-      });
-
       document.querySelectorAll("[data-slider]").forEach(slider => {
         const slides = Array.from(slider.querySelectorAll(".slide"));
         const prev = slider.querySelector(".prev");
@@ -833,7 +806,7 @@
           const dot = document.createElement("button");
           dot.type = "button";
           dot.className = "slider-dot";
-          dot.setAttribute("aria-label", "Voir l'écran " + (index + 1));
+          dot.setAttribute("aria-label", "Voir l’écran " + (index + 1));
 
           dot.addEventListener("click", () => {
             showSlide(index);
