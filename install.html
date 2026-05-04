@@ -170,9 +170,7 @@
       margin-top: 18px;
     }
 
-    .accordion-card {
-      overflow: hidden;
-    }
+    .accordion-card { overflow: hidden; }
 
     .accordion-toggle {
       appearance: none;
@@ -229,18 +227,14 @@
       transition: transform 0.2s ease;
     }
 
-    .accordion-card.is-open .accordion-arrow {
-      transform: rotate(90deg);
-    }
+    .accordion-card.is-open .accordion-arrow { transform: rotate(90deg); }
 
     .accordion-content {
       display: none;
       padding: 0 18px 20px;
     }
 
-    .accordion-card.is-open .accordion-content {
-      display: block;
-    }
+    .accordion-card.is-open .accordion-content { display: block; }
 
     .inner-card {
       padding: 16px;
@@ -367,18 +361,14 @@
       transition: transform 0.2s ease;
     }
 
-    .install-choice.is-open .install-arrow {
-      transform: rotate(90deg);
-    }
+    .install-choice.is-open .install-arrow { transform: rotate(90deg); }
 
     .install-content {
       display: none;
       padding: 0 14px 14px;
     }
 
-    .install-choice.is-open .install-content {
-      display: block;
-    }
+    .install-choice.is-open .install-content { display: block; }
 
     .warning {
       margin-top: 14px;
@@ -390,6 +380,84 @@
       font-size: 14px;
       line-height: 1.4;
       font-weight: 760;
+    }
+
+    .slider {
+      position: relative;
+      overflow: hidden;
+      border-radius: 22px;
+      margin-top: 16px;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid rgba(20, 50, 45, 0.08);
+    }
+
+    .slide {
+      display: none;
+      padding: 12px;
+    }
+
+    .slide.is-active { display: block; }
+
+    .slide img {
+      display: block;
+      width: 100%;
+      max-height: 620px;
+      object-fit: contain;
+      border-radius: 18px;
+      background: #111827;
+    }
+
+    .slide-caption {
+      margin-top: 12px;
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.75);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 750;
+    }
+
+    .slider-nav {
+      position: absolute;
+      top: 45%;
+      transform: translateY(-50%);
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(0,0,0,0.52);
+      color: #fff;
+      font-size: 28px;
+      font-weight: 950;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      z-index: 5;
+    }
+
+    .slider-nav.prev { left: 16px; }
+    .slider-nav.next { right: 16px; }
+
+    .slider-dots {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 0 14px;
+    }
+
+    .slider-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(116, 104, 93, 0.35);
+      cursor: pointer;
+    }
+
+    .slider-dot.is-active {
+      width: 22px;
+      background: var(--brown);
     }
 
     .main-btn,
@@ -636,7 +704,49 @@
             <div class="inner-card">
               <h3 class="inner-title">Utiliser Runner FB26</h3>
 
-              <div class="steps">
+              <div class="slider" data-slider="guide-utilisation">
+                <div class="slide is-active">
+                  <img src="./Accueil.png" alt="Accueil Runner FB26">
+                  <div class="slide-caption">
+                    <strong>Accueil</strong><br>
+                    Le créneau en cours est cliquable pour voir qui est sur ce créneau.
+                    L’icône personnage à côté de “connecté en tant que” permet de changer de vue utilisateur.
+                  </div>
+                </div>
+
+                <div class="slide">
+                  <img src="./Mes_creneaux.png" alt="Mes créneaux Runner FB26">
+                  <div class="slide-caption">
+                    <strong>Mes créneaux</strong><br>
+                    Chaque carte est cliquable pour voir la composition du créneau.
+                    L’icône imprimante permet d’imprimer tes créneaux, un jour précis ou le planning complet.
+                  </div>
+                </div>
+
+                <div class="slide">
+                  <img src="./Planning.png" alt="Planning Runner FB26">
+                  <div class="slide-caption">
+                    <strong>Planning</strong><br>
+                    Le planning affiche les créneaux par jour.
+                    Chaque carte est cliquable pour voir les détails et les personnes présentes.
+                  </div>
+                </div>
+
+                <div class="slide">
+                  <img src="./Contacts.png" alt="Contacts Runner FB26">
+                  <div class="slide-caption">
+                    <strong>Contacts</strong><br>
+                    Les cartes sont cliquables pour voir les créneaux de chacun.
+                    Pour les référents, il suffit d’appuyer sur le téléphone pour appeler directement.
+                  </div>
+                </div>
+
+                <button class="slider-nav prev" type="button" aria-label="Image précédente">‹</button>
+                <button class="slider-nav next" type="button" aria-label="Image suivante">›</button>
+                <div class="slider-dots" aria-label="Navigation du guide visuel"></div>
+              </div>
+
+              <div class="steps" style="margin-top: 14px;">
                 <div class="step">
                   <div>
                     <strong>Choisis ton profil bénévole.</strong>
@@ -653,8 +763,8 @@
 
                 <div class="step">
                   <div>
-                    <strong>Regarde les messages et infos terrain.</strong>
-                    <span>Les infos importantes peuvent être mises à jour pendant le festival.</span>
+                    <strong>Utilise les cartes cliquables.</strong>
+                    <span>Accueil, Mes créneaux, Planning et Contacts donnent accès aux détails.</span>
                   </div>
                 </div>
 
@@ -686,66 +796,134 @@
     </footer>
   </div>
 
- <script>
-  (function initAccordions() {
-    const mainCards = Array.from(document.querySelectorAll("[data-accordion]"));
-    const installChoices = Array.from(document.querySelectorAll("[data-install]"));
+  <script>
+    (function initGuidePage() {
+      const mainCards = Array.from(document.querySelectorAll("[data-accordion]"));
+      const installChoices = Array.from(document.querySelectorAll("[data-install]"));
 
-    function toggleMainAccordion(name) {
-      const targetCard = document.querySelector('[data-accordion="' + name + '"]');
-      if (!targetCard) return;
+      function toggleMainAccordion(name) {
+        const targetCard = document.querySelector('[data-accordion="' + name + '"]');
+        if (!targetCard) return;
 
-      const wasOpen = targetCard.classList.contains("is-open");
+        const wasOpen = targetCard.classList.contains("is-open");
+
+        mainCards.forEach(card => {
+          card.classList.remove("is-open");
+        });
+
+        if (!wasOpen) {
+          targetCard.classList.add("is-open");
+          setTimeout(() => {
+            targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 60);
+        }
+      }
+
+      function toggleInstallChoice(name) {
+        const targetChoice = document.querySelector('[data-install="' + name + '"]');
+        if (!targetChoice) return;
+
+        const wasOpen = targetChoice.classList.contains("is-open");
+
+        installChoices.forEach(choice => {
+          choice.classList.remove("is-open");
+        });
+
+        if (!wasOpen) {
+          targetChoice.classList.add("is-open");
+        }
+      }
 
       mainCards.forEach(card => {
-        card.classList.remove("is-open");
+        const toggle = card.querySelector(".accordion-toggle");
+        if (!toggle) return;
+
+        toggle.addEventListener("click", () => {
+          toggleMainAccordion(card.dataset.accordion);
+        });
       });
-
-      if (!wasOpen) {
-        targetCard.classList.add("is-open");
-        targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }
-
-    function toggleInstallChoice(name) {
-      const targetChoice = document.querySelector('[data-install="' + name + '"]');
-      if (!targetChoice) return;
-
-      const wasOpen = targetChoice.classList.contains("is-open");
 
       installChoices.forEach(choice => {
-        choice.classList.remove("is-open");
+        const toggle = choice.querySelector(".install-toggle");
+        if (!toggle) return;
+
+        toggle.addEventListener("click", () => {
+          toggleInstallChoice(choice.dataset.install);
+        });
       });
 
-      if (!wasOpen) {
-        targetChoice.classList.add("is-open");
-      }
-    }
-
-    mainCards.forEach(card => {
-      const toggle = card.querySelector(".accordion-toggle");
-      if (!toggle) return;
-
-      toggle.addEventListener("click", () => {
-        toggleMainAccordion(card.dataset.accordion);
+      document.querySelectorAll("[data-open-main]").forEach(button => {
+        button.addEventListener("click", () => {
+          toggleMainAccordion(button.dataset.openMain);
+        });
       });
-    });
 
-    installChoices.forEach(choice => {
-      const toggle = choice.querySelector(".install-toggle");
-      if (!toggle) return;
+      document.querySelectorAll("[data-slider]").forEach(slider => {
+        const slides = Array.from(slider.querySelectorAll(".slide"));
+        const prev = slider.querySelector(".prev");
+        const next = slider.querySelector(".next");
+        const dotsContainer = slider.querySelector(".slider-dots");
 
-      toggle.addEventListener("click", () => {
-        toggleInstallChoice(choice.dataset.install);
+        if (!slides.length || !prev || !next || !dotsContainer) return;
+
+        let currentIndex = 0;
+        let startX = 0;
+
+        slides.forEach((_, index) => {
+          const dot = document.createElement("button");
+          dot.type = "button";
+          dot.className = "slider-dot";
+          dot.setAttribute("aria-label", "Voir l'écran " + (index + 1));
+
+          dot.addEventListener("click", () => {
+            showSlide(index);
+          });
+
+          dotsContainer.appendChild(dot);
+        });
+
+        const dots = Array.from(dotsContainer.querySelectorAll(".slider-dot"));
+
+        function showSlide(index) {
+          currentIndex = (index + slides.length) % slides.length;
+
+          slides.forEach((slide, slideIndex) => {
+            slide.classList.toggle("is-active", slideIndex === currentIndex);
+          });
+
+          dots.forEach((dot, dotIndex) => {
+            dot.classList.toggle("is-active", dotIndex === currentIndex);
+          });
+        }
+
+        next.addEventListener("click", () => {
+          showSlide(currentIndex + 1);
+        });
+
+        prev.addEventListener("click", () => {
+          showSlide(currentIndex - 1);
+        });
+
+        slider.addEventListener("touchstart", event => {
+          startX = event.touches[0].clientX;
+        }, { passive: true });
+
+        slider.addEventListener("touchend", event => {
+          const endX = event.changedTouches[0].clientX;
+          const diff = startX - endX;
+
+          if (Math.abs(diff) < 50) return;
+
+          if (diff > 0) {
+            showSlide(currentIndex + 1);
+          } else {
+            showSlide(currentIndex - 1);
+          }
+        }, { passive: true });
+
+        showSlide(0);
       });
-    });
-
-    document.querySelectorAll("[data-open-main]").forEach(button => {
-      button.addEventListener("click", () => {
-        toggleMainAccordion(button.dataset.openMain);
-      });
-    });
-  })();
-</script>
+    })();
+  </script>
 </body>
 </html>
