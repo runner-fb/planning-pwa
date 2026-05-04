@@ -407,17 +407,6 @@
       background: #111827;
     }
 
-    .slide-caption {
-      margin-top: 12px;
-      padding: 12px 13px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.75);
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.4;
-      font-weight: 750;
-    }
-
     .slider-nav {
       position: absolute;
       top: 45%;
@@ -509,20 +498,14 @@
         <p class="brand-kicker">Festival</p>
         <h1 class="brand-title">Beau<br>Regard</h1>
         <p class="brand-subtitle">1+2.3.4.5 juillet 2026</p>
-        <div class="hero-pill">
-          <span>🚐</span>
-          <span>Guide bénévole Runner FB26</span>
-        </div>
       </div>
     </header>
 
     <main>
       <section class="intro-card">
+        <span>🚐</span>
+          <span>Guide appli Runner FB26</span>
         <h2 class="intro-title">3 étapes simples</h2>
-        <p class="intro-text">
-          Avant le festival, il faut d’abord répondre au formulaire, puis installer l’application, puis apprendre les bases d’utilisation.
-          Dans cet ordre. Sinon c’est le bazar, et le bazar conduit au tableur maudit.
-        </p>
       </section>
 
       <section class="accordion-list">
@@ -690,109 +673,57 @@
           </div>
         </article>
 
-        <article class="accordion-card" data-accordion="utilisation">
-          <button class="accordion-toggle" type="button">
-            <span class="accordion-icon">🚐</span>
-            <span>
-              <span class="accordion-title">Étape 3 — Utilisation</span>
-              <span class="accordion-subtitle">Voir ses créneaux, les messages et les infos terrain.</span>
-            </span>
-            <span class="accordion-arrow">›</span>
-          </button>
+       <article class="accordion-card" data-accordion="utilisation">
+  <button class="accordion-toggle" type="button">
+    <span class="accordion-icon">🚐</span>
+    <span>
+      <span class="accordion-title">Étape 3 — Utilisation</span>
+      <span class="accordion-subtitle">Guide visuel de l’application.</span>
+    </span>
+    <span class="accordion-arrow">›</span>
+  </button>
 
-          <div class="accordion-content">
-            <div class="inner-card">
-              <h3 class="inner-title">Utiliser Runner FB26</h3>
+  <div class="accordion-content">
+    <div class="inner-card">
+      <h3 class="inner-title">Utiliser Runner FB26</h3>
 
-              <div class="slider" data-slider="guide-utilisation">
-                <div class="slide is-active">
-                  <img src="./Accueil.png" alt="Accueil Runner FB26">
-                  <div class="slide-caption">
-                    <strong>Accueil</strong><br>
-                    Le créneau en cours est cliquable pour voir qui est sur ce créneau.
-                    L’icône personnage à côté de “connecté en tant que” permet de changer de vue utilisateur.
-                  </div>
-                </div>
+      <div class="slider" data-slider="guide-utilisation">
+        <div class="slide is-active">
+          <img src="./Accueil.png" alt="Accueil Runner FB26">
+        </div>
 
-                <div class="slide">
-                  <img src="./Mes_creneaux.png" alt="Mes créneaux Runner FB26">
-                  <div class="slide-caption">
-                    <strong>Mes créneaux</strong><br>
-                    Chaque carte est cliquable pour voir la composition du créneau.
-                    L’icône imprimante permet d’imprimer tes créneaux, un jour précis ou le planning complet.
-                  </div>
-                </div>
+        <div class="slide">
+          <img src="./Mes_creneaux.png" alt="Mes créneaux Runner FB26">
+        </div>
 
-                <div class="slide">
-                  <img src="./Planning.png" alt="Planning Runner FB26">
-                  <div class="slide-caption">
-                    <strong>Planning</strong><br>
-                    Le planning affiche les créneaux par jour.
-                    Chaque carte est cliquable pour voir les détails et les personnes présentes.
-                  </div>
-                </div>
+        <div class="slide">
+          <img src="./Planning.png" alt="Planning Runner FB26">
+        </div>
 
-                <div class="slide">
-                  <img src="./Contacts.png" alt="Contacts Runner FB26">
-                  <div class="slide-caption">
-                    <strong>Contacts</strong><br>
-                    Les cartes sont cliquables pour voir les créneaux de chacun.
-                    Pour les référents, il suffit d’appuyer sur le téléphone pour appeler directement.
-                  </div>
-                </div>
+        <div class="slide">
+          <img src="./Contacts.png" alt="Contacts Runner FB26">
+        </div>
 
-                <button class="slider-nav prev" type="button" aria-label="Image précédente">‹</button>
-                <button class="slider-nav next" type="button" aria-label="Image suivante">›</button>
-                <div class="slider-dots" aria-label="Navigation du guide visuel"></div>
-              </div>
+        <button class="slider-nav prev" type="button" aria-label="Image précédente">‹</button>
+        <button class="slider-nav next" type="button" aria-label="Image suivante">›</button>
+        <div class="slider-dots" aria-label="Navigation du guide visuel"></div>
+      </div>
 
-              <div class="steps" style="margin-top: 14px;">
-                <div class="step">
-                  <div>
-                    <strong>Choisis ton profil bénévole.</strong>
-                    <span>Sélectionne ton nom pour afficher tes informations personnelles.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Consulte tes créneaux.</strong>
-                    <span>Tu peux voir tes horaires, ton rôle et les informations associées.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Utilise les cartes cliquables.</strong>
-                    <span>Accueil, Mes créneaux, Planning et Contacts donnent accès aux détails.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Ouvre l’application avec du réseau au moins une fois.</strong>
-                    <span>Ça permet de charger les dernières données avant d’avoir besoin du mode hors ligne.</span>
-                  </div>
-                </div>
-              </div>
-
-              <a class="main-btn" href="./">
-                🚐 Lancer Runner FB26
-              </a>
-
-              <button class="ghost-btn" type="button" data-open-main="formulaire">
-                ↩ Revenir au formulaire
-              </button>
-            </div>
-          </div>
-        </article>
+      <a class="main-btn" href="./">
+        🚐 Lancer Runner FB26
+      </a>
+      
+    </div>
+  </div>
+</article>
 
       </section>
     </main>
 
     <footer>
-      Runner FB26 — Planning runners Beauregard<br>
-      En cas de souci : supprimer l’ancienne icône, rouvrir le lien, puis refaire l’installation.
+      Runner FB26 — Planning runners Beauregard par Anthony Bodereau
+      En cas de souci : envoi moi un mail à bodereaua@gmail.com<br>
+     
     </footer>
   </div>
 
