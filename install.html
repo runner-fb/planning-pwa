@@ -3,22 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Runner FB26 — Guide bénévole</title>
+  <title>Installer Runner FB26</title>
   <meta name="theme-color" content="#111827">
 
   <style>
+    /* =========================================================
+       PAGE INSTALLATION PWA — Runner FB26
+       Style volontairement proche de l'app : fond Beauregard,
+       cartes arrondies, tons crème / vert / brun.
+       ========================================================= */
+
     :root {
-      --green-dark: #0b3d36;
-      --green-deep: #062b27;
-      --cream: #f3ecdf;
-      --cream-2: #fff9ee;
+      --bg-dark: #0f3f37;
+      --bg-deep: #082c29;
+      --card: rgba(245, 239, 226, 0.92);
+      --card-soft: rgba(255, 255, 255, 0.72);
       --text: #103b35;
-      --muted: #74685d;
-      --brown: #8a4b24;
-      --gold: #c8934a;
-      --border: rgba(70, 50, 30, 0.15);
-      --shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
-      --radius-xl: 30px;
+      --muted: #6f655b;
+      --accent: #8a4b24;
+      --accent-soft: #c8934a;
+      --border: rgba(70, 50, 30, 0.14);
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
@@ -27,30 +34,37 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
+      padding: 0;
+      min-height: 100%;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 85% 18%, rgba(243, 202, 112, 0.22), transparent 18%),
-        radial-gradient(circle at 8% 42%, rgba(255, 125, 80, 0.16), transparent 15%),
-        linear-gradient(180deg, var(--green-dark) 0%, var(--green-deep) 48%, #ebe2d4 48%, #e4dac8 100%);
+        radial-gradient(circle at 86% 18%, rgba(233, 202, 124, 0.24), transparent 18%),
+        radial-gradient(circle at 14% 40%, rgba(255, 142, 78, 0.18), transparent 14%),
+        linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-deep) 52%, #f0eadf 52%, #e7dfd0 100%);
+    }
+
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
     .app-shell {
       width: 100%;
-      max-width: 820px;
+      max-width: 760px;
       margin: 0 auto;
       min-height: 100vh;
-      padding-bottom: calc(34px + var(--safe-bottom));
+      padding-bottom: calc(28px + var(--safe-bottom));
     }
 
     .hero {
-      min-height: 315px;
-      padding: 34px 24px 120px;
-      color: #f8f1e4;
       position: relative;
+      min-height: 310px;
+      padding: 34px 24px 120px;
+      color: #f7f1e4;
       overflow: hidden;
     }
 
@@ -59,8 +73,8 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(180deg, rgba(5, 45, 39, 0.08), rgba(5, 45, 39, 0.92)),
-        radial-gradient(circle at 78% 24%, rgba(255,255,255,0.18), transparent 19%);
+        linear-gradient(180deg, rgba(5, 45, 39, 0.24), rgba(5, 45, 39, 0.86)),
+        radial-gradient(circle at 72% 25%, rgba(255,255,255,0.18), transparent 18%);
       pointer-events: none;
     }
 
@@ -71,30 +85,30 @@
 
     .brand-kicker {
       margin: 0 0 4px;
-      font-weight: 950;
+      font-weight: 900;
       font-size: 15px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      opacity: 0.85;
+      opacity: 0.82;
     }
 
     .brand-title {
       margin: 0;
-      font-size: clamp(42px, 11vw, 76px);
       line-height: 0.92;
+      font-size: clamp(40px, 11vw, 76px);
       font-weight: 950;
-      letter-spacing: -0.045em;
       text-transform: uppercase;
+      letter-spacing: -0.045em;
     }
 
     .brand-subtitle {
       margin: 16px 0 0;
       color: #d7bd86;
       font-size: 22px;
-      font-weight: 950;
+      font-weight: 900;
     }
 
-    .hero-pill {
+    .install-pill {
       margin-top: 28px;
       display: inline-flex;
       align-items: center;
@@ -102,194 +116,148 @@
       max-width: 100%;
       padding: 13px 16px;
       border-radius: 999px;
-      background: rgba(245, 239, 226, 0.9);
+      background: rgba(245, 239, 226, 0.88);
       color: var(--text);
-      box-shadow: 0 12px 26px rgba(0,0,0,0.2);
-      font-weight: 950;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+      font-weight: 900;
     }
 
-    .hero-pill span:first-child {
+    .install-pill .icon {
       width: 34px;
       height: 34px;
       border-radius: 50%;
       display: grid;
       place-items: center;
       background: rgba(255,255,255,0.75);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
     }
 
     main {
-      margin-top: -88px;
-      padding: 0 22px;
       position: relative;
       z-index: 2;
+      margin-top: -88px;
+      padding: 0 22px;
     }
 
-    .intro-card,
-    .section-card {
+    .status-card {
+      position: relative;
+      margin-bottom: 18px;
+      padding: 20px 22px;
       border-radius: var(--radius-xl);
-      background: rgba(245, 239, 226, 0.94);
+      background: var(--card);
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
-    }
-
-    .intro-card {
-      padding: 22px;
-      margin-bottom: 18px;
       overflow: hidden;
-      position: relative;
     }
 
-    .intro-card::before {
+    .status-card::before {
       content: "";
       position: absolute;
       left: 0;
       top: 0;
       bottom: 0;
       width: 12px;
+      background: linear-gradient(180deg, var(--accent), var(--accent-soft));
       border-radius: var(--radius-xl) 0 0 var(--radius-xl);
-      background: linear-gradient(180deg, var(--brown), var(--gold));
     }
 
-    .intro-title {
+    .status-title {
       margin: 0;
       padding-left: 14px;
-      color: var(--brown);
+      color: var(--accent);
       font-size: 25px;
       line-height: 1.05;
-      font-weight: 950;
-      letter-spacing: 0.035em;
       text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 950;
     }
 
-    .intro-text {
-      margin: 11px 0 0;
+    .status-text {
+      margin: 10px 0 0;
       padding-left: 14px;
       color: var(--muted);
       font-size: 15px;
       line-height: 1.45;
-      font-weight: 680;
+      font-weight: 650;
     }
 
-    .quick-actions {
+    .tabs-note {
       display: grid;
-      gap: 12px;
-      margin: 18px 0 24px;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 18px 0;
     }
 
-    .action-card {
-      appearance: none;
-      border: none;
-      font: inherit;
-      text-align: left;
-      cursor: pointer;
-      display: grid;
-      grid-template-columns: 48px 1fr 28px;
-      align-items: center;
-      gap: 13px;
-      min-height: 82px;
-      padding: 16px;
-      border-radius: 24px;
-      background: rgba(255,255,255,0.76);
-      box-shadow: 0 12px 26px rgba(0,0,0,0.12);
+    .mini-card {
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.62);
+      border: 1px solid rgba(20, 50, 45, 0.08);
+      font-weight: 800;
       color: var(--text);
     }
 
-    .action-card.is-active {
-      background: rgba(255, 249, 238, 0.96);
-      outline: 3px solid rgba(200, 147, 74, 0.55);
-    }
-
-    .action-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 18px;
-      display: grid;
-      place-items: center;
-      background: var(--cream-2);
-      font-size: 25px;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
-    }
-
-    .action-title {
-      display: block;
-      font-size: 17px;
-      font-weight: 950;
-      line-height: 1.15;
-    }
-
-    .action-subtitle {
+    .mini-card span {
       display: block;
       margin-top: 4px;
-      color: var(--muted);
       font-size: 13px;
+      color: var(--muted);
+      font-weight: 650;
       line-height: 1.35;
-      font-weight: 700;
-    }
-
-    .action-arrow {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--brown);
-      color: #fff;
-      font-weight: 950;
-    }
-
-    .page-section {
-      display: none;
-    }
-
-    .page-section.is-visible {
-      display: block;
     }
 
     .section-title {
-      margin: 26px 0 12px;
-      color: var(--brown);
+      margin: 24px 0 12px;
+      color: var(--accent);
       font-size: 27px;
       font-weight: 950;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
 
-    .section-card {
-      padding: 20px;
+    .guide-card {
       margin-bottom: 18px;
+      padding: 20px;
+      border-radius: var(--radius-xl);
+      background: var(--card-soft);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
     }
 
-    .section-header {
+    .guide-header {
       display: flex;
-      gap: 13px;
       align-items: center;
+      gap: 12px;
       margin-bottom: 16px;
     }
 
-    .section-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 19px;
+    .guide-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
       display: grid;
       place-items: center;
-      background: rgba(255,255,255,0.82);
-      font-size: 28px;
+      background: rgba(255,255,255,0.78);
+      font-size: 25px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
       flex: 0 0 auto;
     }
 
-    .section-heading {
+    .guide-title {
       margin: 0;
       font-size: 23px;
       line-height: 1.1;
       font-weight: 950;
+      color: var(--text);
     }
 
-    .section-subheading {
+    .guide-subtitle {
       margin: 4px 0 0;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.35;
-      font-weight: 700;
+      font-weight: 650;
     }
 
     .steps {
@@ -302,9 +270,10 @@
       display: grid;
       grid-template-columns: 38px 1fr;
       gap: 11px;
+      align-items: start;
       padding: 13px;
       border-radius: 18px;
-      background: rgba(255,255,255,0.68);
+      background: rgba(255,255,255,0.62);
       border: 1px solid rgba(20, 50, 45, 0.08);
     }
 
@@ -316,14 +285,16 @@
       border-radius: 50%;
       display: grid;
       place-items: center;
-      color: #fff;
-      background: var(--brown);
+      color: white;
+      background: var(--accent);
       font-weight: 950;
+      box-shadow: 0 6px 14px rgba(138, 75, 36, 0.28);
     }
 
     .step strong {
       display: block;
       font-size: 16px;
+      color: var(--text);
       line-height: 1.25;
     }
 
@@ -333,95 +304,120 @@
       color: var(--muted);
       font-size: 14px;
       line-height: 1.35;
-      font-weight: 650;
-    }
-
-    .split {
-      display: grid;
-      gap: 14px;
-      margin-top: 14px;
-    }
-
-    .sub-card {
-      padding: 16px;
-      border-radius: 21px;
-      background: rgba(255,255,255,0.58);
-      border: 1px solid rgba(20, 50, 45, 0.08);
-    }
-
-    .sub-card h4 {
-      margin: 0 0 10px;
-      font-size: 18px;
+      font-weight: 600;
     }
 
     .warning {
       margin-top: 14px;
       padding: 13px 14px;
       border-radius: 18px;
-      background: rgba(255, 244, 218, 0.92);
-      border: 1px solid rgba(201, 146, 75, 0.38);
+      background: rgba(255, 244, 218, 0.9);
+      border: 1px solid rgba(201, 146, 75, 0.35);
       color: #6c431e;
       font-size: 14px;
       line-height: 1.4;
-      font-weight: 760;
+      font-weight: 750;
+    }
+
+    .button-row {
+      display: grid;
+      gap: 10px;
+      margin: 22px 0 10px;
     }
 
     .main-btn,
     .ghost-btn {
       appearance: none;
+      border: none;
       width: 100%;
-      min-height: 54px;
+      min-height: 52px;
       border-radius: 999px;
+      font-size: 16px;
+      font-weight: 950;
+      text-decoration: none;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      text-align: center;
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 950;
-      border: none;
-      cursor: pointer;
-      margin-top: 14px;
     }
 
     .main-btn {
       color: #fff;
-      background: var(--brown);
+      background: var(--accent);
       box-shadow: 0 14px 24px rgba(138, 75, 36, 0.28);
     }
 
     .ghost-btn {
       color: var(--text);
-      background: rgba(255,255,255,0.68);
+      background: rgba(255,255,255,0.65);
       border: 1px solid rgba(20, 50, 45, 0.1);
     }
 
+    .faq {
+      margin-top: 18px;
+    }
+
+    details {
+      margin-bottom: 10px;
+      padding: 15px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.64);
+      border: 1px solid rgba(20, 50, 45, 0.08);
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 950;
+      color: var(--text);
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-weight: 620;
+      font-size: 14px;
+    }
+
     footer {
-      padding: 14px 22px 0;
+      padding: 12px 22px 0;
       text-align: center;
       color: rgba(16, 59, 53, 0.72);
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.4;
       font-weight: 700;
     }
 
-    @media (min-width: 760px) {
-      .quick-actions {
-        grid-template-columns: repeat(3, 1fr);
+    .desktop-only {
+      display: none;
+    }
+
+    @media (min-width: 720px) {
+      .app-shell {
+        max-width: 920px;
       }
 
-      .action-card {
-        grid-template-columns: 1fr;
-        justify-items: start;
+      main {
+        padding: 0 30px;
       }
 
-      .action-arrow {
-        display: none;
-      }
-
-      .split {
+      .guide-grid {
+        display: grid;
         grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .guide-card {
+        margin-bottom: 0;
+      }
+
+      .desktop-only {
+        display: block;
       }
     }
   </style>
@@ -435,266 +431,152 @@
         <h1 class="brand-title">Beau<br>Regard</h1>
         <p class="brand-subtitle">1+2.3.4.5 juillet 2026</p>
 
-        <div class="hero-pill">
-          <span>🚐</span>
-          <span>Guide bénévole Runner FB26</span>
+        <div class="install-pill">
+          <span class="icon">📲</span>
+          <span>Installer l’application Runner FB26</span>
         </div>
       </div>
     </header>
 
     <main>
-      <section class="intro-card">
-        <h2 class="intro-title">3 étapes simples</h2>
-        <p class="intro-text">
-          Avant le festival, il faut d’abord répondre au formulaire, puis installer l’application,
-          puis apprendre les bases d’utilisation. Dans cet ordre. Sinon c’est le bazar, et le bazar
-          conduit au tableur maudit.
+      <section class="status-card">
+        <h2 class="status-title">Guide d’installation</h2>
+        <p class="status-text">
+          Cette page explique comment ajouter l’application sur l’écran d’accueil du téléphone. Une fois installée, elle s’ouvre comme une vraie application.
         </p>
       </section>
 
-      <nav class="quick-actions" aria-label="Navigation rapide">
-        <button class="action-card is-active" type="button" data-target="formulaire">
-          <span class="action-icon">📝</span>
-          <span>
-            <span class="action-title">Étape 1 — Remplir le formulaire</span>
-            <span class="action-subtitle">Donner ses disponibilités et souhaits.</span>
-          </span>
-          <span class="action-arrow">›</span>
-        </button>
-
-        <button class="action-card" type="button" data-target="installation">
-          <span class="action-icon">📲</span>
-          <span>
-            <span class="action-title">Étape 2 — Installer l’appli</span>
-            <span class="action-subtitle">Android avec Chrome, iPhone avec Safari.</span>
-          </span>
-          <span class="action-arrow">›</span>
-        </button>
-
-        <button class="action-card" type="button" data-target="utilisation">
-          <span class="action-icon">🚐</span>
-          <span>
-            <span class="action-title">Étape 3 — Utilisation</span>
-            <span class="action-subtitle">Voir ses créneaux, les contacts et les infos terrain.</span>
-          </span>
-          <span class="action-arrow">›</span>
-        </button>
-      </nav>
-
-      <div class="page-section is-visible" data-section="formulaire">
-        <h2 class="section-title">Étape 1</h2>
-
-        <section class="section-card">
-          <div class="section-header">
-            <div class="section-icon">📝</div>
-            <div>
-              <h3 class="section-heading">Remplir le formulaire</h3>
-              <p class="section-subheading">
-                C’est la base : sans formulaire, pas de souhaits fiables, donc pas de planning propre.
-              </p>
-            </div>
-          </div>
-
-          <div class="steps">
-            <div class="step">
-              <div>
-                <strong>Ouvre le formulaire bénévole</strong>
-                <span>Il permet d’indiquer tes disponibilités, contraintes et souhaits.</span>
-              </div>
-            </div>
-
-            <div class="step">
-              <div>
-                <strong>Remplis les informations sérieusement</strong>
-                <span>Évite les réponses approximatives : elles compliquent directement le planning.</span>
-              </div>
-            </div>
-
-            <div class="step">
-              <div>
-                <strong>Valide l’envoi du formulaire</strong>
-                <span>Une fois envoyé, tes réponses seront prises en compte pour préparer l’organisation.</span>
-              </div>
-            </div>
-          </div>
-
-          <a class="main-btn" href="https://forms.gle/xiqFxvP77rRJHLFR6" target="_blank" rel="noopener">
-            📝 Répondre au formulaire
-          </a>
-        </section>
+      <div class="tabs-note">
+        <div class="mini-card">
+          Android
+          <span>Utiliser Chrome de préférence.</span>
+        </div>
+        <div class="mini-card">
+          iPhone
+          <span>Utiliser Safari obligatoirement.</span>
+        </div>
       </div>
 
-      <div class="page-section" data-section="installation">
-        <h2 class="section-title">Étape 2</h2>
-
-        <section class="section-card">
-          <div class="section-header">
-            <div class="section-icon">📲</div>
-            <div>
-              <h3 class="section-heading">Installer l’application</h3>
-              <p class="section-subheading">
-                L’application s’ajoute sur l’écran d’accueil du téléphone. Pas besoin de Play Store ou d’App Store.
-              </p>
-            </div>
-          </div>
-
-          <div class="split">
-            <div class="sub-card">
-              <h4>Android</h4>
-
-              <div class="steps">
-                <div class="step">
-                  <div>
-                    <strong>Ouvre le lien avec Chrome</strong>
-                    <span>Chrome est recommandé. Samsung Internet peut afficher une alerte inutile.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Menu ⋮</strong>
-                    <span>Appuie sur le menu du navigateur.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Installer l’application</strong>
-                    <span>Sinon, choisis “Ajouter à l’écran d’accueil”.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="sub-card">
-              <h4>iPhone</h4>
-
-              <div class="steps">
-                <div class="step">
-                  <div>
-                    <strong>Ouvre le lien avec Safari</strong>
-                    <span>Sur iPhone, l’installation propre passe par Safari.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Bouton Partager</strong>
-                    <span>Icône carré avec une flèche vers le haut.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Sur l’écran d’accueil</strong>
-                    <span>Puis appuie sur “Ajouter”.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="warning">
-            Sur Android, si Samsung Internet affiche “Appli non sécurisée bloquée”, utilise Chrome.
-            L’application n’est pas une application du Play Store : c’est une application web installable.
-          </div>
-
-          <a class="main-btn" href="./">
-            🚐 Ouvrir l’application
-          </a>
-        </section>
+      <div class="button-row">
+        <a class="main-btn" href="./">🚐 Ouvrir l’application</a>
+        <a class="ghost-btn" href="./manifest.json">🔎 Vérifier le manifest</a>
       </div>
 
-      <div class="page-section" data-section="utilisation">
-        <h2 class="section-title">Étape 3</h2>
+      <h2 class="section-title">Android</h2>
 
-        <section class="section-card">
-          <div class="section-header">
-            <div class="section-icon">🚐</div>
+      <section class="guide-card">
+        <div class="guide-header">
+          <div class="guide-icon">🤖</div>
+          <div>
+            <h3 class="guide-title">Installation avec Chrome</h3>
+            <p class="guide-subtitle">La méthode recommandée pour éviter les alertes inutiles de certains navigateurs.</p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="step">
             <div>
-              <h3 class="section-heading">Utiliser l’application</h3>
-              <p class="section-subheading">
-                Une fois installée, l’application sert à consulter les infos utiles pendant le festival.
-              </p>
+              <strong>Ouvre le lien avec Google Chrome</strong>
+              <span>Évite Samsung Internet si possible : il peut afficher une alerte Play Protect.</span>
             </div>
           </div>
-
-          <div class="steps">
-            <div class="step">
-              <div>
-                <strong>Choisis ton profil bénévole</strong>
-                <span>Sélectionne ton nom pour afficher tes informations personnelles.</span>
-              </div>
-            </div>
-
-            <div class="step">
-              <div>
-                <strong>Consulte tes créneaux</strong>
-                <span>Tu peux voir tes horaires, ton rôle et les informations associées.</span>
-              </div>
-            </div>
-
-            <div class="step">
-              <div>
-                <strong>Regarde les messages et infos terrain</strong>
-                <span>Les infos importantes peuvent être mises à jour pendant le festival.</span>
-              </div>
-            </div>
-
-            <div class="step">
-              <div>
-                <strong>Ouvre l’application avec du réseau au moins une fois</strong>
-                <span>Ça permet de charger les dernières données avant d’avoir besoin du mode hors ligne.</span>
-              </div>
+          <div class="step">
+            <div>
+              <strong>Appuie sur le menu ⋮</strong>
+              <span>Le bouton est en haut ou en bas selon le téléphone.</span>
             </div>
           </div>
+          <div class="step">
+            <div>
+              <strong>Choisis “Installer l’application”</strong>
+              <span>Si tu vois “Ajouter à l’écran d’accueil”, ça marche aussi.</span>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <strong>Valide avec “Installer” ou “Ajouter”</strong>
+              <span>L’icône Runner FB26 apparaît ensuite sur l’écran d’accueil.</span>
+            </div>
+          </div>
+        </div>
 
-          <a class="main-btn" href="./">
-            🚐 Lancer Runner FB26
-          </a>
+        <div class="warning">
+          Si Samsung Internet affiche “Appli non sécurisée bloquée”, ce n’est pas l’application qui est dangereuse : utilise Chrome pour l’installation.
+        </div>
+      </section>
 
-          <button class="ghost-btn" type="button" data-target="formulaire">
-            ↩ Revenir au formulaire
-          </button>
-        </section>
-      </div>
+      <h2 class="section-title">iPhone</h2>
+
+      <section class="guide-card">
+        <div class="guide-header">
+          <div class="guide-icon">🍎</div>
+          <div>
+            <h3 class="guide-title">Installation avec Safari</h3>
+            <p class="guide-subtitle">Sur iPhone, l’ajout à l’écran d’accueil se fait depuis Safari.</p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div>
+              <strong>Ouvre le lien avec Safari</strong>
+              <span>Sur iPhone, Chrome ne propose pas toujours l’installation correcte.</span>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <strong>Appuie sur le bouton Partager</strong>
+              <span>C’est l’icône avec un carré et une flèche vers le haut.</span>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <strong>Choisis “Sur l’écran d’accueil”</strong>
+              <span>Fais défiler la liste si l’option n’apparaît pas tout de suite.</span>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <strong>Appuie sur “Ajouter”</strong>
+              <span>L’icône Runner FB26 sera ajoutée comme une application.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="warning">
+          Sur iPhone, le mode hors ligne peut être plus capricieux. Ouvre l’application une première fois avec du réseau avant le festival.
+        </div>
+      </section>
+
+      <section class="faq">
+        <h2 class="section-title">À savoir</h2>
+
+        <details>
+          <summary>Est-ce une vraie application du Play Store ou de l’App Store ?</summary>
+          <p>Non. C’est une application web installable. Elle se lance comme une application, mais elle n’a pas besoin de passer par un store.</p>
+        </details>
+
+        <details>
+          <summary>Faut-il internet ?</summary>
+          <p>Oui pour récupérer les dernières données. Certaines informations déjà chargées peuvent rester disponibles hors ligne, selon le téléphone.</p>
+        </details>
+
+        <details>
+          <summary>Pourquoi utiliser Chrome sur Android ?</summary>
+          <p>Chrome gère mieux l’installation PWA. Certains navigateurs Android ajoutent des alertes ou créent un simple raccourci moins propre.</p>
+        </details>
+
+        <details>
+          <summary>Pourquoi utiliser Safari sur iPhone ?</summary>
+          <p>Apple impose le moteur Safari pour les applications web installées. L’ajout propre à l’écran d’accueil se fait donc via Safari.</p>
+        </details>
+      </section>
     </main>
 
     <footer>
-      Runner FB26 — Planning runners Beauregard<br>
+      Runner FB26 — Application planning runners Beauregard<br>
       En cas de souci : supprimer l’ancienne icône, rouvrir le lien, puis refaire l’installation.
     </footer>
   </div>
-
-  <script>
-    (function initGuideNavigation() {
-      const buttons = Array.from(document.querySelectorAll("[data-target]"));
-      const sections = Array.from(document.querySelectorAll("[data-section]"));
-
-      function showSection(name) {
-        sections.forEach(section => {
-          section.classList.toggle("is-visible", section.dataset.section === name);
-        });
-
-        buttons.forEach(button => {
-          button.classList.toggle("is-active", button.dataset.target === name);
-        });
-
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth"
-        });
-      }
-
-      buttons.forEach(button => {
-        button.addEventListener("click", () => {
-          const target = button.dataset.target;
-          if (!target) return;
-
-          showSection(target);
-        });
-      });
-    })();
-  </script>
 </body>
 </html>
