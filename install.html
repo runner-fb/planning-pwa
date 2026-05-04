@@ -480,6 +480,38 @@
       border: 1px solid rgba(20, 50, 45, 0.1);
     }
 
+    .intro-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.intro-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.7);
+  font-size: 22px;
+}
+
+.intro-main {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--green-dark);
+  line-height: 1.1;
+}
+
+.intro-title {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
     footer {
       padding: 22px 22px 0;
       text-align: center;
@@ -502,11 +534,17 @@
     </header>
 
     <main>
-      <section class="intro-card">
-        <span>🚐</span>
-          <span>Guide appli Runner FB26</span>
-        <h2 class="intro-title">3 étapes simples</h2>
-      </section>
+     <section class="intro-card">
+
+  <div class="intro-header">
+    <span class="intro-icon">🚐</span>
+    <div>
+      <div class="intro-main">Appli Runner FB26</div>
+      <h2 class="intro-title">Guide - 3 étapes simples</h2>
+    </div>
+  </div>
+
+</section>
 
       <section class="accordion-list">
 
@@ -584,7 +622,7 @@
                     <div class="steps">
                       <div class="step">
                         <div>
-                          <strong>Ouvre le lien avec Chrome.</strong>
+                          <strong>Ouvre le lien avec ton navigateur.</strong>
                           <span>Si possible, utilise Chrome pour éviter les surprises.</span>
                         </div>
                       </div>
@@ -721,8 +759,8 @@
     </main>
 
     <footer>
-      Runner FB26 — Planning runners Beauregard par Anthony Bodereau
-      En cas de souci : envoi moi un mail à bodereaua@gmail.com<br>
+      Runner FB26 — Planning runners Beauregard par Anthony Bodereau<br>
+      En cas de souci : envoi moi un mail à bodereaua@gmail.com
      
     </footer>
   </div>
