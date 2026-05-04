@@ -119,7 +119,7 @@
     }
 
     .intro-card,
-    .section-card {
+    .accordion-card {
       border-radius: var(--radius-xl);
       background: rgba(245, 239, 226, 0.94);
       border: 1px solid var(--border);
@@ -164,98 +164,33 @@
       font-weight: 680;
     }
 
-    .quick-actions {
+    .accordion-list {
       display: grid;
-      gap: 12px;
-      margin: 18px 0 24px;
+      gap: 14px;
+      margin-top: 18px;
     }
 
-    .action-card {
+    .accordion-card {
+      overflow: hidden;
+    }
+
+    .accordion-toggle {
       appearance: none;
+      width: 100%;
       border: none;
+      background: transparent;
       font: inherit;
-      text-align: left;
       cursor: pointer;
+      text-align: left;
       display: grid;
-      grid-template-columns: 48px 1fr 28px;
+      grid-template-columns: 52px 1fr 34px;
       align-items: center;
       gap: 13px;
-      min-height: 82px;
-      padding: 16px;
-      border-radius: 24px;
-      background: rgba(255,255,255,0.76);
-      box-shadow: 0 12px 26px rgba(0,0,0,0.12);
+      padding: 18px;
       color: var(--text);
     }
 
-    .action-card.is-active {
-      background: rgba(255, 249, 238, 0.96);
-      outline: 3px solid rgba(200, 147, 74, 0.55);
-    }
-
-    .action-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 18px;
-      display: grid;
-      place-items: center;
-      background: var(--cream-2);
-      font-size: 25px;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
-    }
-
-    .action-title {
-      display: block;
-      font-size: 17px;
-      font-weight: 950;
-      line-height: 1.15;
-    }
-
-    .action-subtitle {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
-      font-weight: 700;
-    }
-
-    .action-arrow {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--brown);
-      color: #fff;
-      font-weight: 950;
-    }
-
-    .page-section { display: none; }
-    .page-section.is-visible { display: block; }
-
-    .section-title {
-      margin: 26px 0 12px;
-      color: var(--brown);
-      font-size: 27px;
-      font-weight: 950;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .section-card {
-      padding: 20px;
-      margin-bottom: 18px;
-    }
-
-    .section-header {
-      display: flex;
-      gap: 13px;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .section-icon {
+    .accordion-icon {
       width: 52px;
       height: 52px;
       border-radius: 19px;
@@ -266,10 +201,68 @@
       flex: 0 0 auto;
     }
 
-    .section-heading { margin: 0; font-size: 23px; line-height: 1.1; font-weight: 950; }
-    .section-subheading { margin: 4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.35; font-weight: 700; }
+    .accordion-title {
+      display: block;
+      font-size: 20px;
+      font-weight: 950;
+      line-height: 1.12;
+    }
 
-    .steps { display: grid; gap: 10px; counter-reset: step; }
+    .accordion-subtitle {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .accordion-arrow {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--brown);
+      color: #fff;
+      font-weight: 950;
+      transition: transform 0.2s ease;
+    }
+
+    .accordion-card.is-open .accordion-arrow {
+      transform: rotate(90deg);
+    }
+
+    .accordion-content {
+      display: none;
+      padding: 0 18px 20px;
+    }
+
+    .accordion-card.is-open .accordion-content {
+      display: block;
+    }
+
+    .inner-card {
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(20, 50, 45, 0.08);
+    }
+
+    .inner-title {
+      margin: 0 0 12px;
+      color: var(--brown);
+      font-size: 21px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.035em;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+      counter-reset: step;
+    }
 
     .step {
       display: grid;
@@ -294,19 +287,98 @@
       font-weight: 950;
     }
 
-    .step strong { display: block; font-size: 16px; line-height: 1.25; }
-    .step span { display: block; margin-top: 3px; color: var(--muted); font-size: 14px; line-height: 1.35; font-weight: 650; }
+    .step strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.25;
+    }
 
-    .split { display: grid; gap: 14px; margin-top: 14px; }
+    .step span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      font-weight: 650;
+    }
 
-    .sub-card {
-      padding: 16px;
-      border-radius: 21px;
-      background: rgba(255,255,255,0.58);
+    .install-choice-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .install-choice {
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.5);
       border: 1px solid rgba(20, 50, 45, 0.08);
     }
 
-    .sub-card h4 { margin: 0 0 10px; font-size: 18px; }
+    .install-toggle {
+      appearance: none;
+      width: 100%;
+      border: none;
+      background: transparent;
+      font: inherit;
+      cursor: pointer;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 42px 1fr 30px;
+      align-items: center;
+      gap: 11px;
+      padding: 14px;
+      color: var(--text);
+    }
+
+    .install-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.85);
+      font-size: 23px;
+    }
+
+    .install-title {
+      display: block;
+      font-size: 17px;
+      font-weight: 950;
+    }
+
+    .install-subtitle {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.3;
+      font-weight: 700;
+    }
+
+    .install-arrow {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(138, 75, 36, 0.14);
+      color: var(--brown);
+      font-weight: 950;
+      transition: transform 0.2s ease;
+    }
+
+    .install-choice.is-open .install-arrow {
+      transform: rotate(90deg);
+    }
+
+    .install-content {
+      display: none;
+      padding: 0 14px 14px;
+    }
+
+    .install-choice.is-open .install-content {
+      display: block;
+    }
 
     .warning {
       margin-top: 14px;
@@ -339,23 +411,25 @@
       margin-top: 14px;
     }
 
-    .main-btn { color: #fff; background: var(--brown); box-shadow: 0 14px 24px rgba(138, 75, 36, 0.28); }
-    .ghost-btn { color: var(--text); background: rgba(255,255,255,0.68); border: 1px solid rgba(20, 50, 45, 0.1); }
+    .main-btn {
+      color: #fff;
+      background: var(--brown);
+      box-shadow: 0 14px 24px rgba(138, 75, 36, 0.28);
+    }
+
+    .ghost-btn {
+      color: var(--text);
+      background: rgba(255,255,255,0.68);
+      border: 1px solid rgba(20, 50, 45, 0.1);
+    }
 
     footer {
-      padding: 14px 22px 0;
+      padding: 22px 22px 0;
       text-align: center;
       color: rgba(16, 59, 53, 0.72);
       font-size: 13px;
       line-height: 1.45;
       font-weight: 700;
-    }
-
-    @media (min-width: 760px) {
-      .quick-actions { grid-template-columns: repeat(3, 1fr); }
-      .action-card { grid-template-columns: 1fr; justify-items: start; }
-      .action-arrow { display: none; }
-      .split { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -367,144 +441,298 @@
         <p class="brand-kicker">Festival</p>
         <h1 class="brand-title">Beau<br>Regard</h1>
         <p class="brand-subtitle">1+2.3.4.5 juillet 2026</p>
-        <div class="hero-pill"><span>🚐</span><span>Guide bénévole Runner FB26</span></div>
+        <div class="hero-pill">
+          <span>🚐</span>
+          <span>Guide bénévole Runner FB26</span>
+        </div>
       </div>
     </header>
 
     <main>
       <section class="intro-card">
         <h2 class="intro-title">3 étapes simples</h2>
-        <p class="intro-text">Avant le festival, il faut d’abord répondre au formulaire, puis installer l’application, puis apprendre les bases d’utilisation. Dans cet ordre. Sinon c’est le bazar, et le bazar conduit au tableur maudit.</p>
+        <p class="intro-text">
+          Avant le festival, il faut d’abord répondre au formulaire, puis installer l’application, puis apprendre les bases d’utilisation.
+          Dans cet ordre. Sinon c’est le bazar, et le bazar conduit au tableur maudit.
+        </p>
       </section>
 
-      <nav class="quick-actions" aria-label="Navigation rapide">
-        <button class="action-card is-active" type="button" data-target="formulaire">
-          <span class="action-icon">📝</span>
-          <span><span class="action-title">Étape 1 — Remplir le formulaire</span>
-            <span class="action-subtitle">Remplis le formulaire pour nous indiquer tes souhaits.</span></span>
-          <span class="action-arrow">›</span>
-        </button>
-        <button class="action-card" type="button" data-target="installation">
-          <span class="action-icon">📲</span>
-          <span><span class="action-title">Étape 2 — Installer l’appli</span><span class="action-subtitle">Android avec Chrome, iPhone avec Safari.</span></span>
-          <span class="action-arrow">›</span>
-        </button>
-        <button class="action-card" type="button" data-target="utilisation">
-          <span class="action-icon">🚐</span>
-          <span><span class="action-title">Étape 3 — Utilisation</span><span class="action-subtitle">Voir ses créneaux, les contacts et les infos terrain.</span></span>
-          <span class="action-arrow">›</span>
-        </button>
-      </nav>
+      <section class="accordion-list">
 
-      <div class="page-section is-visible" data-section="formulaire">
-        <h2 class="section-title">Étape 1</h2>
-        <section class="section-card">
-          <div class="section-header">
-            <div class="section-icon">📝</div>
-            <div><h3 class="section-heading">Remplir le formulaire</h3>
-              <p class="section-subheading">
-                Remplis le formulaire pour indiquer tes souhaits.
-              </p></div>
-          </div>
-          <div class="steps">
-            <div class="step"><div><strong>Remplis le formulaire.</strong>
-                <span>Indique tes préferences et tes souhaits.
-                Ils seront pris en compte autant que possible, mais ne peuvent être garantis.</span></div></div>
-            <div class="step"><div><strong>Valide l’envoi du formulaire</strong>
-                <span>Une fois envoyé, tes réponses seront utilisées pour préparer le planning.</span></div></div>
-          </div>
-          <a class="main-btn" href="https://forms.gle/xiqFxvP77rRJHLFR6" target="_blank" rel="noopener">📝 Répondre au formulaire</a>
-        </section>
-      </div>
+        <article class="accordion-card is-open" data-accordion="formulaire">
+          <button class="accordion-toggle" type="button">
+            <span class="accordion-icon">📝</span>
+            <span>
+              <span class="accordion-title">Étape 1 — Remplir le formulaire</span>
+              <span class="accordion-subtitle">Remplis le formulaire pour nous donner tes souhaits.</span>
+            </span>
+            <span class="accordion-arrow">›</span>
+          </button>
 
-      <div class="page-section" data-section="installation">
-        <h2 class="section-title">Étape 2</h2>
-        <section class="section-card">
-          <div class="section-header">
-            <div class="section-icon">📲</div>
-            <div><h3 class="section-heading">Installer l’application</h3><p class="section-subheading">L’application s’ajoute sur l’écran d’accueil du téléphone. Pas besoin de Play Store ou d’App Store.</p></div>
-          </div>
-          <div class="split">
-            <div class="sub-card">
-              <h4>Android (Chrome)</h4>
+          <div class="accordion-content">
+            <div class="inner-card">
+              <h3 class="inner-title">Formulaire bénévole</h3>
+
               <div class="steps">
-                <div class="step"><div><strong>Ouvre le lien avec le navigateur Chrome</strong></div></div>
-                <div class="step"><div><strong>Appuie sur le Menu ⋮</strong><span>Les 3 petits points dans la barre du menu.</span></div></div>
-                <div class="step"><div><strong>Ajouter à l'écran d'accueil</strong></div></div>
-                <div class="step"><div><strong>Installer l’application</strong></div></div>
-                <div class="step"><div><strong>Tu trouvera ensuite l'icone directement sous forme d'application.</strong></div></div>
+                <div class="step">
+                  <div>
+                    <strong>Remplis les infos demandées.</strong>
+                    <span>Indique tes préférences et tes souhaits.</span>
+                  </div>
+                </div>
+
+                <div class="step">
+                  <div>
+                    <strong>Tes choix sont consultatifs.</strong>
+                    <span>Ils seront pris en compte autant que possible, mais ils ne peuvent pas être garantis.</span>
+                  </div>
+                </div>
+
+                <div class="step">
+                  <div>
+                    <strong>Valide l’envoi du formulaire.</strong>
+                    <span>Une fois envoyé, tes réponses seront utilisées pour préparer le planning.</span>
+                  </div>
+                </div>
               </div>
-            </div>
-             <div class="sub-card">
-              <h4>Android (Autre navigateur)</h4>
-              <div class="steps">
-                <div class="step"><div><strong>Ouvre le lien avec ton navigateur.</strong></div></div>
-                <div class="step"><div><strong>Appuie sur le Menu ⋮</strong><span>Les 3 petits points ou 3 petites barres dans la barre du menu.</span></div></div>
-                <div class="step"><div><strong>Ajouter à</strong><span>Les 3 petits points ou 3 petites barres dans la barre du menu.</span></div></div>
-                <div class="step"><div><strong>Appuie sur le Menu ⋮</strong><span>Attention à ce moment là tu peut avoir une alerte de Google Play protect, Clique sur "Plus de détails" puis su "Installer quand même"</span></div></div>
-                <div class="step"><div><strong>Installer l’application</strong></div></div>
-                <div class="step"><div><strong>Tu trouvera esnuite l'icone directement sous forme d'application.</strong></div></div>
-              </div>
-            </div>
-            <div class="sub-card">
-              <h4>iPhone</h4>
-              <div class="steps">
-                <div class="step"><div><strong>Ouvre le lien avec Safari</strong></div></div>
-                 <div class="step"><div><strong>Appuie sur le bouton Partager</strong><span>C'est l'icône avec un carré et une flèche vers le haut.</span></div></div>
-                <div class="step"><div><strong>Choisis " Sur l'écran d'accueil "</strong><span>Faire défiler la liste si l'option n'apparaît pas tout de suite</span></div></div>
-                <div class="step"><div><strong>Appuie sue " Ajouter "</strong><span>l'îcone Runner FB26 sera ajoutée comme une application.</span></div></div>
-              </div>
+
+              <a class="main-btn" href="https://forms.gle/xiqFxvP77rRJHLFR6" target="_blank" rel="noopener">
+                📝 Répondre au formulaire
+              </a>
             </div>
           </div>
-          <div class="warning">Sur iPhone, le mode hors ligne peut être plus capricieux. Ouvre l’application une première fois avec du réseau avant le festival.</div>
-          <a class="main-btn" href="./">🚐 Ouvrir l’application</a>
-        </section>
-      </div>
+        </article>
 
-      <div class="page-section" data-section="utilisation">
-        <h2 class="section-title">Étape 3</h2>
-        <section class="section-card">
-          <div class="section-header">
-            <div class="section-icon">🚐</div>
-            <div><h3 class="section-heading">Utiliser l’application</h3><p class="section-subheading">Une fois installée, l’application sert à consulter les infos utiles pendant le festival.</p></div>
+        <article class="accordion-card" data-accordion="installation">
+          <button class="accordion-toggle" type="button">
+            <span class="accordion-icon">📲</span>
+            <span>
+              <span class="accordion-title">Étape 2 — Installer l’application</span>
+              <span class="accordion-subtitle">Choisis Android ou iPhone selon ton téléphone.</span>
+            </span>
+            <span class="accordion-arrow">›</span>
+          </button>
+
+          <div class="accordion-content">
+            <div class="inner-card">
+              <h3 class="inner-title">Installation</h3>
+
+              <div class="install-choice-list">
+
+                <div class="install-choice is-open" data-install="android">
+                  <button class="install-toggle" type="button">
+                    <span class="install-icon">🤖</span>
+                    <span>
+                      <span class="install-title">Android</span>
+                      <span class="install-subtitle">Chrome conseillé. Simple, propre, efficace.</span>
+                    </span>
+                    <span class="install-arrow">›</span>
+                  </button>
+
+                  <div class="install-content">
+                    <div class="steps">
+                      <div class="step">
+                        <div>
+                          <strong>Ouvre le lien avec Chrome.</strong>
+                          <span>Si possible, utilise Chrome pour éviter les surprises.</span>
+                        </div>
+                      </div>
+
+                      <div class="step">
+                        <div>
+                          <strong>Appuie sur le menu ⋮.</strong>
+                          <span>Ce sont les trois petits points en haut ou en bas selon le téléphone.</span>
+                        </div>
+                      </div>
+
+                      <div class="step">
+                        <div>
+                          <strong>Choisis “Ajouter à l’écran d’accueil”.</strong>
+                          <span>Selon le navigateur, le texte peut aussi être “Installer l’application”.</span>
+                        </div>
+                      </div>
+
+                      <div class="step">
+                        <div>
+                          <strong>Valide l’installation.</strong>
+                          <span>L’icône Runner FB26 apparaîtra comme une vraie application.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="warning">
+                      Si Google Play Protect affiche une alerte, appuie sur “Plus de détails”, puis sur “Installer quand même”.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="install-choice" data-install="ios">
+                  <button class="install-toggle" type="button">
+                    <span class="install-icon">🍎</span>
+                    <span>
+                      <span class="install-title">iPhone</span>
+                      <span class="install-subtitle">Obligatoirement avec Safari. Pas Chrome.</span>
+                    </span>
+                    <span class="install-arrow">›</span>
+                  </button>
+
+                  <div class="install-content">
+                    <div class="steps">
+                      <div class="step">
+                        <div>
+                          <strong>Ouvre le lien avec Safari.</strong>
+                          <span>Sur iPhone, l’installation sur l’écran d’accueil passe par Safari.</span>
+                        </div>
+                      </div>
+
+                      <div class="step">
+                        <div>
+                          <strong>Appuie sur le bouton Partager.</strong>
+                          <span>C’est l’icône avec un carré et une flèche vers le haut.</span>
+                        </div>
+                      </div>
+
+                      <div class="step">
+                        <div>
+                          <strong>Choisis “Sur l’écran d’accueil”.</strong>
+                          <span>Fais défiler la liste si l’option n’apparaît pas tout de suite.</span>
+                        </div>
+                      </div>
+
+                      <div class="step">
+                        <div>
+                          <strong>Appuie sur “Ajouter”.</strong>
+                          <span>L’icône Runner FB26 sera ajoutée comme une application.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="warning">
+                      Sur iPhone, le mode hors ligne peut être plus capricieux. Ouvre l’application une première fois avec du réseau avant le festival.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <a class="main-btn" href="./">
+                🚐 Ouvrir l’application
+              </a>
+            </div>
           </div>
-          <div class="steps">
-            <div class="step"><div><strong>Choisis ton profil bénévole</strong><span>Sélectionne ton nom pour afficher tes informations personnelles.</span></div></div>
-            <div class="step"><div><strong>Consulte tes créneaux</strong><span>Tu peux voir tes horaires, ton rôle et les informations associées.</span></div></div>
-            <div class="step"><div><strong>Regarde les messages et infos terrain</strong><span>Les infos importantes peuvent être mises à jour pendant le festival.</span></div></div>
-            <div class="step"><div><strong>Ouvre l’application avec du réseau au moins une fois</strong><span>Ça permet de charger les dernières données avant d’avoir besoin du mode hors ligne.</span></div></div>
+        </article>
+
+        <article class="accordion-card" data-accordion="utilisation">
+          <button class="accordion-toggle" type="button">
+            <span class="accordion-icon">🚐</span>
+            <span>
+              <span class="accordion-title">Étape 3 — Utilisation</span>
+              <span class="accordion-subtitle">Voir ses créneaux, les messages et les infos terrain.</span>
+            </span>
+            <span class="accordion-arrow">›</span>
+          </button>
+
+          <div class="accordion-content">
+            <div class="inner-card">
+              <h3 class="inner-title">Utiliser Runner FB26</h3>
+
+              <div class="steps">
+                <div class="step">
+                  <div>
+                    <strong>Choisis ton profil bénévole.</strong>
+                    <span>Sélectionne ton nom pour afficher tes informations personnelles.</span>
+                  </div>
+                </div>
+
+                <div class="step">
+                  <div>
+                    <strong>Consulte tes créneaux.</strong>
+                    <span>Tu peux voir tes horaires, ton rôle et les informations associées.</span>
+                  </div>
+                </div>
+
+                <div class="step">
+                  <div>
+                    <strong>Regarde les messages et infos terrain.</strong>
+                    <span>Les infos importantes peuvent être mises à jour pendant le festival.</span>
+                  </div>
+                </div>
+
+                <div class="step">
+                  <div>
+                    <strong>Ouvre l’application avec du réseau au moins une fois.</strong>
+                    <span>Ça permet de charger les dernières données avant d’avoir besoin du mode hors ligne.</span>
+                  </div>
+                </div>
+              </div>
+
+              <a class="main-btn" href="./">
+                🚐 Lancer Runner FB26
+              </a>
+
+              <button class="ghost-btn" type="button" data-open-main="formulaire">
+                ↩ Revenir au formulaire
+              </button>
+            </div>
           </div>
-          <a class="main-btn" href="./">🚐 Lancer Runner FB26</a>
-          <button class="ghost-btn" type="button" data-target="formulaire">↩ Revenir au formulaire</button>
-        </section>
-      </div>
+        </article>
+
+      </section>
     </main>
 
-    <footer>Runner FB26 — Planning runners Beauregard<br>En cas de souci : supprimer l’ancienne icône, rouvrir le lien, puis refaire l’installation.</footer>
+    <footer>
+      Runner FB26 — Planning runners Beauregard<br>
+      En cas de souci : supprimer l’ancienne icône, rouvrir le lien, puis refaire l’installation.
+    </footer>
   </div>
 
   <script>
-    (function initGuideNavigation() {
-      const buttons = Array.from(document.querySelectorAll('[data-target]'));
-      const sections = Array.from(document.querySelectorAll('[data-section]'));
+    (function initAccordions() {
+      const mainCards = Array.from(document.querySelectorAll("[data-accordion]"));
+      const installChoices = Array.from(document.querySelectorAll("[data-install]"));
 
-      function showSection(name) {
-        sections.forEach(section => {
-          section.classList.toggle('is-visible', section.dataset.section === name);
+      function openMainAccordion(name) {
+        mainCards.forEach(card => {
+          const isTarget = card.dataset.accordion === name;
+          card.classList.toggle("is-open", isTarget);
         });
 
-        buttons.forEach(button => {
-          button.classList.toggle('is-active', button.dataset.target === name);
-        });
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const targetCard = document.querySelector('[data-accordion="' + name + '"]');
+        if (targetCard) {
+          targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
 
-      buttons.forEach(button => {
-        button.addEventListener('click', () => {
-          const target = button.dataset.target;
-          if (!target) return;
-          showSection(target);
+      function openInstallChoice(name) {
+        installChoices.forEach(choice => {
+          const isTarget = choice.dataset.install === name;
+          choice.classList.toggle("is-open", isTarget);
+        });
+      }
+
+      mainCards.forEach(card => {
+        const toggle = card.querySelector(".accordion-toggle");
+        if (!toggle) return;
+
+        toggle.addEventListener("click", () => {
+          const name = card.dataset.accordion;
+          openMainAccordion(name);
+        });
+      });
+
+      installChoices.forEach(choice => {
+        const toggle = choice.querySelector(".install-toggle");
+        if (!toggle) return;
+
+        toggle.addEventListener("click", () => {
+          const name = choice.dataset.install;
+          openInstallChoice(name);
+        });
+      });
+
+      document.querySelectorAll("[data-open-main]").forEach(button => {
+        button.addEventListener("click", () => {
+          openMainAccordion(button.dataset.openMain);
         });
       });
     })();
