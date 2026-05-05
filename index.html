@@ -3370,11 +3370,20 @@ async function syncOfflineQueue_() {
   if (!navigator.onLine) return;
 
   const queue = getOfflineQueue_();
-  const pending = queue.filter(item => item.status === "pending");
-
+const pending = queue.filter(item => item.status === "pending" || item.status === "sending");
   if (!pending.length) return;
 
   for (const item of pending) {
+
+    // ⛔ skip si déjà en cours d’envoi depuis moins de 10s
+if (item.status === "sending") {
+  const lastTry = item.lastTryAt ? new Date(item.lastTryAt).getTime() : 0;
+  const now = Date.now();
+
+  if (now - lastTry < 10000) {
+    continue;
+  }
+}
 
     // ❌ abandon après 5 tentatives
     if ((item.tries || 0) >= 5) {
