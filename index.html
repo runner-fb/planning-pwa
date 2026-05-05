@@ -3321,6 +3321,19 @@ function saveOfflineQueue_(queue) {
 
 function addOfflineAction_(action) {
   const queue = getOfflineQueue_();
+  if (action.type === "saveMessage" && action.payload && action.payload.id) {
+  const alreadyExists = queue.some(item =>
+    item.type === "saveMessage" &&
+    item.payload &&
+    item.payload.id === action.payload.id &&
+    item.status !== "failed"
+  );
+
+  if (alreadyExists) {
+    console.warn("Action saveMessage déjà présente dans la queue", action.payload.id);
+    return null;
+  }
+}
 
   const item = {
     id: "queue_" + Date.now() + "_" + Math.random().toString(36).slice(2),
@@ -3353,11 +3366,7 @@ function updateOfflineAction_(id, patch) {
   saveOfflineQueue_(queue);
 }
 
-function hasPendingOfflineActions_() {
-  return getOfflineQueue_().some(item => item.status === "pending");
-}
-
-  async function syncOfflineQueue_() {
+async function syncOfflineQueue_() {
   if (!navigator.onLine) return;
 
   const queue = getOfflineQueue_();
@@ -3366,6 +3375,27 @@ function hasPendingOfflineActions_() {
   if (!pending.length) return;
 
   for (const item of pending) {
+
+    // ❌ abandon après 5 tentatives
+    if ((item.tries || 0) >= 5) {
+      console.warn("Action abandonnée après 5 tentatives", item);
+
+      updateOfflineAction_(item.id, {
+        status: "failed",
+        abandonedAt: new Date().toISOString()
+      });
+
+      continue;
+    }
+
+    // 🧠 throttle anti spam (5 secondes)
+    const lastTry = item.lastTryAt ? new Date(item.lastTryAt).getTime() : 0;
+    const now = Date.now();
+
+    if (now - lastTry < 5000) {
+      continue;
+    }
+
     try {
       updateOfflineAction_(item.id, {
         status: "sending",
@@ -3388,8 +3418,22 @@ function hasPendingOfflineActions_() {
         });
 
         if (!res || !res.ok) {
-          throw new Error(res?.error || "SAVE_MESSAGE_QUEUE_ERROR");
-        }
+  const error = res?.error || "SAVE_MESSAGE_QUEUE_ERROR";
+
+  if (error === "SESSION_INVALID") {
+    updateOfflineAction_(item.id, {
+      status: "pending",
+      error: "SESSION_INVALID",
+      lastErrorAt: new Date().toISOString()
+    });
+
+    clearAuthState();
+    goToLogin();
+    return;
+  }
+
+  throw new Error(error);
+}
 
         removeOfflineAction_(item.id);
         continue;
@@ -3398,7 +3442,12 @@ function hasPendingOfflineActions_() {
       throw new Error("UNKNOWN_QUEUE_ACTION_" + item.type);
 
     } catch (err) {
-      console.warn("Échec sync queue", item, err);
+
+      console.warn("Échec sync queue", {
+        id: item.id,
+        tries: item.tries,
+        error: err.message
+      });
 
       updateOfflineAction_(item.id, {
         status: "pending",
@@ -3406,6 +3455,11 @@ function hasPendingOfflineActions_() {
         lastErrorAt: new Date().toISOString()
       });
     }
+  }
+
+  // 🔁 MAJ UI
+  if (typeof updateQueueIndicator_ === "function") {
+    updateQueueIndicator_();
   }
 }
 
