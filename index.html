@@ -5665,7 +5665,6 @@ async function login() {
 }
 
     localStorage.setItem("planning_app_mode", state.appMode);
-    setAuth_(state.appMode || "unknown");
 
     loginSuccess.textContent = isRef
       ? "Mot de passe référent correct."
@@ -10244,18 +10243,30 @@ async function boot() {
     const auth = getAuth_();
 
     if (auth && auth.userId) {
-      state.authOk = true;
-      state.userId = localStorage.getItem("planning_user_id") || auth.userId;
-      state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel || "";
-      state.appMode = localStorage.getItem("planning_app_mode") || state.appMode || "benevole";
-      state.isRefMode = state.userId === "__REFERENT__" || state.appMode === "referent";
+  state.password = localStorage.getItem("planning_password") || state.password || "";
+  state.authOk = true;
 
-      if (state.isRefMode) {
-        state.appMode = "referent";
-        state.userId = "__REFERENT__";
-        state.userLabel = "Référent";
-      }
-    }
+  const savedMode = localStorage.getItem("planning_app_mode") || state.appMode || "";
+  const savedUserId = localStorage.getItem("planning_user_id") || auth.userId || "";
+
+  if (savedMode === "referent" || savedUserId === "__REFERENT__") {
+    state.appMode = "referent";
+    state.isRefMode = true;
+    state.userId = "__REFERENT__";
+    state.userLabel = "Référent";
+
+    localStorage.setItem("planning_app_mode", "referent");
+    localStorage.setItem("planning_user_id", "__REFERENT__");
+    localStorage.setItem("planning_user_label", "Référent");
+
+    setAuth_("__REFERENT__");
+  } else {
+    state.userId = savedUserId;
+    state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel || "";
+    state.appMode = savedMode || "benevole";
+    state.isRefMode = false;
+  }
+}
     let cache = loadCache();
 
     if (shouldResetCache(cache) || (cache && !isSafeBundleForCurrentContext(cache))) {
@@ -10345,7 +10356,7 @@ if (!ok) {
     }
 
     if (state.userId) {
-      setAuth_(state.userId)
+      setAuth_(state.userId);
       await loadAppData(false);
       startAutoRefresh();
       startUiMinuteRefresh();
