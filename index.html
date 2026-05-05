@@ -3357,6 +3357,58 @@ function hasPendingOfflineActions_() {
   return getOfflineQueue_().some(item => item.status === "pending");
 }
 
+  async function syncOfflineQueue_() {
+  if (!navigator.onLine) return;
+
+  const queue = getOfflineQueue_();
+  const pending = queue.filter(item => item.status === "pending");
+
+  if (!pending.length) return;
+
+  for (const item of pending) {
+    try {
+      updateOfflineAction_(item.id, {
+        status: "sending",
+        tries: (item.tries || 0) + 1,
+        lastTryAt: new Date().toISOString()
+      });
+
+      if (item.type === "saveMessage") {
+        const payload = item.payload || {};
+
+        const res = await apiGet_({
+          api: "saveMessage",
+          token: localStorage.getItem("planning_session_token"),
+          id: payload.id,
+          actif: payload.actif,
+          cible: payload.cible,
+          titre: payload.titre,
+          message: payload.message,
+          priorite: payload.priorite
+        });
+
+        if (!res || !res.ok) {
+          throw new Error(res?.error || "SAVE_MESSAGE_QUEUE_ERROR");
+        }
+
+        removeOfflineAction_(item.id);
+        continue;
+      }
+
+      throw new Error("UNKNOWN_QUEUE_ACTION_" + item.type);
+
+    } catch (err) {
+      console.warn("Échec sync queue", item, err);
+
+      updateOfflineAction_(item.id, {
+        status: "pending",
+        error: err.message || String(err),
+        lastErrorAt: new Date().toISOString()
+      });
+    }
+  }
+}
+
 /*********************************
  * AUTH HELPERS
  *********************************/
@@ -3882,17 +3934,44 @@ async function flushPendingSyncQueue() {
         if (action.type === "saveMessage") {
           const sendId = String(action.id || "").startsWith("local_msg_") ? "" : String(action.id || "");
 
-          const res = await apiGet_({
-            api: "saveMessage",
-            ...authParams,
-            id: sendId,
-            titre: action.titre || "",
-            message: action.message || "",
-            cible: action.cible || "tous",
-            priorite: action.priorite || "normal",
-            actif: action.actif ? "true" : "false",
-            _: Date.now()
-          });
+         try {
+  if (!navigator.onLine) {
+    throw new Error("OFFLINE");
+  }
+
+  const res = await apiGet({
+    api: "saveMessage",
+    ...getApiAuthParams_(),
+    id,
+    actif,
+    cible,
+    titre,
+    message,
+    priorite
+  });
+
+  if (!res || !res.ok) {
+    throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
+  }
+
+} catch (err) {
+
+  console.warn("Message mis en queue offline", err);
+
+  addOfflineAction_({
+    type: "saveMessage",
+    payload: {
+      id,
+      actif,
+      cible,
+      titre,
+      message,
+      priorite
+    }
+  });
+
+  alert("Mode hors ligne : message enregistré et envoyé dès que possible");
+}
 
           if (!res || !res.ok) {
             throw new Error(res?.error || "SAVE_MESSAGE_ERROR");
@@ -5795,6 +5874,7 @@ async function login() {
       await loadAppData(false);
       startAutoRefresh();
       startUiMinuteRefresh();
+      syncOfflineQueue_();
 
       showView("home", { push: false });
       replaceHistoryRoot("home");
@@ -10823,6 +10903,14 @@ function hideLoader() {
   if (!overlay) return;
 
   overlay.classList.add("hidden");
+}
+
+  if (!window.__offlineQueueOnlineListenerInstalled) {
+  window.__offlineQueueOnlineListenerInstalled = true;
+
+  window.addEventListener("online", () => {
+    syncOfflineQueue_();
+  });
 }
 
 </script>
