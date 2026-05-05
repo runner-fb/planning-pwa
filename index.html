@@ -3125,10 +3125,12 @@ async function apiGetUsers_(password) {
   return Array.isArray(res.data) ? res.data : [];
 }
 
-async function apiGetBundle_(password, userId) {
+async function apiGetBundle_(userId) {
+  const token = localStorage.getItem("planning_session_token") || "";
+
   const res = await apiGet_({
     api: "bundle",
-    ...getApiAuthParams_(password),
+    token: token,
     userId: userId
   });
 
@@ -5146,7 +5148,7 @@ async function loadAppDataInternal(forceRefresh = false) {
       throw new Error("Aucun utilisateur actif pour charger les données.");
     }
 
-    const data = await apiGetBundle_(state.password, bundleUserId);
+    const data = await apiGetBundle_(bundleUserId);
 
     if (!isSafeBundleForCurrentContext(data)) {
       throw new Error("Bundle invalide ou incomplet pour le contexte courant");
