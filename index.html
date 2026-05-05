@@ -3130,8 +3130,8 @@ async function apiGetBundle_(userId) {
 
   const res = await apiGet_({
     api: "bundle",
-    token: token,
-    userId: userId
+    token,
+    userId
   });
 
   if (!res || !res.ok) {
