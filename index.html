@@ -3831,9 +3831,7 @@ async function flushPendingSyncQueue() {
         }
 
         if (action.type === "saveMessage") {
-          const sendId = String(action.id || "").startsWith("local_msg_")
-            ? ""
-            : String(action.id || "");
+          const sendId = String(action.id || "");
 
           const res = await apiGet_({
             api: "saveMessage",
