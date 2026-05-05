@@ -2880,20 +2880,18 @@ body {
     <main class="main-content" id="mainContent">
       <div id="miniPageTitle" class="mini-page-title hidden"></div>
 
-<section id="view-loader" class="page active">
+      <section id="view-loader" class="page active">
   <div class="auth-wrap">
     <div class="auth-card" style="text-align:center;">
       <div class="sync-spinner" style="margin:0 auto 14px;"></div>
       <div class="auth-title">Chargement</div>
-      <div class="auth-subtitle">
-        Connexion à l’application en cours…
-      </div>
+      <div class="auth-subtitle">Connexion à l’application en cours…</div>
     </div>
   </div>
 </section>
 
 <section id="view-login" class="page">
-  <div class="auth-wrap">
+        <div class="auth-wrap">
           <div class="auth-card">
             <div class="auth-title">Accès planning</div>
             <div class="auth-subtitle">Entre le mot de passe pour accéder au planning bénévoles.</div>
@@ -3067,6 +3065,18 @@ async function apiGet_(params) {
   }
 }
   
+function getSessionToken_() {
+  return String(localStorage.getItem("planning_session_token") || "").trim();
+}
+
+function getApiAuthParams_(password) {
+  const token = getSessionToken_();
+  if (token) return { token };
+
+  const pwd = password || (typeof state !== "undefined" ? state.password : "") || "";
+  return { pwd };
+}
+
 async function apiCheckPassword_(password) {
   const res = await apiGet_({
     api: "checkPassword",
@@ -3077,10 +3087,10 @@ async function apiCheckPassword_(password) {
     throw new Error("INVALID_CHECK_PASSWORD_RESPONSE");
   }
 
-  return res.valid;
+  return res;
 }
 
-  async function apiCheckRefPassword_(password) {
+async function apiCheckRefPassword_(password) {
   const res = await apiGet_({
     api: "checkRefPassword",
     pwd: password
@@ -3090,13 +3100,22 @@ async function apiCheckPassword_(password) {
     throw new Error("INVALID_CHECK_REF_PASSWORD_RESPONSE");
   }
 
-  return res.valid;
+  return res;
+}
+
+async function apiVerifySession_(token) {
+  const res = await apiGet_({
+    api: "verifySession",
+    token
+  });
+
+  return res;
 }
 
 async function apiGetUsers_(password) {
   const res = await apiGet_({
     api: "users",
-    pwd: password
+    ...getApiAuthParams_(password)
   });
 
   if (!res || !res.ok) {
@@ -3109,7 +3128,7 @@ async function apiGetUsers_(password) {
 async function apiGetBundle_(password, userId) {
   const res = await apiGet_({
     api: "bundle",
-    pwd: password,
+    ...getApiAuthParams_(password),
     userId: userId
   });
 
@@ -3127,8 +3146,8 @@ let state = {
   currentView: "login",
   previousView: "home",
 
-  password: localStorage.getItem("planning_password") || "",
-  authOk: localStorage.getItem("planning_auth_ok") === "1",
+  password: "",
+  authOk: !!localStorage.getItem("planning_session_token") || localStorage.getItem("planning_auth_ok") === "1",
 
   // Mode d'accès principal : benevole / referent / admin
   appMode: localStorage.getItem("planning_app_mode") || "",
@@ -3515,7 +3534,7 @@ function startAutoRefresh() {
 
       // Sécurité : pas de refresh si l'utilisateur n'est pas vraiment connecté
       if (!state.authOk) return;
-      if (!state.password) return;
+      if (!getSessionToken_()) return;
 
       if (!state.userId && state.appMode !== "referent") return;
 
@@ -3717,9 +3736,9 @@ function addPendingSyncAction(action) {
 
   const nextAction = normalizePendingSyncAction_({
     ...action,
-    // Le mot de passe est déjà stocké côté app ; on le copie ici pour éviter
-    // qu'une action créée en mode référent soit rejouée plus tard avec le mauvais mode.
-    pwd: action?.pwd || state.password || localStorage.getItem("planning_password") || "",
+    // On stocke le token de session avec l’action pour la rejouer dans le bon contexte.
+    token: action?.token || getSessionToken_() || "",
+    pwd: action?.pwd || state.password || "",
     createdAt: action?.createdAt || now,
     updatedAt: now,
     lastError: ""
@@ -3744,16 +3763,17 @@ async function flushPendingSyncQueue() {
     if (!queue.length) return false;
 
     const remaining = [];
-    const fallbackPwd = state.password || localStorage.getItem("planning_password") || "";
 
     for (const action of queue) {
       try {
-        const pwd = action.pwd || fallbackPwd;
+        const authParams = action.token
+          ? { token: action.token }
+          : (action.pwd ? { pwd: action.pwd } : getApiAuthParams_());
 
         if (action.type === "updateVehicule") {
           const res = await apiGet_({
             api: "updateVehicule",
-            pwd,
+            ...authParams,
             id: action.id,
             field: action.field,
             value: action.value ? "true" : "false"
@@ -3769,7 +3789,7 @@ async function flushPendingSyncQueue() {
         if (action.type === "updateBenevolePlanningStatus") {
           const res = await apiGet_({
             api: "updateBenevolePlanningStatus",
-            pwd,
+            ...authParams,
             id: action.id,
             statutPlanning: action.statutPlanning
           });
@@ -3786,7 +3806,7 @@ async function flushPendingSyncQueue() {
 
           const res = await apiGet_({
             api: "saveMessage",
-            pwd,
+            ...authParams,
             id: sendId,
             titre: action.titre || "",
             message: action.message || "",
@@ -3813,7 +3833,7 @@ async function flushPendingSyncQueue() {
 
           const res = await apiGet_({
             api: "deleteMessage",
-            pwd,
+            ...authParams,
             id,
             _: Date.now()
           });
@@ -3921,7 +3941,7 @@ async function refreshDataWithoutChangingPage(forceRefresh = true) {
   directState.isManual = false;
   mesCreneauxState.autoScrolled = false;
 
-  if (state.password && (state.userId || state.appMode === "referent")) {
+  if (getSessionToken_() && (state.userId || state.appMode === "referent")) {
     await loadAppData(forceRefresh);
   } else {
     refreshCurrentViewOnly();
@@ -5593,7 +5613,7 @@ ${fieldLabel} : ${value ? "Oui" : "Non"}`
 
     const res = await apiGet_({
       api: "updateVehicule",
-      pwd: state.password || localStorage.getItem("planning_password") || "",
+      ...getApiAuthParams_(),
       id,
       field,
       value: value ? "true" : "false"
@@ -5639,48 +5659,54 @@ ${fieldLabel} : ${value ? "Oui" : "Non"}`
  *********************************/
 async function login() {
   if (!lockAction()) return;
+
   const pwdInput = document.getElementById("pwd");
   const loginError = document.getElementById("loginError");
   const loginSuccess = document.getElementById("loginSuccess");
 
-  const pwd = pwdInput.value;
-  loginError.textContent = "";
-  loginSuccess.textContent = "";
+  const pwd = pwdInput ? pwdInput.value : "";
+  if (loginError) loginError.textContent = "";
+  if (loginSuccess) loginSuccess.textContent = "";
 
   try {
-    const isRef = await apiCheckRefPassword_(pwd).catch(() => false);
-    const ok = isRef || await apiCheckPassword_(pwd);
+    let res = null;
 
-    if (!ok) {
-      loginError.textContent = "Mot de passe incorrect.";
+    const resRef = await apiCheckRefPassword_(pwd).catch(() => null);
+
+    if (resRef && resRef.valid) {
+      res = resRef;
+    } else {
+      const resPwd = await apiCheckPassword_(pwd).catch(() => null);
+      if (resPwd && resPwd.valid) {
+        res = resPwd;
+      }
+    }
+
+    if (!res || !res.valid || !res.token) {
+      if (loginError) loginError.textContent = "Mot de passe incorrect.";
       return;
     }
 
+    // Le mot de passe reste uniquement en mémoire pendant cette ouverture.
+    // Il n'est plus persisté dans localStorage.
     state.password = pwd;
+    localStorage.removeItem("planning_password");
+
+    localStorage.setItem("planning_session_token", res.token);
+    localStorage.setItem("planning_session_expires_at", String(res.expiresAt || ""));
+
     state.authOk = true;
-    state.isRefMode = isRef;
+    state.appMode = res.mode || "benevole";
+    state.isRefMode = state.appMode === "referent";
 
-    localStorage.setItem("planning_password", pwd);
     localStorage.setItem("planning_auth_ok", "1");
-
-    if (pwd === "fb26") {
-  state.appMode = "benevole";
-  state.isRefMode = false;
-} else if (pwd === "hjafb26") {
-  state.appMode = "referent";
-  state.isRefMode = true;
-} else if (pwd === "test26") {
-  state.appMode = "admin";
-  state.isRefMode = false;
-} else {
-  state.appMode = "";
-}
-
     localStorage.setItem("planning_app_mode", state.appMode);
 
-    loginSuccess.textContent = isRef
-      ? "Mot de passe référent correct."
-      : "Mot de passe correct.";
+    if (loginSuccess) {
+      loginSuccess.textContent = state.isRefMode
+        ? "Mot de passe référent correct."
+        : "Mot de passe correct.";
+    }
 
     if (state.isRefMode) {
       state.userId = "__REFERENT__";
@@ -5699,27 +5725,32 @@ async function login() {
       return;
     }
 
-    if (state.userId) {
+    const savedUserId = localStorage.getItem("planning_user_id") || state.userId || "";
+    if (savedUserId) {
+      state.userId = savedUserId;
+      state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel || "";
       setAuth_(state.userId);
+
       await loadAppData(false);
       startAutoRefresh();
       startUiMinuteRefresh();
 
       const targetView = getLastView();
-      showView(targetView, { push: false });
-      replaceHistoryRoot(targetView);
+      showView(targetView || "home", { push: false });
+      replaceHistoryRoot(targetView || "home");
     } else {
       await loadUsers();
     }
 
   } catch (err) {
     console.error("Erreur login", err);
-    loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
+    if (loginError) loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
   } finally {
     unlockAction();
   }
 }
-  window.login = login;
+
+window.login = login;
 
 function clearCacheAndReload() {
   if (!confirm("Vider complètement le cache de cette appli ?")) return;
@@ -5944,6 +5975,7 @@ async function validateSelectedUser() {
 
   localStorage.setItem("planning_user_id", state.userId);
   localStorage.setItem("planning_user_label", state.userLabel);
+  setAuth_(state.userId);
 
   localStorage.setItem("planning_last_benevole_user_id", state.userId);
   localStorage.setItem("planning_last_benevole_user_label", state.userLabel);
@@ -6259,7 +6291,7 @@ async function setPlanningPublished(value) {
 
   if (!confirm(message)) return;
 
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const pwd = state.password || "";
   const loader = document.getElementById("planningPublishLoader");
 
   try {
@@ -6268,7 +6300,7 @@ async function setPlanningPublished(value) {
 
     const res = await apiGet_({
       api: "setPlanningPublished",
-      pwd: pwd,
+      ...getApiAuthParams_(pwd),
       value: value ? "true" : "false",
       _: Date.now()
     });
@@ -6372,7 +6404,7 @@ async function toggleMessagesAdminAccordion() {
   infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
 
   if (infosState.openMessagesAdmin) {
-    const pwd = state.password || localStorage.getItem("planning_password") || "";
+    const pwd = state.password || "";
 
     try {
       if (!navigator.onLine) {
@@ -6385,7 +6417,7 @@ async function toggleMessagesAdminAccordion() {
 
       const res = await apiGet_({
         api: "listMessages",
-        pwd: pwd,
+        ...getApiAuthParams_(pwd),
         _: Date.now()
       });
 
@@ -7421,7 +7453,7 @@ function renderMessagesBox() {
   const oldModal = document.getElementById("messagesAdminModal");
   if (oldModal) oldModal.remove();
 
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const pwd = state.password || "";
 
   try {
     if (!navigator.onLine) {
@@ -7430,7 +7462,7 @@ function renderMessagesBox() {
 
     const res = await apiGet_({
       api: "listMessages",
-      pwd: pwd,
+      ...getApiAuthParams_(pwd),
       _: Date.now()
     });
 
@@ -7631,7 +7663,7 @@ function closeMessagesAdminModal() {
 async function deleteMessageAdminForm() {
   if (MESSAGE_ADMIN_BUSY) return;
 
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const pwd = state.password || "";
   const id = document.getElementById("adminMessageId")?.value.trim() || "";
 
   if (!id) {
@@ -7667,7 +7699,7 @@ async function deleteMessageAdminForm() {
 
     const res = await apiGet_({
       api: "deleteMessage",
-      pwd: pwd,
+      ...getApiAuthParams_(pwd),
       id: id,
       _: Date.now()
     });
@@ -7934,7 +7966,7 @@ async function refreshMessagesAdminFromServer_() {
 }
 
 async function reloadMessageAdminSelect_() {
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const pwd = state.password || "";
 
   try {
     if (!navigator.onLine) {
@@ -7943,7 +7975,7 @@ async function reloadMessageAdminSelect_() {
 
     const res = await apiGet_({
       api: "listMessages",
-      pwd: pwd,
+      ...getApiAuthParams_(pwd),
       _: Date.now()
     });
 
@@ -7965,7 +7997,7 @@ async function reloadMessageAdminSelect_() {
 async function saveMessageAdminForm() {
   if (MESSAGE_ADMIN_BUSY) return;
 
-  const pwd = state.password || localStorage.getItem("planning_password") || "";
+  const pwd = state.password || "";
 
   const id = document.getElementById("adminMessageId")?.value.trim() || "";
   const titre = document.getElementById("adminMessageTitle")?.value.trim() || "";
@@ -8018,7 +8050,7 @@ async function saveMessageAdminForm() {
 
     const res = await apiGet_({
       api: "saveMessage",
-      pwd: pwd,
+      ...getApiAuthParams_(pwd),
       id: id,
       titre: titre,
       message: message,
@@ -9370,7 +9402,7 @@ Nouveau statut : ${label}`
 
     const res = await apiGet_({
       api: "updateBenevolePlanningStatus",
-      pwd: state.password || localStorage.getItem("planning_password") || "",
+      ...getApiAuthParams_(),
       id: personId,
       statutPlanning: cleanStatus
     });
@@ -9868,7 +9900,7 @@ async function toggleBenevolePlanningStatus(personId, targetStatus, checked) {
   try {
     const res = await apiGet_({
       api: "updateBenevolePlanningStatus",
-      pwd: state.password || localStorage.getItem("planning_password") || "",
+      ...getApiAuthParams_(),
       id: personId,
       statutPlanning: newStatus
     });
@@ -10252,66 +10284,102 @@ function renderPrintShiftCard(shift, people) {
  *********************************/
 async function boot() {
   try {
-    const auth = getAuth_();
+    if (document.getElementById("view-loader")) {
+      showView("loader", { push: false });
+    }
 
-    if (auth && auth.userId) {
-  state.password = localStorage.getItem("planning_password") || state.password || "";
-  state.authOk = true;
+    const token = getSessionToken_();
+    const savedMode = localStorage.getItem("planning_app_mode") || "";
+    const savedUserId = localStorage.getItem("planning_user_id") || "";
+    const savedUserLabel = localStorage.getItem("planning_user_label") || "";
 
-  const savedMode = localStorage.getItem("planning_app_mode") || state.appMode || "";
-  const savedUserId = localStorage.getItem("planning_user_id") || auth.userId || "";
+    if (token) {
+      state.authOk = true;
+      state.appMode = savedMode || state.appMode || "benevole";
+      state.userId = savedUserId || state.userId || "";
+      state.userLabel = savedUserLabel || state.userLabel || "";
+      state.isRefMode = state.appMode === "referent" || state.userId === "__REFERENT__";
 
-  if (savedMode === "referent" || savedUserId === "__REFERENT__") {
-    state.appMode = "referent";
-    state.isRefMode = true;
-    state.userId = "__REFERENT__";
-    state.userLabel = "Référent";
+      if (state.isRefMode) {
+        state.appMode = "referent";
+        state.userId = "__REFERENT__";
+        state.userLabel = "Référent";
+      }
+    }
 
-    localStorage.setItem("planning_app_mode", "referent");
-    localStorage.setItem("planning_user_id", "__REFERENT__");
-    localStorage.setItem("planning_user_label", "Référent");
+    if (!token) {
+      clearAuthState();
+      goToLogin();
+      return;
+    }
 
-    setAuth_("__REFERENT__");
-  } else {
-    state.userId = savedUserId;
-    state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel || "";
-    state.appMode = savedMode || "benevole";
-    state.isRefMode = false;
-  }
-}
+    if (navigator.onLine) {
+      let verified = null;
+
+      try {
+        verified = await apiVerifySession_(token);
+      } catch (e) {
+        console.warn("Vérification session impossible", e);
+      }
+
+      if (!verified || !verified.ok || !verified.session) {
+        clearAuthState();
+        goToLogin();
+        return;
+      }
+
+      const session = verified.session;
+      state.authOk = true;
+      state.appMode = session.mode || savedMode || "benevole";
+      state.userId = session.userId || savedUserId || "";
+      state.userLabel = savedUserLabel || state.userLabel || "";
+      state.isRefMode = state.appMode === "referent" || state.userId === "__REFERENT__";
+
+      if (state.isRefMode) {
+        state.appMode = "referent";
+        state.userId = "__REFERENT__";
+        state.userLabel = "Référent";
+      }
+
+      localStorage.setItem("planning_auth_ok", "1");
+      localStorage.setItem("planning_app_mode", state.appMode);
+
+      if (state.userId) {
+        localStorage.setItem("planning_user_id", state.userId);
+        localStorage.setItem("planning_user_label", state.userLabel || "");
+        setAuth_(state.userId);
+      }
+    }
+
     let cache = loadCache();
 
     if (shouldResetCache(cache) || (cache && !isSafeBundleForCurrentContext(cache))) {
       cache = null;
     }
 
-    if (state.appMode === "referent") {
-      state.isRefMode = true;
-      state.userId = state.userId || "__REFERENT__";
-      state.userLabel = state.userLabel || "Référent";
-    }
-
-    if (state.authOk && cache && (state.userId || state.appMode === "referent")) {
+    if (cache && (state.userId || state.appMode === "referent")) {
       try {
         APP_DATA = cache;
         applyAppData(cache);
 
         const savedState = getLastViewState();
-const targetView = savedState?.currentView || getLastView();
+        const targetView = savedState?.currentView || getLastView() || "home";
 
-showView(targetView, {
-  push: false,
-  restore: savedState,
-  preserveScroll: true
-});
+        showView(targetView, {
+          push: false,
+          restore: savedState,
+          preserveScroll: true
+        });
 
-replaceHistoryRoot(targetView);
-
+        replaceHistoryRoot(targetView);
         startAutoRefresh();
         startUiMinuteRefresh();
 
-        if (navigator.onLine && state.password) {
-          loadAppData(false);
+        if (navigator.onLine) {
+          loadAppData(false).catch(err => {
+            console.warn("Refresh après boot cache échoué", err);
+            showSyncStatus("offline", getCacheLastUpdateLabel(cache));
+          });
         } else {
           showSyncStatus("offline", getCacheLastUpdateLabel(cache));
         }
@@ -10323,70 +10391,30 @@ replaceHistoryRoot(targetView);
       }
     }
 
-    if (!state.password) {
-      goToLogin();
-      return;
-    }
-
     if (!navigator.onLine) {
-      goToLogin();
+      bootFromFallbackCacheOrLogin();
       return;
     }
 
-    let isRef = false;
-let ok = false;
-
-try {
-  isRef = await apiCheckRefPassword_(state.password);
-  ok = isRef || await apiCheckPassword_(state.password);
-} catch (e) {
-  console.warn("Contrôle mot de passe impossible au boot", e);
-  bootFromFallbackCacheOrLogin();
-  return;
-}
-
-if (!ok) {
-  clearAuthState();
-  goToLogin();
-  return;
-}
-
-    state.authOk = true;
-    state.isRefMode = isRef;
-    state.appMode = isRef ? "referent" : (state.appMode || "benevole");
-
-    localStorage.setItem("planning_auth_ok", "1");
-    localStorage.setItem("planning_app_mode", state.appMode);
-
-    if (isRef) {
-      state.userId = "__REFERENT__";
-      state.userLabel = "Référent";
-
-      localStorage.setItem("planning_user_id", "__REFERENT__");
-      localStorage.setItem("planning_user_label", "Référent");
-      setAuth_("__REFERENT__");
-    }
-
-    if (state.userId) {
-      setAuth_(state.userId);
+    if (state.userId || state.appMode === "referent") {
       await loadAppData(false);
       startAutoRefresh();
       startUiMinuteRefresh();
 
       const savedState = getLastViewState();
-const targetView = savedState?.currentView || getLastView();
+      const targetView = savedState?.currentView || getLastView() || "home";
 
-showView(targetView, {
-  push: false,
-  restore: savedState,
-  preserveScroll: true
-});
+      showView(targetView, {
+        push: false,
+        restore: savedState,
+        preserveScroll: true
+      });
 
-replaceHistoryRoot(targetView);
-      
-    } else {
-      await loadUsers();
+      replaceHistoryRoot(targetView);
+      return;
     }
+
+    await loadUsers();
 
   } catch (err) {
     console.error("Erreur boot générale", err);
@@ -10401,6 +10429,9 @@ function getCacheLastUpdateLabel(cache) {
 
 function clearAuthState() {
   clearAuth_();
+  localStorage.removeItem("planning_session_token");
+  localStorage.removeItem("planning_session_expires_at");
+  localStorage.removeItem("planning_password");
   localStorage.removeItem("planning_auth_ok");
   localStorage.removeItem("planning_app_mode");
   localStorage.removeItem("planning_user_id");
@@ -10417,6 +10448,12 @@ function clearAuthState() {
 
 function goToLogin() {
   state.currentView = "login";
+
+  const loginError = document.getElementById("loginError");
+  const loginSuccess = document.getElementById("loginSuccess");
+  if (loginError) loginError.textContent = "";
+  if (loginSuccess) loginSuccess.textContent = "";
+
   showView("login", { push: false });
   replaceHistoryRoot("login");
 }
@@ -10510,7 +10547,7 @@ function bindHistoryNavigation() {
 document.addEventListener("visibilitychange", async function () {
   if (document.visibilityState !== "visible") return;
 
-  if (!state.password || !state.userId) return;
+  if (!getSessionToken_() || (!state.userId && state.appMode !== "referent")) return;
 
   if (!navigator.onLine) {
     showSyncStatus("offline", getRealLastRefreshIso());
@@ -10535,7 +10572,7 @@ window.addEventListener("online", async function () {
       await flushPendingSyncQueue();
     }
 
-    if (state.password && state.userId) {
+    if (getSessionToken_() && (state.userId || state.appMode === "referent")) {
       await loadAppData(false);
     }
 
