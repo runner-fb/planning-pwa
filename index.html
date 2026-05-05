@@ -3290,6 +3290,73 @@ function getCacheKey() {
   ].join("_");
 }
 
+  /*********************************
+ * OFFLINE QUEUE / MESSAGES
+ *********************************/
+
+const OFFLINE_QUEUE_KEY = "planning_offline_queue_v1";
+
+function getOfflineQueue_() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.warn("Queue offline illisible", e);
+    return [];
+  }
+}
+
+function saveOfflineQueue_(queue) {
+  try {
+    localStorage.setItem(
+      OFFLINE_QUEUE_KEY,
+      JSON.stringify(Array.isArray(queue) ? queue : [])
+    );
+  } catch (e) {
+    console.error("Impossible de sauvegarder la queue offline", e);
+  }
+}
+
+function addOfflineAction_(action) {
+  const queue = getOfflineQueue_();
+
+  const item = {
+    id: "queue_" + Date.now() + "_" + Math.random().toString(36).slice(2),
+    createdAt: new Date().toISOString(),
+    tries: 0,
+    status: "pending",
+    ...action
+  };
+
+  queue.push(item);
+  saveOfflineQueue_(queue);
+
+  return item;
+}
+
+function removeOfflineAction_(id) {
+  const queue = getOfflineQueue_().filter(item => item.id !== id);
+  saveOfflineQueue_(queue);
+}
+
+function updateOfflineAction_(id, patch) {
+  const queue = getOfflineQueue_().map(item => {
+    if (item.id !== id) return item;
+    return {
+      ...item,
+      ...patch
+    };
+  });
+
+  saveOfflineQueue_(queue);
+}
+
+function hasPendingOfflineActions_() {
+  return getOfflineQueue_().some(item => item.status === "pending");
+}
+
 /*********************************
  * AUTH HELPERS
  *********************************/
