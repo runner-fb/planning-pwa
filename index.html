@@ -2880,17 +2880,7 @@ body {
     <main class="main-content" id="mainContent">
       <div id="miniPageTitle" class="mini-page-title hidden"></div>
 
-      <section id="view-loader" class="page active">
-  <div class="auth-wrap">
-    <div class="auth-card" style="text-align:center;">
-      <div class="sync-spinner" style="margin:0 auto 14px;"></div>
-      <div class="auth-title">Chargement</div>
-      <div class="auth-subtitle">Connexion à l’application en cours…</div>
-    </div>
-  </div>
-</section>
-
-<section id="view-login" class="page">
+      <section id="view-login" class="page active">
         <div class="auth-wrap">
           <div class="auth-card">
             <div class="auth-title">Accès planning</div>
@@ -3066,15 +3056,12 @@ async function apiGet_(params) {
 }
   
 function getSessionToken_() {
-  return String(localStorage.getItem("planning_session_token") || "").trim();
+  return localStorage.getItem("planning_session_token") || "";
 }
 
-function getApiAuthParams_(password) {
+function getApiAuthParams_() {
   const token = getSessionToken_();
-  if (token) return { token };
-
-  const pwd = password || (typeof state !== "undefined" ? state.password : "") || "";
-  return { pwd };
+  return token ? { token } : {};
 }
 
 async function apiCheckPassword_(password) {
@@ -3104,18 +3091,16 @@ async function apiCheckRefPassword_(password) {
 }
 
 async function apiVerifySession_(token) {
-  const res = await apiGet_({
+  return apiGet_({
     api: "verifySession",
     token
   });
-
-  return res;
 }
 
-async function apiGetUsers_(password) {
+async function apiGetUsers_() {
   const res = await apiGet_({
     api: "users",
-    ...getApiAuthParams_(password)
+    ...getApiAuthParams_()
   });
 
   if (!res || !res.ok) {
@@ -3126,12 +3111,10 @@ async function apiGetUsers_(password) {
 }
 
 async function apiGetBundle_(userId) {
-  const token = localStorage.getItem("planning_session_token") || "";
-
   const res = await apiGet_({
     api: "bundle",
-    token,
-    userId
+    ...getApiAuthParams_(),
+    userId: userId
   });
 
   if (!res || !res.ok) {
@@ -3149,7 +3132,7 @@ let state = {
   previousView: "home",
 
   password: "",
-  authOk: !!localStorage.getItem("planning_session_token") || localStorage.getItem("planning_auth_ok") === "1",
+  authOk: localStorage.getItem("planning_auth_ok") === "1",
 
   // Mode d'accès principal : benevole / referent / admin
   appMode: localStorage.getItem("planning_app_mode") || "",
@@ -3738,9 +3721,6 @@ function addPendingSyncAction(action) {
 
   const nextAction = normalizePendingSyncAction_({
     ...action,
-    // On stocke le token de session avec l’action pour la rejouer dans le bon contexte.
-    token: action?.token || getSessionToken_() || "",
-    pwd: action?.pwd || state.password || "",
     createdAt: action?.createdAt || now,
     updatedAt: now,
     lastError: ""
@@ -3765,13 +3745,10 @@ async function flushPendingSyncQueue() {
     if (!queue.length) return false;
 
     const remaining = [];
+    const authParams = getApiAuthParams_();
 
     for (const action of queue) {
       try {
-        const authParams = action.token
-          ? { token: action.token }
-          : (action.pwd ? { pwd: action.pwd } : getApiAuthParams_());
-
         if (action.type === "updateVehicule") {
           const res = await apiGet_({
             api: "updateVehicule",
@@ -3828,7 +3805,6 @@ async function flushPendingSyncQueue() {
         if (action.type === "deleteMessage") {
           const id = String(action.id || "");
 
-          // Un message créé uniquement en local puis supprimé avant synchro n'existe pas serveur.
           if (!id || id.startsWith("local_msg_")) {
             continue;
           }
@@ -5689,14 +5665,11 @@ async function login() {
       return;
     }
 
-    // Le mot de passe reste uniquement en mémoire pendant cette ouverture.
-    // Il n'est plus persisté dans localStorage.
-    state.password = pwd;
     localStorage.removeItem("planning_password");
-
     localStorage.setItem("planning_session_token", res.token);
     localStorage.setItem("planning_session_expires_at", String(res.expiresAt || ""));
 
+    state.password = "";
     state.authOk = true;
     state.appMode = res.mode || "benevole";
     state.isRefMode = state.appMode === "referent";
@@ -5727,10 +5700,7 @@ async function login() {
       return;
     }
 
-    const savedUserId = localStorage.getItem("planning_user_id") || state.userId || "";
-    if (savedUserId) {
-      state.userId = savedUserId;
-      state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel || "";
+    if (state.userId) {
       setAuth_(state.userId);
 
       await loadAppData(false);
@@ -5738,15 +5708,17 @@ async function login() {
       startUiMinuteRefresh();
 
       const targetView = getLastView();
-      showView(targetView || "home", { push: false });
-      replaceHistoryRoot(targetView || "home");
+      showView(targetView, { push: false });
+      replaceHistoryRoot(targetView);
     } else {
       await loadUsers();
     }
 
   } catch (err) {
     console.error("Erreur login", err);
-    if (loginError) loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
+    if (loginError) {
+      loginError.textContent = "Mot de passe incorrect ou serveur temporairement indisponible.";
+    }
   } finally {
     unlockAction();
   }
@@ -5869,7 +5841,7 @@ async function loadUsers() {
   userError.textContent = "";
 
   try {
-    const data = await apiGetUsers_(state.password);
+    const data = await apiGetUsers_();
     let users = Array.isArray(data) ? data.slice() : [];
 
     if (!state.isRefMode) {
@@ -5977,7 +5949,6 @@ async function validateSelectedUser() {
 
   localStorage.setItem("planning_user_id", state.userId);
   localStorage.setItem("planning_user_label", state.userLabel);
-  setAuth_(state.userId);
 
   localStorage.setItem("planning_last_benevole_user_id", state.userId);
   localStorage.setItem("planning_last_benevole_user_label", state.userLabel);
@@ -6293,7 +6264,6 @@ async function setPlanningPublished(value) {
 
   if (!confirm(message)) return;
 
-  const pwd = state.password || "";
   const loader = document.getElementById("planningPublishLoader");
 
   try {
@@ -6302,7 +6272,7 @@ async function setPlanningPublished(value) {
 
     const res = await apiGet_({
       api: "setPlanningPublished",
-      ...getApiAuthParams_(pwd),
+      ...getApiAuthParams_(),
       value: value ? "true" : "false",
       _: Date.now()
     });
@@ -6406,8 +6376,6 @@ async function toggleMessagesAdminAccordion() {
   infosState.openMessagesAdmin = !infosState.openMessagesAdmin;
 
   if (infosState.openMessagesAdmin) {
-    const pwd = state.password || "";
-
     try {
       if (!navigator.onLine) {
         setAdminMessagesFromCache_();
@@ -6419,7 +6387,7 @@ async function toggleMessagesAdminAccordion() {
 
       const res = await apiGet_({
         api: "listMessages",
-        ...getApiAuthParams_(pwd),
+        ...getApiAuthParams_(),
         _: Date.now()
       });
 
@@ -7455,8 +7423,6 @@ function renderMessagesBox() {
   const oldModal = document.getElementById("messagesAdminModal");
   if (oldModal) oldModal.remove();
 
-  const pwd = state.password || "";
-
   try {
     if (!navigator.onLine) {
       throw new Error("OFFLINE");
@@ -7464,7 +7430,7 @@ function renderMessagesBox() {
 
     const res = await apiGet_({
       api: "listMessages",
-      ...getApiAuthParams_(pwd),
+      ...getApiAuthParams_(),
       _: Date.now()
     });
 
@@ -7665,7 +7631,6 @@ function closeMessagesAdminModal() {
 async function deleteMessageAdminForm() {
   if (MESSAGE_ADMIN_BUSY) return;
 
-  const pwd = state.password || "";
   const id = document.getElementById("adminMessageId")?.value.trim() || "";
 
   if (!id) {
@@ -7685,8 +7650,7 @@ async function deleteMessageAdminForm() {
       if (!wasLocalOnly) {
         addPendingSyncAction({
           type: "deleteMessage",
-          id,
-          pwd
+          id
         });
       }
 
@@ -7701,7 +7665,7 @@ async function deleteMessageAdminForm() {
 
     const res = await apiGet_({
       api: "deleteMessage",
-      ...getApiAuthParams_(pwd),
+      ...getApiAuthParams_(),
       id: id,
       _: Date.now()
     });
@@ -7732,8 +7696,7 @@ async function deleteMessageAdminForm() {
     if (!wasLocalOnly) {
       addPendingSyncAction({
         type: "deleteMessage",
-        id,
-        pwd
+        id
       });
     }
 
@@ -7968,8 +7931,6 @@ async function refreshMessagesAdminFromServer_() {
 }
 
 async function reloadMessageAdminSelect_() {
-  const pwd = state.password || "";
-
   try {
     if (!navigator.onLine) {
       throw new Error("OFFLINE");
@@ -7977,7 +7938,7 @@ async function reloadMessageAdminSelect_() {
 
     const res = await apiGet_({
       api: "listMessages",
-      ...getApiAuthParams_(pwd),
+      ...getApiAuthParams_(),
       _: Date.now()
     });
 
@@ -7998,8 +7959,6 @@ async function reloadMessageAdminSelect_() {
   
 async function saveMessageAdminForm() {
   if (MESSAGE_ADMIN_BUSY) return;
-
-  const pwd = state.password || "";
 
   const id = document.getElementById("adminMessageId")?.value.trim() || "";
   const titre = document.getElementById("adminMessageTitle")?.value.trim() || "";
@@ -8037,8 +7996,7 @@ async function saveMessageAdminForm() {
         message,
         cible,
         priorite,
-        actif,
-        pwd
+        actif
       });
 
       saveCache(APP_DATA);
@@ -8052,7 +8010,7 @@ async function saveMessageAdminForm() {
 
     const res = await apiGet_({
       api: "saveMessage",
-      ...getApiAuthParams_(pwd),
+      ...getApiAuthParams_(),
       id: id,
       titre: titre,
       message: message,
@@ -8085,8 +8043,7 @@ async function saveMessageAdminForm() {
       message,
       cible,
       priorite,
-      actif,
-      pwd
+      actif
     });
 
     saveCache(APP_DATA);
@@ -10286,8 +10243,8 @@ function renderPrintShiftCard(shift, people) {
  *********************************/
 async function boot() {
   try {
-    if (document.getElementById("view-loader")) {
-      showView("loader", { push: false });
+    if (typeof showBootLoader === "function") {
+      showBootLoader();
     }
 
     const token = getSessionToken_();
@@ -10431,9 +10388,9 @@ function getCacheLastUpdateLabel(cache) {
 
 function clearAuthState() {
   clearAuth_();
+  localStorage.removeItem("planning_password");
   localStorage.removeItem("planning_session_token");
   localStorage.removeItem("planning_session_expires_at");
-  localStorage.removeItem("planning_password");
   localStorage.removeItem("planning_auth_ok");
   localStorage.removeItem("planning_app_mode");
   localStorage.removeItem("planning_user_id");
@@ -10448,14 +10405,13 @@ function clearAuthState() {
   state.userLabel = "";
 }
 
+function showBootLoader() {
+  state.currentView = "loader";
+  showView("loader", { push: false });
+}
+
 function goToLogin() {
   state.currentView = "login";
-
-  const loginError = document.getElementById("loginError");
-  const loginSuccess = document.getElementById("loginSuccess");
-  if (loginError) loginError.textContent = "";
-  if (loginSuccess) loginSuccess.textContent = "";
-
   showView("login", { push: false });
   replaceHistoryRoot("login");
 }
@@ -10549,7 +10505,7 @@ function bindHistoryNavigation() {
 document.addEventListener("visibilitychange", async function () {
   if (document.visibilityState !== "visible") return;
 
-  if (!getSessionToken_() || (!state.userId && state.appMode !== "referent")) return;
+  if (!getSessionToken_() || !state.userId) return;
 
   if (!navigator.onLine) {
     showSyncStatus("offline", getRealLastRefreshIso());
@@ -10574,7 +10530,7 @@ window.addEventListener("online", async function () {
       await flushPendingSyncQueue();
     }
 
-    if (getSessionToken_() && (state.userId || state.appMode === "referent")) {
+    if (getSessionToken_() && state.userId) {
       await loadAppData(false);
     }
 
