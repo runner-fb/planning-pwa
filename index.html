@@ -3242,6 +3242,34 @@ function getCacheKey() {
   ].join("_");
 }
 
+/*********************************
+ * AUTH HELPERS
+ *********************************/
+
+function setAuth_(userId) {
+  localStorage.setItem("auth", JSON.stringify({
+    userId: userId,
+    ts: Date.now()
+  }));
+}
+
+function getAuth_() {
+  try {
+    return JSON.parse(localStorage.getItem("auth"));
+  } catch(e) {
+    return null;
+  }
+}
+
+function clearAuth_() {
+  localStorage.removeItem("auth");
+}
+
+function isLogged_() {
+  const auth = getAuth_();
+  return !!(auth && auth.userId);
+}
+  
 function saveCache(data) {
   try {
     const cacheKey = getCacheKey();
@@ -5637,6 +5665,7 @@ async function login() {
 }
 
     localStorage.setItem("planning_app_mode", state.appMode);
+    setAuth_(state.appMode || "unknown");
 
     loginSuccess.textContent = isRef
       ? "Mot de passe référent correct."
@@ -5648,6 +5677,7 @@ async function login() {
 
       localStorage.setItem("planning_user_id", "__REFERENT__");
       localStorage.setItem("planning_user_label", "Référent");
+      setAuth_("__REFERENT__");
 
       await loadAppData(false);
       startAutoRefresh();
@@ -5659,6 +5689,7 @@ async function login() {
     }
 
     if (state.userId) {
+      setAuth_(state.userId);
       await loadAppData(false);
       startAutoRefresh();
       startUiMinuteRefresh();
@@ -10210,6 +10241,21 @@ function renderPrintShiftCard(shift, people) {
  *********************************/
 async function boot() {
   try {
+    const auth = getAuth_();
+
+    if (auth && auth.userId) {
+      state.authOk = true;
+      state.userId = localStorage.getItem("planning_user_id") || auth.userId;
+      state.userLabel = localStorage.getItem("planning_user_label") || state.userLabel || "";
+      state.appMode = localStorage.getItem("planning_app_mode") || state.appMode || "benevole";
+      state.isRefMode = state.userId === "__REFERENT__" || state.appMode === "referent";
+
+      if (state.isRefMode) {
+        state.appMode = "referent";
+        state.userId = "__REFERENT__";
+        state.userLabel = "Référent";
+      }
+    }
     let cache = loadCache();
 
     if (shouldResetCache(cache) || (cache && !isSafeBundleForCurrentContext(cache))) {
@@ -10295,9 +10341,11 @@ if (!ok) {
 
       localStorage.setItem("planning_user_id", "__REFERENT__");
       localStorage.setItem("planning_user_label", "Référent");
+      setAuth_("__REFERENT__");
     }
 
     if (state.userId) {
+      setAuth_(state.userId)
       await loadAppData(false);
       startAutoRefresh();
       startUiMinuteRefresh();
@@ -10329,6 +10377,7 @@ function getCacheLastUpdateLabel(cache) {
 }
 
 function clearAuthState() {
+  clearAuth_();
   localStorage.removeItem("planning_auth_ok");
   localStorage.removeItem("planning_app_mode");
   localStorage.removeItem("planning_user_id");
