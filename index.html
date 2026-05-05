@@ -2880,8 +2880,20 @@ body {
     <main class="main-content" id="mainContent">
       <div id="miniPageTitle" class="mini-page-title hidden"></div>
 
-      <section id="view-login" class="page active">
-        <div class="auth-wrap">
+<section id="view-loader" class="page active">
+  <div class="auth-wrap">
+    <div class="auth-card" style="text-align:center;">
+      <div class="sync-spinner" style="margin:0 auto 14px;"></div>
+      <div class="auth-title">Chargement</div>
+      <div class="auth-subtitle">
+        Connexion à l’application en cours…
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="view-login" class="page">
+  <div class="auth-wrap">
           <div class="auth-card">
             <div class="auth-title">Accès planning</div>
             <div class="auth-subtitle">Entre le mot de passe pour accéder au planning bénévoles.</div>
