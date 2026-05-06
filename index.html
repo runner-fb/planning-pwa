@@ -7786,13 +7786,12 @@ async function deleteMessageAdminForm() {
     if (!navigator.onLine) {
       applyLocalMessageDelete_(id);
 
-      const wasLocalOnly = removePendingMessageSaveIfLocalOnly_(id);
-      if (!wasLocalOnly) {
-        addPendingSyncAction({
-          type: "deleteMessage",
-          id
-        });
-      }
+      removePendingMessageSaveIfLocalOnly_(id);
+
+addPendingSyncAction({
+  type: "deleteMessage",
+  id
+});
 
       saveCache(APP_DATA);
       refreshAdminMessageSelectFromLocal_();
@@ -7832,13 +7831,12 @@ async function deleteMessageAdminForm() {
 
     applyLocalMessageDelete_(id);
 
-    const wasLocalOnly = removePendingMessageSaveIfLocalOnly_(id);
-    if (!wasLocalOnly) {
-      addPendingSyncAction({
-        type: "deleteMessage",
-        id
-      });
-    }
+    removePendingMessageSaveIfLocalOnly_(id);
+
+addPendingSyncAction({
+  type: "deleteMessage",
+  id
+});
 
     saveCache(APP_DATA);
     refreshAdminMessageSelectFromLocal_();
@@ -8014,6 +8012,7 @@ function applyLocalMessageDelete_(id) {
     ADMIN_MESSAGES = ADMIN_MESSAGES.filter(m => String(m.id || "") !== cleanId);
   }
 }
+
 
 function removePendingMessageSaveIfLocalOnly_(id) {
   const cleanId = String(id || "").trim();
