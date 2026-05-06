@@ -7660,6 +7660,10 @@ function renderMessagesBox() {
           Message actif
         </label>
 
+<button onclick="clearAllPendingQueuesNow_()">
+  Vider toutes les queues
+</button>
+
         <button
           id="adminMessageSaveBtn"
           onclick="saveMessageAdminForm()"
@@ -7801,7 +7805,8 @@ addPendingSyncAction({
       showMessageAdminToast("Suppression gardée hors ligne. Elle sera synchronisée au retour du réseau.");
       return;
     }
-
+    
+removePendingMessageSaveIfLocalOnly_(id);
     const res = await apiGet_({
       api: "deleteMessage",
       ...getApiAuthParams_(),
@@ -7850,6 +7855,20 @@ addPendingSyncAction({
   }
 }
 
+function clearAllPendingQueuesNow_() {
+  Object.keys(localStorage).forEach(key => {
+    if (
+      key.includes("pending_sync") ||
+      key.includes("offline_queue") ||
+      key.includes("queue")
+    ) {
+      localStorage.removeItem(key);
+    }
+  });
+
+  alert("Toutes les queues locales ont été vidées.");
+}
+  
 function fillMessageAdminForm() {
   const select = document.getElementById("adminMessageSelect");
   const id = select ? select.value : "";
@@ -8016,10 +8035,22 @@ function applyLocalMessageDelete_(id) {
 
 function removePendingMessageSaveIfLocalOnly_(id) {
   const cleanId = String(id || "").trim();
-  if (!cleanId || !cleanId.startsWith("local_msg_")) return false;
+  if (!cleanId) return false;
 
   const queue = getPendingSyncQueue();
-  const next = queue.filter(action => !(action.type === "saveMessage" && String(action.id || "") === cleanId));
+
+  const next = queue.filter(action => {
+    return !(
+      action.type === "saveMessage" &&
+      String(action.id || "") === cleanId
+    );
+  });
+
+  savePendingSyncQueue(next);
+
+  return next.length !== queue.length;
+}
+
   savePendingSyncQueue(next);
   return next.length !== queue.length;
 }
