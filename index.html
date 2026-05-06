@@ -8051,10 +8051,6 @@ function removePendingMessageSaveIfLocalOnly_(id) {
   return next.length !== queue.length;
 }
 
-  savePendingSyncQueue(next);
-  return next.length !== queue.length;
-}
-
 function refreshAdminMessageSelectFromLocal_() {
   const select = document.getElementById("adminMessageSelect");
   if (!select) return;
