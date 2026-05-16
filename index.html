@@ -129,6 +129,40 @@ body {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
+
+
+/* Titre de page avec action référent */
+.mini-page-title.has-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding-right: 58px;
+  padding-left: 58px;
+}
+
+.mini-page-title-print-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(222, 212, 194, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.92);
+  box-shadow: 0 6px 16px rgba(78, 57, 31, 0.12);
+  color: var(--primary-dark);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mini-page-title-print-btn:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
 .mini-page-title.home-title {
   display: none !important;
 }
@@ -5442,7 +5476,27 @@ function updateShellForView(name) {
 
   if (inAppViews.includes(name)) {
     bottomNav.classList.remove("hidden");
-    titleEl.textContent = getMiniPageTitle(name);
+
+    const titleLabel = getMiniPageTitle(name);
+
+    if (name === "planning" && isReferentVisualMode()) {
+      titleEl.innerHTML = `
+        <span>${escapeHtml(titleLabel)}</span>
+        <button
+          type="button"
+          class="mini-page-title-print-btn"
+          onclick="openReferentPlanningPrintMenu()"
+          title="Imprimer le planning"
+          aria-label="Imprimer le planning"
+        >
+          🖨️
+        </button>
+      `;
+      titleEl.classList.add("has-action");
+    } else {
+      titleEl.textContent = titleLabel;
+      titleEl.classList.remove("has-action");
+    }
 
     if (name === "home") {
       titleEl.classList.add("home-title");
@@ -5455,6 +5509,7 @@ function updateShellForView(name) {
     bottomNav.classList.add("hidden");
     titleEl.classList.add("hidden");
     titleEl.classList.remove("home-title");
+    titleEl.classList.remove("has-action");
     titleEl.textContent = "";
   }
 
@@ -10737,6 +10792,62 @@ async function clearForcedNow() {
 /*********************************
  * 32 - PRINT MODALS
  *********************************/
+
+function openReferentPlanningPrintMenu() {
+  closePrintModal();
+  closePrintDayPicker();
+
+  const oldModal = document.getElementById("referentPlanningPrintModal");
+  if (oldModal) oldModal.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "referentPlanningPrintModal";
+  modal.className = "print-modal-backdrop";
+  modal.setAttribute("onclick", "closeReferentPlanningPrintMenu()");
+
+  modal.innerHTML = `
+    <div class="print-modal" onclick="event.stopPropagation()">
+      <div class="print-modal-title">Imprimer le planning</div>
+      <div class="print-modal-subtitle">
+        Choisis une impression par jour ou le planning complet.
+      </div>
+
+      <div class="print-modal-actions">
+        <button
+          type="button"
+          class="print-option-btn secondary"
+          onclick="closeReferentPlanningPrintMenu(); openPrintDayPicker()"
+        >
+          <span class="print-option-title">Un jour</span>
+          <span class="print-option-sub">Choisir le jour à imprimer</span>
+        </button>
+
+        <button
+          type="button"
+          class="print-option-btn primary"
+          onclick="closeReferentPlanningPrintMenu(); printFullPlanningDetailed()"
+        >
+          <span class="print-option-title">Planning complet</span>
+          <span class="print-option-sub">Tous les jours et tous les créneaux</span>
+        </button>
+      </div>
+
+      <div class="print-modal-close-row">
+        <button type="button" class="print-option-btn light" onclick="closeReferentPlanningPrintMenu()">
+          Fermer
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+function closeReferentPlanningPrintMenu() {
+  const modal = document.getElementById("referentPlanningPrintModal");
+  if (modal) modal.remove();
+}
+
 function openPrintModal() {
   toggleModal("printModal", true);
 }
