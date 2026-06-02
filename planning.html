@@ -520,55 +520,55 @@
 
       <section class="accordion-list">
 
-        <article class="accordion-card" data-accordion="formulaire">
-          <button class="accordion-toggle" type="button">
-            <span class="accordion-icon">📝</span>
-            <span>
-              <span class="accordion-title">Étape 1 — Remplir le formulaire</span>
-              <span class="accordion-subtitle">Remplis le formulaire pour nous donner tes souhaits.</span>
-            </span>
-            <span class="accordion-arrow">›</span>
-          </button>
+        <article class="accordion-card" data-accordion="siteweb">
+  <button class="accordion-toggle" type="button">
+    <span class="accordion-icon">🌐</span>
+    <span>
+      <span class="accordion-title">Utiliser en tant que site web</span>
+      <span class="accordion-subtitle">Ouvre Runner FB26 directement dans ton navigateur.</span>
+    </span>
+    <span class="accordion-arrow">›</span>
+  </button>
 
-          <div class="accordion-content">
-            <div class="inner-card">
-              <h3 class="inner-title">Formulaire bénévole</h3>
+  <div class="accordion-content">
+    <div class="inner-card">
+      <h3 class="inner-title">Utiliser sans installation</h3>
 
-              <div class="steps">
-                <div class="step">
-                  <div>
-                    <strong>Remplis les informations demandées.</strong>
-                    <span>Indique tes préférences et tes souhaits.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Tes choix sont consultatifs.</strong>
-                    <span>Ils seront pris en compte autant que possible, mais ils ne peuvent pas être garantis.</span>
-                  </div>
-                </div>
-
-                <div class="step">
-                  <div>
-                    <strong>Valide l’envoi du formulaire.</strong>
-                    <span>Une fois envoyé, tes réponses seront utilisées pour préparer le planning.</span>
-                  </div>
-                </div>
-              </div>
-
-              <a class="main-btn" href="https://forms.gle/xiqFxvP77rRJHLFR6" target="_blank" rel="noopener">
-                📝 Répondre au formulaire
-              </a>
-            </div>
+      <div class="steps">
+        <div class="step">
+          <div>
+            <strong>Ouvre l’application en ligne.</strong>
+            <span>Tu peux utiliser Runner FB26 directement comme un simple site web.</span>
           </div>
-        </article>
+        </div>
+
+        <div class="step">
+          <div>
+            <strong>Aucune installation obligatoire.</strong>
+            <span>Pratique si tu veux juste consulter rapidement ton planning.</span>
+          </div>
+        </div>
+
+        <div class="step">
+          <div>
+            <strong>Connexion internet recommandée.</strong>
+            <span>Pour un usage complet, l’installation mobile reste plus confortable.</span>
+          </div>
+        </div>
+      </div>
+
+      <a class="main-btn" href="https://runner-fb.github.io/planning-pwa/" target="_blank" rel="noopener">
+        🌐 Utiliser en tant que site web
+      </a>
+    </div>
+  </div>
+</article>
 
         <article class="accordion-card" data-accordion="installation">
           <button class="accordion-toggle" type="button">
             <span class="accordion-icon">📲</span>
             <span>
-              <span class="accordion-title">Étape 2 — Installer l’application</span>
+              <span class="accordion-title">Comment installer en tant qu’application sur mobile</span>
               <span class="accordion-subtitle">Choisis Android ou iPhone selon ton téléphone.</span>
             </span>
             <span class="accordion-arrow">›</span>
@@ -687,7 +687,7 @@
           <button class="accordion-toggle" type="button">
             <span class="accordion-icon">🚐</span>
             <span>
-              <span class="accordion-title">Étape 3 — Utilisation</span>
+              <span class="accordion-title">Étape 3 — Comment utiliser ?</span>
               <span class="accordion-subtitle">Guide visuel de l’application.</span>
             </span>
             <span class="accordion-arrow">›</span>
@@ -722,11 +722,18 @@
               <a class="main-btn" href="./">
                 🚐 Lancer Runner FB26
               </a>
+              
             </div>
           </div>
         </article>
+        
 
       </section>
+
+      <button class="main-btn" type="button" onclick="openPlanningPopup()">
+        📅 Voir simplement le planning
+      </button>
+
     </main>
 
     <footer>
@@ -856,6 +863,19 @@
 
         showSlide(0);
       });
+      window.openPlanningPopup = function () {
+  if (
+    confirm(
+      "Ouvrir le planning Google Sheets dans un nouvel onglet ?"
+    )
+  ) {
+    window.open(
+      "https://docs.google.com/spreadsheets/d/1j-FvVzd_AW2tt8KFrMbZbyyHpr2hDrqc3xrwYJc6q5Q/edit?usp=sharing",
+      "_blank",
+      "noopener"
+    );
+  }
+};
     })();
   </script>
 </body>
