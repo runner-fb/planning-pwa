@@ -513,7 +513,7 @@
           <span class="intro-icon">🚐</span>
           <div>
             <div class="intro-main">Appli Runner FB26</div>
-            <h2 class="intro-title">Guide — 3 étapes simples</h2>
+            <h2 class="intro-title">Guide pas à pas</h2>
           </div>
         </div>
       </section>
@@ -558,7 +558,7 @@
       </div>
 
       <a class="main-btn" href="https://runner-fb.github.io/planning-pwa/" target="_blank" rel="noopener">
-        🌐 Utiliser en tant que site web
+        🌐 Ouvri la page web du planning (mot de passe : fb26 )
       </a>
     </div>
   </div>
@@ -730,9 +730,14 @@
 
       </section>
 
-      <button class="main-btn" type="button" onclick="openPlanningPopup()">
-        📅 Voir simplement le planning
-      </button>
+      <a
+  class="main-btn"
+  href="https://docs.google.com/spreadsheets/d/1j-FvVzd_AW2tt8KFrMbZbyyHpr2hDrqc3xrwYJc6q5Q/edit?usp=sharing"
+  target="_blank"
+  rel="noopener"
+>
+  📅 Voir simplement le planning
+</a>
 
     </main>
 
@@ -863,19 +868,6 @@
 
         showSlide(0);
       });
-      window.openPlanningPopup = function () {
-  if (
-    confirm(
-      "Ouvrir le planning Google Sheets dans un nouvel onglet ?"
-    )
-  ) {
-    window.open(
-      "https://docs.google.com/spreadsheets/d/1j-FvVzd_AW2tt8KFrMbZbyyHpr2hDrqc3xrwYJc6q5Q/edit?usp=sharing",
-      "_blank",
-      "noopener"
-    );
-  }
-};
     })();
   </script>
 </body>
