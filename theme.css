@@ -1,0 +1,20 @@
+/* Thème annuel. Modifier ces variables pour changer l’identité visuelle d’une édition. */
+:root{
+  --forest:#174d43;
+  --forest-deep:#103c35;
+  --ink:#283a35;
+  --muted:#71807a;
+  --canvas:#f6f2e9;
+  --canvas-deep:#eee7d9;
+  --paper:#fffdf8;
+  --soft:#e8efe8;
+  --line:#ded8ca;
+  --line-dark:#cfc5b2;
+  --accent:#b56b32;
+  --gold:#f2d7a3;
+  --wash:rgba(181,107,50,.13);
+  --focus:rgba(23,77,67,.14);
+  --notice-bg:#edf4eb;
+  --notice-line:#c8d8c7;
+  --shadow:0 20px 65px rgba(31,53,44,.12);
+}
