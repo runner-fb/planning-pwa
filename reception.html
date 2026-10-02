@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18443d">
+<link rel="manifest" href="./manifest.json"><link rel="stylesheet" href="./style.css?v=1"><script src="./config.js"></script>
+<title>Réception véhicule — Beauregard</title>
+</head>
+<body class="reception-page">
+<header class="reception-header"><a href="./index.html">‹ Véhicules</a><strong>Réception véhicule</strong></header>
+<main class="reception-shell">
+<p class="reception-lead">Effectue le tour du véhicule avec le loueur. Le constat est enregistré dans le tableur et ses photos dans le Drive.</p>
+<div class="reception-progress"><span id="progressLabel"></span><div class="reception-progress-track"><i id="progressBar"></i></div></div>
+<form id="receptionForm">
+<section class="reception-step active">
+<h1>1. Identifier le véhicule</h1>
+<label>Sens du constat<select name="sens"><option value="départ">Prise en charge</option><option value="retour">Retour du véhicule</option></select></label>
+<label>Immatriculation *<input name="immatriculation" required></label>
+<label>Marque et modèle<input name="marqueModele"></label><label>Couleur<input name="couleur"></label>
+<label>Type<select name="type"><option>Voiture</option><option>9 places</option><option>Utilitaire</option></select></label>
+<label>Conducteur *<input name="conducteur" required></label>
+</section>
+<section class="reception-step">
+<h1>2. Compteur et carburant</h1>
+<label>Compteur kilométrique *<input name="compteur" type="number" min="0" required></label>
+<label>Photo du compteur *<input name="photoCompteur" type="file" accept="image/*" capture="environment" required></label><div id="previewCompteur" class="photo-preview"></div>
+<label>Niveau de carburant *<select name="carburant" required><option value="">Choisir…</option><option>Réserve</option><option>1/4</option><option>1/2</option><option>3/4</option><option>Plein</option></select></label>
+<label>Photo de la jauge *<input name="photoCarburant" type="file" accept="image/*" capture="environment" required></label><div id="previewCarburant" class="photo-preview"></div>
+</section>
+<section class="reception-step">
+<h1>3. Extérieur et intérieur</h1>
+<label>État extérieur<select name="etatExterieur"><option>Bon état</option><option>À signaler</option><option>Non vérifié</option></select></label>
+<label>État intérieur<select name="etatInterieur"><option>Bon état</option><option>À signaler</option><option>Non vérifié</option></select></label>
+<label>Éléments à signaler à l’extérieur ou à l’intérieur<textarea name="etatDetails" rows="4" placeholder="Propreté, équipement manquant, voyant, élément à contrôler…"></textarea></label>
+</section>
+<section class="reception-step">
+<h1>4. Dommages</h1>
+<div id="previousDamage" class="previous-damage hidden"></div>
+<label>État par rapport au précédent constat<select name="etatDommages"><option>Inchangé</option><option>Aggravé</option><option>Nouveaux dommages</option><option>Premier constat</option></select></label>
+<div class="signature-label">Indique l’emplacement sur le schéma</div>
+<svg class="damage-map" viewBox="0 0 180 300" role="group" aria-label="Schéma du véhicule">
+<rect class="damage-zone" data-zone="Avant" x="45" y="8" width="90" height="38" rx="18"/><text x="90" y="32">Avant</text>
+<rect class="damage-zone" data-zone="Capot et toit" x="53" y="53" width="74" height="143" rx="24"/><text x="90" y="126">Capot / toit</text>
+<rect class="damage-zone" data-zone="Côté gauche" x="6" y="76" width="38" height="95" rx="16"/><text transform="translate(28 134) rotate(-90)">Gauche</text>
+<rect class="damage-zone" data-zone="Côté droit" x="136" y="76" width="38" height="95" rx="16"/><text transform="translate(158 118) rotate(90)">Droite</text>
+<rect class="damage-zone" data-zone="Arrière" x="45" y="204" width="90" height="38" rx="16"/><text x="90" y="228">Arrière</text>
+<rect class="damage-zone" data-zone="Intérieur" x="53" y="251" width="74" height="40" rx="15"/><text x="90" y="276">Intérieur</text>
+</svg>
+<input type="hidden" name="zonesDommages" value="">
+<label>Type de dommage<select name="typeDommages"><option value="">Choisir…</option><option>Rayure</option><option>Choc / enfoncement</option><option>Éclat</option><option>Fissure</option><option>Autre</option><option>Aucun nouveau dommage</option></select></label>
+<label>Dommages déjà présents<textarea name="dommagesAnterieurs" rows="3" placeholder="Au retour, reporte les dommages consignés au départ."></textarea></label>
+<label>Description des dommages constatés<textarea name="dommagesNouveaux" rows="4" placeholder="Décris le dommage si besoin."></textarea></label>
+<label>Photo des dommages<input name="photoDommages" type="file" accept="image/*" capture="environment"></label><div id="previewDommages" class="photo-preview"></div>
+</section>
+<section class="reception-step">
+<h1>5. Remarques</h1>
+<label>Remarques complémentaires<textarea name="remarques" rows="6" placeholder="Autres observations, accessoires remis ou consignes…"></textarea></label>
+</section>
+<section class="reception-step">
+<h1>6. Récapitulatif</h1><div id="summary" class="reception-summary"></div>
+<p class="reception-note">Vérifie le constat avant de passer à la signature.</p>
+</section>
+<section class="reception-step">
+<h1>7. Signatures</h1>
+<label>Nom du loueur / représentant *<input name="nomLoueur" required></label><div class="signature-label">Signature du loueur *</div><canvas id="signatureLoueur" class="signature-pad"></canvas><button type="button" data-clear="signatureLoueur" class="clear-signature">Effacer</button>
+<label>Nom du locataire / conducteur *<input name="nomLocataire" required></label><div class="signature-label">Signature du locataire *</div><canvas id="signatureLocataire" class="signature-pad"></canvas><button type="button" data-clear="signatureLocataire" class="clear-signature">Effacer</button>
+<p class="reception-note">La date et l’heure sont enregistrées lors de l’envoi.</p><div id="status" role="status" aria-live="polite"></div>
+</section>
+<div class="reception-controls"><button id="back" type="button" class="btn-light">Retour</button><button id="next" type="button" class="btn-dark">Continuer</button><button id="send" type="button" class="btn-dark hidden">Envoyer le constat</button></div>
+</form>
+</main>
+<iframe name="receptionResponse" id="receptionResponse" hidden title="Confirmation"></iframe>
+<form id="postForm" method="post" target="receptionResponse" hidden><input id="postPayload" name="payload"></form>
+<script>
+(function(){
+const form=document.getElementById('receptionForm'), steps=[...document.querySelectorAll('.reception-step')], pads={};
+let current=0, sent=false;
+const field=n=>form.elements.namedItem(n), val=n=>String(field(n).value||'').trim();
+let previousLoadedFor='';
+async function loadPreviousReception(){
+const plate=val('immatriculation').replace(/\s+/g,'').toUpperCase();
+if(val('sens')!=='retour'||plate.length<4||previousLoadedFor===plate)return;
+previousLoadedFor=plate;
+try{
+const endpoint=String(window.APP_CONFIG&&window.APP_CONFIG.WEBAPP_BASE_URL||'').trim();if(!endpoint)return;
+const url=new URL(endpoint);url.searchParams.set('api','previousVehicleReception');url.searchParams.set('token',localStorage.getItem('planning_session_token')||'');url.searchParams.set('immatriculation',plate);
+const response=await fetch(url.toString(),{cache:'no-store'}),result=await response.json();if(!result.ok||!result.data)return;
+const p=result.data,summary=[p.dommagesAnterieurs,p.dommagesNouveaux].filter(Boolean).join('\n');
+if(summary&&!val('dommagesAnterieurs'))field('dommagesAnterieurs').value=summary;
+const box=document.getElementById('previousDamage');box.classList.remove('hidden');box.textContent='Dernier constat du '+(p.date||'date inconnue')+' — '+(p.sens||'')+'. Compteur : '+(p.compteur||'non renseigné')+' km. Dommages : '+(p.typeDommages||'non précisé')+'; '+(p.zonesDommages||'emplacement non indiqué')+'. Compare le véhicule à ces éléments.';
+if(p.photoDommages){const link=document.createElement('a');link.href=p.photoDommages;link.target='_blank';link.rel='noopener';link.textContent=' Ouvrir la photo précédente';box.append(link);}
+}catch(error){console.warn('Constat précédent non chargé',error);}
+}
+function drawStep(){
+steps.forEach((s,i)=>s.classList.toggle('active',i===current));
+document.getElementById('progressLabel').textContent='Étape '+(current+1)+' sur '+steps.length;
+document.getElementById('progressBar').style.width=((current+1)/steps.length*100)+'%';
+document.getElementById('back').style.visibility=current===0?'hidden':'visible';
+document.getElementById('next').classList.toggle('hidden',current===steps.length-1);
+document.getElementById('send').classList.toggle('hidden',current!==steps.length-1);
+if(current===5)renderSummary();
+window.scrollTo(0,0);
+}
+function validStep(){
+for(const el of steps[current].querySelectorAll('[required]'))if(!el.value){el.reportValidity();return false;}
+if(current===6&&(!pads.signatureLoueur.ink||!pads.signatureLocataire.ink)){alert('Les deux signatures sont obligatoires.');return false;}
+return true;
+}
+function makePad(id){
+const c=document.getElementById(id),ctx=c.getContext('2d'),p={ink:false};
+function resize(){const r=c.getBoundingClientRect(),d=Math.max(1,devicePixelRatio||1);c.width=r.width*d;c.height=150*d;ctx.setTransform(d,0,0,d,0,0);ctx.strokeStyle='#18443d';ctx.lineWidth=2.5;ctx.lineCap='round';}
+resize();window.addEventListener('resize',resize);
+function xy(e){const r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+c.addEventListener('pointerdown',e=>{p.ink=true;c.setPointerCapture(e.pointerId);const q=xy(e);ctx.beginPath();ctx.moveTo(q.x,q.y);});
+c.addEventListener('pointermove',e=>{if(!c.hasPointerCapture(e.pointerId))return;const q=xy(e);ctx.lineTo(q.x,q.y);ctx.stroke();});
+document.querySelector('[data-clear="'+id+'"]').onclick=()=>{ctx.clearRect(0,0,c.width,c.height);p.ink=false;};
+p.data=()=>c.toDataURL('image/png');return p;
+}
+pads.signatureLoueur=makePad('signatureLoueur');pads.signatureLocataire=makePad('signatureLocataire');
+document.querySelectorAll('[data-zone]').forEach(zone=>zone.addEventListener('click',()=>{
+zone.classList.toggle('selected');
+field('zonesDommages').value=[...document.querySelectorAll('[data-zone].selected')].map(z=>z.dataset.zone).join(', ');
+}));
+field('immatriculation').addEventListener('change',loadPreviousReception);
+field('sens').addEventListener('change',()=>{previousLoadedFor='';document.getElementById('previousDamage').classList.add('hidden');loadPreviousReception();});
+document.getElementById('back').onclick=()=>{if(current){current--;drawStep();}};
+document.getElementById('next').onclick=async()=>{if(validStep()){if(current===2)await loadPreviousReception();current++;drawStep();}};
+async function photo(n){
+const file=field(n).files[0];if(!file)return '';
+if(file.size>14000000)throw new Error('Une photo dépasse 14 Mo. Reprends-la en résolution plus faible.');
+const image=await createImageBitmap(file),scale=Math.min(1,1280/Math.max(image.width,image.height)),c=document.createElement('canvas');
+c.width=Math.round(image.width*scale);c.height=Math.round(image.height*scale);c.getContext('2d').drawImage(image,0,0,c.width,c.height);image.close();return c.toDataURL('image/jpeg',0.62);
+}
+[['photoCompteur','previewCompteur'],['photoCarburant','previewCarburant'],['photoDommages','previewDommages']].forEach(pair=>field(pair[0]).addEventListener('change',e=>{
+const box=document.getElementById(pair[1]);box.textContent='';if(e.target.files[0]){const img=document.createElement('img');img.src=URL.createObjectURL(e.target.files[0]);img.alt='Aperçu';box.append(img);}
+}));
+function renderSummary(){
+const names=[['Sens','sens'],['Immatriculation','immatriculation'],['Marque / modèle','marqueModele'],['Couleur','couleur'],['Type','type'],['Conducteur','conducteur'],['Compteur','compteur'],['Carburant','carburant'],['État extérieur','etatExterieur'],['État intérieur','etatInterieur'],['Détails véhicule','etatDetails'],['Comparaison des dommages','etatDommages'],['Zones concernées','zonesDommages'],['Type de dommage','typeDommages'],['Dommages précédents','dommagesAnterieurs'],['Dommages constatés','dommagesNouveaux'],['Remarques','remarques']];
+const root=document.getElementById('summary');root.textContent='';
+names.forEach(([label,name])=>{const row=document.createElement('div'),b=document.createElement('b'),span=document.createElement('span');b.textContent=label;span.textContent=val(name)||'—';row.append(b,span);root.append(row);});
+}
+function showStatus(text,kind){const s=document.getElementById('status');s.textContent=text;s.className=kind||'';}
+window.addEventListener('message',e=>{
+if(e.source!==document.getElementById('receptionResponse').contentWindow||!e.data||e.data.type!=='beauregard:reception')return;
+sent=!!e.data.ok;const b=document.getElementById('send');
+if(sent){showStatus('Constat enregistré. Référence : '+e.data.result,'reception-success');b.disabled=true;}
+else{showStatus('Échec de l’enregistrement : '+e.data.result,'reception-error');b.disabled=false;b.textContent='Réessayer';}
+});
+document.getElementById('send').onclick=async()=>{
+const b=document.getElementById('send');if(sent||!validStep())return;
+if(!navigator.onLine){showStatus('Une connexion internet est nécessaire pour transmettre le constat.','reception-error');return;}
+b.disabled=true;b.textContent='Préparation…';
+try{
+const url=String(window.APP_CONFIG&&window.APP_CONFIG.WEBAPP_BASE_URL||'').trim();
+if(!url.startsWith('https://script.google.com/macros/s/'))throw new Error('URL Apps Script absente ou invalide dans config.js.');
+const token=localStorage.getItem('planning_session_token')||'';if(!token)throw new Error('Session référent absente. Reconnecte-toi.');
+const ping=new URL(url);ping.searchParams.set('api','receptionReady');ping.searchParams.set('token',token);const ready=await fetch(ping.toString(),{cache:'no-store'}).then(x=>x.json());if(!ready.reception)throw new Error('Le script Apps Script du tableur doit être mis à jour avec WepApp.gs avant d’utiliser la réception véhicules.');
+const r={sens:val('sens'),immatriculation:val('immatriculation'),marqueModele:val('marqueModele'),couleur:val('couleur'),type:val('type'),conducteur:val('conducteur'),compteur:val('compteur'),photoCompteur:await photo('photoCompteur'),carburant:val('carburant'),photoCarburant:await photo('photoCarburant'),etatExterieur:val('etatExterieur'),etatInterieur:val('etatInterieur'),etatDetails:val('etatDetails'),photoDommages:await photo('photoDommages'),etatDommages:val('etatDommages'),zonesDommages:val('zonesDommages'),typeDommages:val('typeDommages'),dommagesAnterieurs:val('dommagesAnterieurs'),dommagesNouveaux:val('dommagesNouveaux'),remarques:val('remarques'),nomLoueur:val('nomLoueur'),signatureLoueur:pads.signatureLoueur.data(),nomLocataire:val('nomLocataire'),signatureLocataire:pads.signatureLocataire.data()};
+document.getElementById('postForm').action=url;document.getElementById('postPayload').value=JSON.stringify({api:'saveVehicleReception',token:token,reception:r});b.textContent='Envoi en cours…';document.getElementById('postForm').submit();showStatus('Envoi en cours. Ne ferme pas la page.','');
+setTimeout(()=>{if(!sent){showStatus('Aucune confirmation reçue. Vérifie la feuille RECEPTIONS_VEHICULES avant un nouvel envoi.','reception-error');b.disabled=false;b.textContent='Renvoyer après vérification';}},45000);
+}catch(err){showStatus(err.message||String(err),'reception-error');b.disabled=false;b.textContent='Réessayer';}
+};
+drawStep();
+})();
+</script>
+</body></html>
