@@ -1,4 +1,4 @@
-<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Beauregard — test transport RC2</title><style>body{font:18px system-ui;max-width:48rem;margin:3rem auto;padding:1rem;background:#f7f4e8;color:#18443d}button{padding:1rem}pre{white-space:pre-wrap}</style><h1>Test technique RC2</h1><p>Vérifie seulement la réponse à une requête sans session sur la copie privée. Aucune donnée personnelle et aucun envoi d’e-mail.</p><button id="run">Tester le dialogue Apps Script</button><pre id="result" role="status">Prêt.</pre><script>window.BEAUREGARD_CONFIG={API_URL:"https://script.google.com/macros/s/AKfycbyWl3_KB0OEhLp9IBmoYmTfEvHvkgec9UxxPuItj0xsvokh4LvV3vxJ154Vp4YrgDcv/exec"};</script><script>/* IndexedDB : une base par utilisateur, file durable et médias conservés localement. */
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Beauregard — test transport RC2</title><style>body{font:18px system-ui;max-width:48rem;margin:3rem auto;padding:1rem;background:#f7f4e8;color:#18443d}button{padding:1rem}pre{white-space:pre-wrap}</style><h1>Test technique RC2</h1><p>Vérifie le dialogue direct fetch/JSON : GET ping puis POST sans session sur la copie de test. Aucune donnée personnelle et aucun envoi d’e-mail.</p><button id="run">Tester le dialogue Apps Script</button><pre id="result" role="status">Prêt.</pre><script>window.BEAUREGARD_CONFIG={API_URL:"https://script.google.com/macros/s/AKfycbyWl3_KB0OEhLp9IBmoYmTfEvHvkgec9UxxPuItj0xsvokh4LvV3vxJ154Vp4YrgDcv/exec"};</script><script>/* IndexedDB : une base par utilisateur, file durable et médias conservés localement. */
 window.Store = (() => {
   let db;
   function open() {
@@ -30,63 +30,41 @@ window.Store = (() => {
     clear: () => run("readwrite", (s) => s.clear()),
   };
 })();
+/* Dialogue direct fetch/JSON repris de la V1 (apiGet_).
+ * GET pour le contrôle public ; POST pour les données et secrets V2.
+ * Aucun iframe, postMessage, JSONP ou contournement no-cors.
+ */
 window.Transport = async function (action, data = {}, session = {}, opId) {
   const base = window.BEAUREGARD_CONFIG?.API_URL;
   if (!base) throw Error("URL Apps Script manquante");
   const requestId = crypto.randomUUID();
-  return new Promise((resolve, reject) => {
-    const frame = document.createElement("iframe"),
-      form = document.createElement("form");
-    frame.name = "bg_" + requestId.replaceAll("-", "");
-    frame.hidden = true;
-    form.hidden = true;
-    form.method = "POST";
-    form.action = base;
-    form.target = frame.name;
-    const input = document.createElement("input");
-    input.name = "payload";
-    input.value = JSON.stringify({
-      action,
-      data,
-      token: session.token || "",
-      requestId,
-      opId,
-    });
-    form.append(input);
-    const cleanup = () => {
-      clearTimeout(timer);
-      window.removeEventListener("message", receive);
-      frame.remove();
-      form.remove();
-    };
-    const receive = (e) => {
-      // HtmlService responds from Google's nested sandbox, not the direct iframe.
-      // Authenticate its origin and the unguessable, per-request UUID below.
-      if (!e.source) return;
-      if (
-        e.origin !== "https://script.google.com" &&
-        !/^https:\/\/[a-z0-9-]+[.-]script\.googleusercontent\.com$/.test(
-          e.origin,
-        ) &&
-        e.origin !== "https://script.googleusercontent.com"
-      )
-        return;
-      const out = e.data;
-      if (!out || out.requestId !== requestId) return;
-      cleanup();
-      out.ok ? resolve(out.data) : reject(Error(out.error || "Erreur serveur"));
-    };
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(
-        Error(
-          "Le serveur ne répond pas après 60 secondes. L’action en attente est conservée.",
-        ),
-      );
-    }, 60000);
-    window.addEventListener("message", receive);
-    document.body.append(frame, form);
-    form.submit();
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60000);
+  try {
+    const url = new URL(base);
+    const options = { cache: "no-store", redirect: "follow", credentials: "omit", signal: controller.signal };
+    if (action === "ping") {
+      url.searchParams.set("api", "ping");
+      options.method = "GET";
+    } else {
+      options.method = "POST";
+      options.body = new URLSearchParams({ payload: JSON.stringify({
+        action, data, token: session.token || "", requestId, opId,
+      }) });
+    }
+    const response = await fetch(url.toString(), options);
+    if (!response.ok) throw Error("HTTP_" + response.status);
+    let out;
+    try { out = await response.json(); }
+    catch (_) { throw Error("Réponse non JSON : vérifier le déploiement Apps Script et ses droits d’accès."); }
+    if (action !== "ping" && out.requestId !== requestId)
+      throw Error("Réponse serveur incohérente");
+    if (!out.ok) throw Error(out.error || "Erreur serveur");
+    return out.data;
+  } catch (e) {
+    if (e.name === "AbortError")
+      throw Error("Le serveur ne répond pas après 60 secondes. L’action en attente est conservée.");
+    throw e;
+  } finally { clearTimeout(timer); }
 };
-</script><script>document.getElementById("run").onclick=async()=>{const out=document.getElementById("result");out.textContent="Test en cours…";try{await Transport("sync");out.textContent="Réponse inattendue : une session devait être requise."}catch(e){out.textContent=e.message==="SESSION_EXPIRED"?"SUCCÈS : réponse authentifiée reçue depuis Apps Script. SESSION_EXPIRED est attendu pour cette requête sans session.":"ÉCHEC : "+e.message}};</script></html>
+</script><script>document.getElementById("run").onclick=async()=>{const out=document.getElementById("result"),button=document.getElementById("run");button.disabled=true;out.textContent="Test GET ping…";try{const ping=await Transport("ping");out.textContent="GET JSON reçu : "+JSON.stringify(ping)+"\nTest POST sans session…";try{await Transport("sync");out.textContent+="\nÉCHEC : session non exigée."}catch(e){out.textContent+=e.message==="SESSION_EXPIRED"?"\nSUCCÈS : GET JSON et POST JSON vérifiés. SESSION_EXPIRED attendu sans session.":"\nÉCHEC POST : "+e.message}}catch(e){out.textContent="ÉCHEC GET : "+e.message+"\nLe backend est privé : vérifier ses droits d’accès avant de conclure à un défaut du protocole."}finally{button.disabled=false}};</script></html>
