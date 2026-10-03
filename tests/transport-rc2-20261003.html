@@ -1,0 +1,92 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Beauregard — test transport RC2</title><style>body{font:18px system-ui;max-width:48rem;margin:3rem auto;padding:1rem;background:#f7f4e8;color:#18443d}button{padding:1rem}pre{white-space:pre-wrap}</style><h1>Test technique RC2</h1><p>Vérifie seulement la réponse à une requête sans session sur la copie privée. Aucune donnée personnelle et aucun envoi d’e-mail.</p><button id="run">Tester le dialogue Apps Script</button><pre id="result" role="status">Prêt.</pre><script>window.BEAUREGARD_CONFIG={API_URL:"https://script.google.com/macros/s/AKfycbyWl3_KB0OEhLp9IBmoYmTfEvHvkgec9UxxPuItj0xsvokh4LvV3vxJ154Vp4YrgDcv/exec"};</script><script>/* IndexedDB : une base par utilisateur, file durable et médias conservés localement. */
+window.Store = (() => {
+  let db;
+  function open() {
+    return new Promise((resolve, reject) => {
+      const r = indexedDB.open("beauregard-v21", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => {
+        db = r.result;
+        resolve();
+      };
+      r.onerror = () => reject(r.error);
+    });
+  }
+  async function run(mode, fn) {
+    if (!db) await open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction("kv", mode),
+        r = fn(tx.objectStore("kv"));
+      let value;
+      r.onsuccess = () => (value = r.result);
+      tx.oncomplete = () => res(value);
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+  return {
+    get: (k) => run("readonly", (s) => s.get(k)),
+    set: (k, v) => run("readwrite", (s) => s.put(v, k)),
+    del: (k) => run("readwrite", (s) => s.delete(k)),
+    clear: () => run("readwrite", (s) => s.clear()),
+  };
+})();
+window.Transport = async function (action, data = {}, session = {}, opId) {
+  const base = window.BEAUREGARD_CONFIG?.API_URL;
+  if (!base) throw Error("URL Apps Script manquante");
+  const requestId = crypto.randomUUID();
+  return new Promise((resolve, reject) => {
+    const frame = document.createElement("iframe"),
+      form = document.createElement("form");
+    frame.name = "bg_" + requestId.replaceAll("-", "");
+    frame.hidden = true;
+    form.hidden = true;
+    form.method = "POST";
+    form.action = base;
+    form.target = frame.name;
+    const input = document.createElement("input");
+    input.name = "payload";
+    input.value = JSON.stringify({
+      action,
+      data,
+      token: session.token || "",
+      requestId,
+      opId,
+    });
+    form.append(input);
+    const cleanup = () => {
+      clearTimeout(timer);
+      window.removeEventListener("message", receive);
+      frame.remove();
+      form.remove();
+    };
+    const receive = (e) => {
+      // HtmlService responds from Google's nested sandbox, not the direct iframe.
+      // Authenticate its origin and the unguessable, per-request UUID below.
+      if (!e.source) return;
+      if (
+        e.origin !== "https://script.google.com" &&
+        !/^https:\/\/[a-z0-9-]+[.-]script\.googleusercontent\.com$/.test(
+          e.origin,
+        ) &&
+        e.origin !== "https://script.googleusercontent.com"
+      )
+        return;
+      const out = e.data;
+      if (!out || out.requestId !== requestId) return;
+      cleanup();
+      out.ok ? resolve(out.data) : reject(Error(out.error || "Erreur serveur"));
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(
+        Error(
+          "Le serveur ne répond pas après 60 secondes. L’action en attente est conservée.",
+        ),
+      );
+    }, 60000);
+    window.addEventListener("message", receive);
+    document.body.append(frame, form);
+    form.submit();
+  });
+};
+</script><script>document.getElementById("run").onclick=async()=>{const out=document.getElementById("result");out.textContent="Test en cours…";try{await Transport("sync");out.textContent="Réponse inattendue : une session devait être requise."}catch(e){out.textContent=e.message==="SESSION_EXPIRED"?"SUCCÈS : réponse authentifiée reçue depuis Apps Script. SESSION_EXPIRED est attendu pour cette requête sans session.":"ÉCHEC : "+e.message}};</script></html>
