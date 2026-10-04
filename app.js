@@ -1,7 +1,7 @@
-/* Beauregard V2 — app.js (socle)
- * Dialogue repris de la V1 : Transport = fetch GET JSON.
- * File d'actions hors ligne : Queue = IndexedDB (point 62 du cahier des charges).
- * Actions serveur réelles : login, sync, save, logout, read.
+/* Beauregard V2 — app.js (socle + écran Équipe)
+ * Transport = fetch GET JSON, repris de la V1.
+ * Queue = file d'actions hors ligne (IndexedDB, point 62 du cahier des charges).
+ * Écran Équipe branché sur js/screens-team.js.
  */
 (function () {
   "use strict";
@@ -19,29 +19,16 @@
   var ROLE = { benevole: "Bénévole", referent: "Référent", admin: "Organisation", vehicles: "Véhicules" };
 
   var ICON = {
-    Accueil: "\u2302",
-    "Mes créneaux": "\u25A6",
-    Planning: "\u25A4",
-    Contacts: "\u2663",
-    Équipe: "\u2659",
-    Véhicules: "\u25B0",
-    Messages: "\u2709",
-    Outils: "\u2699",
-    Préparation: "\u25F7",
-    Formulaires: "\u25A7",
-    Simulations: "\u27F3",
-    Arbitrages: "\u25C7",
-    Rotations: "\u21BB",
-    Contrôles: "\u2713",
-    Validation: "\u25C9",
-    Publication: "\u2197",
-    Terrain: "\u2316"
+    Accueil: "\u2302", "Mes créneaux": "\u25A6", Planning: "\u25A4", Contacts: "\u2663",
+    Équipe: "\u2659", Véhicules: "\u25B0", Messages: "\u2709", Outils: "\u2699",
+    Préparation: "\u25F7", Formulaires: "\u25A7", Simulations: "\u27F3", Arbitrages: "\u25C7",
+    Rotations: "\u21BB", Contrôles: "\u2713", Validation: "\u25C9", Publication: "\u2197", Terrain: "\u2316"
   };
 
   var NAV = {
     benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]],
     referent: [["Accueil", "home"], ["Équipe", "team"], ["Véhicules", "vehicles"], ["Planning", "planning"], ["Messages", "messages"], ["Contacts", "contacts"], ["Outils", "tools"]],
-    admin: [["Préparation", "setup"], ["Formulaires", "forms"], ["Simulations", "simulations"], ["Planning", "planning"], ["Arbitrages", "arbitrations"], ["Rotations", "rotations"], ["Contrôles", "checks"], ["Validation", "validation"], ["Publication", "publication"], ["Terrain", "terrain"], ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]],
+    admin: [["Équipe", "team"], ["Préparation", "setup"], ["Formulaires", "forms"], ["Simulations", "simulations"], ["Planning", "planning"], ["Arbitrages", "arbitrations"], ["Rotations", "rotations"], ["Contrôles", "checks"], ["Validation", "validation"], ["Publication", "publication"], ["Terrain", "terrain"], ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]],
     vehicles: [["Accueil", "home"], ["Véhicules", "vehicles"]]
   };
 
@@ -50,7 +37,7 @@
     myshifts: ["MON ENGAGEMENT", "Mes créneaux", "Tes missions, tes rôles et tes horaires."],
     planning: ["ORGANISATION", "Planning général", "Les affectations publiées, sans donnée privée."],
     contacts: ["CARNET D'ÉQUIPE", "Contacts", "Les personnes utiles pendant le festival."],
-    team: ["ÉQUIPE", "Bénévoles", "Référents et équipe de l'édition."],
+    team: ["ÉQUIPE", "Bénévoles", "Fiches, contraintes et accès de l'édition."],
     vehicles: ["LOGISTIQUE", "Véhicules", "Parc, états des lieux et incidents."],
     messages: ["INFORMATIONS", "Messages", "Consignes et actualités de l'équipe."],
     tools: ["ESPACE RÉFÉRENT", "Outils", "Accès aux modules de suivi."],
@@ -65,30 +52,25 @@
     terrain: ["PENDANT LE FESTIVAL", "Suivi terrain", "Créneaux et changements sur place."]
   };
 
-  var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0 };
+  var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0, personId: "" };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
 
   function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
-  function bootFail(msg) { if (BOOT && BOOT.fail) BOOT.fail(msg); else { hideBoot(); showLogin(); } }
+  function bootFail(m) { if (BOOT && BOOT.fail) BOOT.fail(m); else { hideBoot(); showLogin(); } }
   function bootSkip() { if (BOOT && BOOT.skip) BOOT.skip(); else hideBoot(); }
   function hideBoot() { var b = $("#bootScreen"); if (b) b.classList.add("hidden"); }
   function showLogin() { var l = $("#loginScreen"); if (l) l.classList.remove("hidden"); }
 
   function saveLocal() {
     try {
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({ at: Date.now(), version: state.version, role: state.role, data: state.data })
-      );
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), version: state.version, role: state.role, data: state.data }));
     } catch (e) {}
   }
-
   function readLocal() {
     try {
       var raw = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-      if (!raw || !raw.data) return null;
-      return raw;
+      return raw && raw.data ? raw : null;
     } catch (e) { return null; }
   }
 
@@ -102,16 +84,12 @@
     notice.t = setTimeout(function () { n.classList.add("hidden"); }, 6500);
   }
 
-  /* Le bandeau reflète toujours l'état réel : réseau, file d'attente, synchro. */
   function syncBadge() {
     var el = $("#connectionText");
     if (!el) return;
-    var pill = el.parentElement;
     var text, kind;
     if (!navigator.onLine) {
-      text = state.pending
-        ? "Hors ligne · " + state.pending + " modification(s) en attente"
-        : "Hors ligne · données disponibles";
+      text = state.pending ? "Hors ligne · " + state.pending + " modification(s) en attente" : "Hors ligne · données disponibles";
       kind = "offline";
     } else if (state.pending) {
       text = state.pending + " modification(s) en attente";
@@ -121,16 +99,12 @@
       kind = "ok";
     }
     el.textContent = text;
-    if (pill) pill.dataset.kind = kind;
+    if (el.parentElement) el.parentElement.dataset.kind = kind;
   }
 
   function refreshPending() {
     if (!window.Queue) return Promise.resolve(0);
-    return Queue.count().then(function (n) {
-      state.pending = n;
-      syncBadge();
-      return n;
-    }).catch(function () { return 0; });
+    return Queue.count().then(function (n) { state.pending = n; syncBadge(); return n; }).catch(function () { return 0; });
   }
 
   function setTitle() {
@@ -155,12 +129,9 @@
     if (dn) dn.innerHTML = items.map(make).join("");
     var mn = $("#mobileNav");
     if (mn) {
-      mn.innerHTML =
-        primary.map(make).join("") +
-        (extra.length
-          ? '<button class="nav-more" id="navMore" aria-expanded="false" aria-label="Plus de fonctions">' +
-            '<span class="nav-icon">\u203A</span><span>Plus</span></button>'
-          : "");
+      mn.innerHTML = primary.map(make).join("") +
+        (extra.length ? '<button class="nav-more" id="navMore" aria-expanded="false" aria-label="Plus de fonctions">' +
+          '<span class="nav-icon">\u203A</span><span>Plus</span></button>' : "");
       var more = $("#navMore");
       if (more) more.onclick = toggleMore;
     }
@@ -178,12 +149,10 @@
     var drawer = document.createElement("div");
     drawer.id = "navDrawer";
     drawer.className = "nav-drawer";
-    drawer.innerHTML = items
-      .map(function (it) {
-        return '<button class="nav-drawer-link" data-page="' + it[1] + '">' +
-          '<span class="nav-icon">' + (ICON[it[0]] || "•") + "</span><span>" + esc(it[0]) + "</span></button>";
-      })
-      .join("");
+    drawer.innerHTML = items.map(function (it) {
+      return '<button class="nav-drawer-link" data-page="' + it[1] + '"><span class="nav-icon">' +
+        (ICON[it[0]] || "•") + "</span><span>" + esc(it[0]) + "</span></button>";
+    }).join("");
     $("#appShell").appendChild(drawer);
     more.setAttribute("aria-expanded", "true");
     wireNav();
@@ -201,6 +170,7 @@
     var more = $("#navMore");
     if (more) more.setAttribute("aria-expanded", "false");
     state.page = key;
+    if (key !== "team") state.personId = "";
     nav();
     setTitle();
     render();
@@ -219,8 +189,7 @@
   }
   function personLabel(id) {
     var p = ((state.data && state.data.people) || []).filter(function (x) { return x.id === id; })[0];
-    if (!p) return "—";
-    return [p.firstName, p.lastName].filter(Boolean).join(" ");
+    return p ? [p.firstName, p.lastName].filter(Boolean).join(" ") : "—";
   }
   function shift(id) {
     return ((state.data && state.data.shifts) || []).filter(function (x) { return x.id === id; })[0] || null;
@@ -230,17 +199,164 @@
     var c = $("#pageContent");
     if (!c) return;
     var d = state.data || {};
-    if (state.page === "home") return renderHome(c, d);
-    if (state.page === "myshifts") return renderMyShifts(c, d);
-    if (state.page === "planning") return renderPlanning(c, d);
-    if (state.page === "contacts") return renderContacts(c, d);
-    if (state.page === "messages") return renderMessages(c, d);
-    if (state.page === "vehicles") return renderVehicles(c, d);
-    if (state.page === "setup") return renderSetup(c, d);
+    var p = state.page;
+    if (p === "home") return renderHome(c, d);
+    if (p === "team") return renderTeam(c, d);
+    if (p === "myshifts") return renderMyShifts(c, d);
+    if (p === "planning") return renderPlanning(c, d);
+    if (p === "contacts") return renderContacts(c, d);
+    if (p === "messages") return renderMessages(c, d);
+    if (p === "vehicles") return renderVehicles(c, d);
+    if (p === "setup") return renderSetup(c, d);
     c.innerHTML = empty("Module en préparation", "Cet écran sera branché à l'étape suivante.");
   }
 
-  /* Écran de préparation : l'état de chaque bloc, selon le point 7 du CDC. */
+  /* ---------- Équipe ---------- */
+  function renderTeam(c, d) {
+    var T = window.ScreenTeam;
+    if (!T) { c.innerHTML = empty("Écran indisponible", "Le module Équipe n'est pas chargé."); return; }
+    c.innerHTML = state.personId ? T.sheet({ data: d }, state.personId) : T.list({ data: d });
+    wireTeam();
+  }
+
+  function wireTeam() {
+    var T = window.ScreenTeam;
+    if (!T) return;
+
+    var search = $("#teamSearch");
+    if (search) {
+      search.oninput = function () {
+        T.setFilter(search.value);
+        var c = $("#pageContent");
+        c.innerHTML = T.list({ data: state.data || {} });
+        wireTeam();
+        var again = $("#teamSearch");
+        if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+      };
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-person]"), function (b) {
+      b.onclick = function () { state.personId = b.dataset.person; render(); };
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-team]"), function (b) {
+      b.onclick = function () {
+        var act = b.dataset.team;
+        if (act === "back") { state.personId = ""; render(); return; }
+        if (act === "new") { openPersonForm(); return; }
+        if (act === "remove") { removePerson(); return; }
+        if (act === "access-one") { createAccessOne(); return; }
+        if (act === "access") { createAccessBatch(); return; }
+        if (act === "copy") { copyCodes(b.dataset.payload || ""); return; }
+      };
+    });
+
+    var form = $("#personForm");
+    if (form) {
+      form.onsubmit = function (e) { e.preventDefault(); savePerson(form); };
+    }
+  }
+
+  function openPersonForm() {
+    var c = $("#pageContent");
+    c.innerHTML = window.ScreenTeam.blank();
+    state.personId = "";
+    wireTeam();
+  }
+
+  function savePerson(form) {
+    var data = window.ScreenTeam.readForm(form);
+    if (!data.lastName || !data.firstName) { notice("Nom et prénom obligatoires.", "error"); return; }
+
+    var row = data, base = null, baseVersion = 0;
+    if (state.personId) {
+      var old = (state.data.people || []).filter(function (x) { return x.id === state.personId; })[0];
+      if (old) {
+        row = Object.assign({}, old, data);
+        row.id = old.id;
+        base = old;
+        baseVersion = old.version || 0;
+      }
+    } else {
+      row.id = "p-" + Transport.requestId().slice(0, 8);
+    }
+
+    sendSave("people", row, baseVersion, base)
+      .then(function () {
+        notice("Fiche enregistrée.", "success");
+        state.data.people = (state.data.people || []).filter(function (x) { return x.id !== row.id; }).concat([row]);
+        saveLocal();
+        state.personId = row.id;
+        render();
+      })
+      .catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function removePerson() {
+    var id = state.personId;
+    if (!id) return;
+    var p = (state.data.people || []).filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    if (!window.confirm("Supprimer la fiche de " + personLabel(id) + " ?\nLa personne sera retirée de la base active.")) return;
+    var row = Object.assign({}, p, { deleted: true });
+    sendSave("people", row, p.version || 0, p)
+      .then(function () {
+        state.data.people = (state.data.people || []).filter(function (x) { return x.id !== id; });
+        saveLocal();
+        state.personId = "";
+        notice("Fiche supprimée.", "success");
+        render();
+      })
+      .catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  /* Le serveur renvoie le code en clair une seule fois (point 11 du CDC). */
+  function createAccessOne() {
+    var id = state.personId;
+    if (!id) return;
+    var p = (state.data.people || []).filter(function (x) { return x.id === id; })[0];
+    Transport.mutate("access", { personId: id })
+      .then(function (out) {
+        var c = $("#pageContent");
+        c.innerHTML = window.ScreenTeam.accessResult([{ nom: p.lastName, prenom: p.firstName, code: (out && out.code) || "—" }]);
+        wireTeam();
+      })
+      .catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function createAccessBatch() {
+    var people = (state.data.people || []).filter(function (p) { return !p.deleted && p.status !== "Désisté"; });
+    if (!people.length) { notice("Aucune personne active.", "error"); return; }
+    if (!window.confirm("Créer les accès pour " + people.length + " personne(s) ?\nLes codes existants seront remplacés.")) return;
+
+    var rows = [];
+    var chain = Promise.resolve();
+    people.forEach(function (p) {
+      chain = chain.then(function () {
+        return Transport.mutate("access", { personId: p.id }).then(function (out) {
+          if (out && out.code) rows.push({ nom: p.lastName, prenom: p.firstName, code: out.code });
+        }).catch(function () {});
+      });
+    });
+    chain.then(function () {
+      var c = $("#pageContent");
+      c.innerHTML = window.ScreenTeam.accessResult(rows);
+      wireTeam();
+    });
+  }
+
+  function copyCodes(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(
+        function () { notice("Liste copiée.", "success"); },
+        function () { notice("Copie impossible sur cet appareil.", "error"); }
+      );
+    } else {
+      notice("Copie impossible sur cet appareil.", "error");
+    }
+  }
+
+  /* ---------- Préparation ---------- */
   function renderSetup(c, d) {
     var cfg = d.config || {};
     var blocks = [
@@ -255,20 +371,19 @@
       '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
       esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
       '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
-      card("État de la préparation",
-        blocks.map(function (b) { return listRow(b[0], b[1], "", ""); }).join("")) +
+      card("État de la préparation", blocks.map(function (b) { return listRow(b[0], b[1], "", ""); }).join("")) +
       card("État de l'appareil",
         listRow("Version des données", "V" + state.version, "", "") +
-        listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune",
-          state.pending ? "bad" : "good") +
+        listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune", state.pending ? "bad" : "good") +
         listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", ""));
   }
 
+  /* ---------- Autres écrans ---------- */
   function renderHome(c, d) {
     var cfg = d.config || {};
     var uid = state.user && state.user.id;
-    var mine = (d.assignments || []).filter(function (a) { return a.personId === uid; });
-    var next = mine
+    var next = (d.assignments || [])
+      .filter(function (a) { return a.personId === uid; })
       .map(function (a) { return shift(a.shiftId); })
       .filter(Boolean)
       .sort(function (a, b) { return String(a.date + a.start).localeCompare(String(b.date + b.start)); })[0];
@@ -297,13 +412,10 @@
       .map(function (a) {
         var s = shift(a.shiftId) || {};
         var mine = rots.filter(function (r) { return r.shiftId === a.shiftId; });
-        var body = mine.length
-          ? mine.map(function (r) { return r.start + "–" + r.end + " · " + r.role; }).join(" · ")
-          : "Rôle à confirmer";
-        return '<article class="card"><h2>' + esc(s.name || "Créneau") + "</h2><p class=\"muted\">" +
+        var body = mine.length ? mine.map(function (r) { return r.start + "–" + r.end + " · " + r.role; }).join(" · ") : "Rôle à confirmer";
+        return '<article class="card"><h2>' + esc(s.name || "Créneau") + '</h2><p class="muted">' +
           esc(s.date || "") + " · " + esc((s.start || "") + "–" + (s.end || "")) + "</p><p>" + esc(body) + "</p></article>";
-      })
-      .join("");
+      }).join("");
     c.innerHTML = rows || empty("Aucun créneau publié", "Ton planning personnel s'affichera ici.");
   }
 
@@ -318,18 +430,17 @@
   }
 
   function renderContacts(c, d) {
-    var refs = [];
-    var others = [];
+    var refs = [], others = [];
     (d.people || []).forEach(function (p) {
       if (p.deleted) return;
       (p.role === "referent" ? refs : others).push(p);
     });
     var block = function (list) {
       return list.map(function (p) {
-        var label = [p.firstName, p.lastName].filter(Boolean).join(" ");
+        var lbl = [p.firstName, p.lastName].filter(Boolean).join(" ");
         return '<article class="card contact-card"><div class="contact-head">' +
-          (p.photo ? '<img class="avatar" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar">' + esc(label.slice(0, 1)) + "</span>") +
-          "<div><b>" + esc(label) + "</b><small>" + esc(p.role === "referent" ? "Référent" : "Bénévole") + "</small></div></div>" +
+          (p.photo ? '<img class="avatar" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar">' + esc(lbl.slice(0, 1)) + "</span>") +
+          "<div><b>" + esc(lbl) + "</b><small>" + esc(p.role === "referent" ? "Référent" : "Bénévole") + "</small></div></div>" +
           '<div class="contact-actions">' +
           (p.phone ? '<a class="button secondary" href="tel:' + esc(p.phone) + '">Appeler</a>' : "") +
           (p.email ? '<a class="button secondary" href="mailto:' + esc(p.email) + '">Écrire</a>' : "") +
@@ -345,14 +456,13 @@
     var msgs = d.messages || [];
     c.innerHTML = msgs.length
       ? msgs.map(function (m) {
-          return '<article class="card"><h2>' + esc(m.title) + "</h2><p>" + esc(m.body) +
-            "</p>" + (m.priority === "Urgent" && !m.read ? '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>' : "") + "</article>";
+          return '<article class="card"><h2>' + esc(m.title) + "</h2><p>" + esc(m.body) + "</p>" +
+            (m.priority === "Urgent" ? '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>' : "") + "</article>";
         }).join("")
       : empty("Aucun message", "Les consignes de l'équipe apparaîtront ici.");
     Array.prototype.forEach.call(document.querySelectorAll("[data-read]"), function (b) {
       b.onclick = function () {
-        send("read", { messageId: b.dataset.read }, "Message marqué comme lu.")
-          .then(function () { render(); });
+        send("read", { messageId: b.dataset.read }, "Message marqué comme lu.").then(function () { render(); });
       };
     });
   }
@@ -361,8 +471,7 @@
     var v = d.vehicles || [];
     c.innerHTML = v.length
       ? v.map(function (x) {
-          return '<article class="card"><h2>' + esc(x.plate || "Véhicule") + "</h2><p>" +
-            esc(x.make || "") + "</p>" +
+          return '<article class="card"><h2>' + esc(x.plate || "Véhicule") + "</h2><p>" + esc(x.make || "") + "</p>" +
             '<span class="badge ' + (x.active === false ? "bad" : "good") + '">' + (x.active === false ? "HS" : "En service") + "</span></article>";
         }).join("")
       : empty("Aucun véhicule", "Les véhicules reçus apparaîtront ici.");
@@ -370,25 +479,20 @@
 
   function start() {
     hideBoot();
-    var l = $("#loginScreen");
-    if (l) l.classList.add("hidden");
-    var s = $("#appShell");
-    if (s) s.classList.remove("hidden");
-    var rl = $("#roleLabel");
-    if (rl) rl.textContent = ROLE[state.role] || "Bénévole";
-    var ul = $("#userLabel");
-    if (ul) ul.textContent = (state.user && state.user.name) || "Mon espace";
+    var l = $("#loginScreen"); if (l) l.classList.add("hidden");
+    var s = $("#appShell"); if (s) s.classList.remove("hidden");
+    var rl = $("#roleLabel"); if (rl) rl.textContent = ROLE[state.role] || "Bénévole";
+    var ul = $("#userLabel"); if (ul) ul.textContent = (state.user && state.user.name) || "Mon espace";
     var ua = $("#userAvatar");
     if (ua) ua.textContent = String((state.user && state.user.name) || "B").trim().slice(0, 1).toUpperCase();
+    if (state.role === "admin") state.page = "team";
     nav();
     setTitle();
     render();
     syncBadge();
-    if (state.role === "admin" && state.page === "home") go("setup");
   }
 
-  /* Envoi d'une action : direct si le réseau est là, sinon mise en file.
-   * Une action hors ligne reste visible dans le bandeau, jamais perdue. */
+  /* ---------- Envoi ---------- */
   function send(action, data, okMessage) {
     if (!navigator.onLine && window.Queue) {
       return Queue.enqueue({ action: action, payload: data }).then(function () {
@@ -408,6 +512,27 @@
         });
       }
       notice(msg, "error");
+      throw e;
+    });
+  }
+
+  function sendSave(collection, row, baseVersion, baseRow) {
+    if (!navigator.onLine && window.Queue) {
+      return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
+        .then(function () { notice("Enregistré hors ligne. Envoi au retour du réseau.", "info"); return refreshPending(); });
+    }
+    return Transport.save(collection, row, baseVersion, baseRow).then(function (out) {
+      if (out && out.conflict) {
+        notice("Conflit détecté : une autre personne a modifié cette fiche.", "error");
+        if (window.Queue) return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow });
+      }
+      return out;
+    }).catch(function (e) {
+      var msg = String((e && e.message) || e);
+      if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+        return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
+          .then(function () { notice("Réseau instable : fiche gardée pour envoi.", "info"); return refreshPending(); });
+      }
       throw e;
     });
   }
@@ -446,61 +571,46 @@
 
   window.logout = function () {
     try { Transport.logout().catch(function () {}); } catch (e) {}
-    state.user = null;
-    state.data = null;
+    state.user = null; state.data = null; state.personId = "";
     try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
     if (window.Queue) Queue.clear().catch(function () {});
-    var s = $("#appShell");
-    if (s) s.classList.add("hidden");
+    var s = $("#appShell"); if (s) s.classList.add("hidden");
     showLogin();
-    var ac = $("#accessCode");
-    if (ac) ac.value = "";
+    var ac = $("#accessCode"); if (ac) ac.value = "";
   };
 
   window.navigate = go;
 
-  /* Vidage de la file puis synchronisation. Un conflit laisse l'action en
-   * place : rien n'est décidé à la place de l'humain (point 62 du CDC). */
   function flushQueue() {
     if (!window.Queue) return Promise.resolve();
-    return Queue.flush()
-      .then(function (r) {
-        state.pending = r && r.remaining ? r.remaining : 0;
-        syncBadge();
-        if (r && r.sent) notice(r.sent + " modification(s) envoyée(s).", "success");
-        return Queue.list();
-      })
-      .then(function (rows) {
-        var conflicts = (rows || []).filter(function (x) { return x.state === "conflict"; });
-        if (conflicts.length) notice(conflicts.length + " modification(s) en conflit à arbitrer.", "error");
-      })
-      .catch(function () {});
+    return Queue.flush().then(function (r) {
+      state.pending = (r && r.remaining) || 0;
+      syncBadge();
+      if (r && r.sent) notice(r.sent + " modification(s) envoyée(s).", "success");
+      return Queue.list();
+    }).then(function (rows) {
+      var conflicts = (rows || []).filter(function (x) { return x.state === "conflict"; });
+      if (conflicts.length) notice(conflicts.length + " modification(s) en conflit à arbitrer.", "error");
+    }).catch(function () {});
   }
 
   function syncNow() {
     if (!navigator.onLine) { syncBadge(); return; }
-    Transport.sync(state.version, state.role)
-      .then(function (bundle) {
-        state.data = bundle || {};
-        state.version = (bundle && bundle.version) || state.version;
-        saveLocal();
-        render();
-        return flushQueue();
-      })
-      .then(function () { return refreshPending(); })
+    Transport.sync(state.version, state.role).then(function (bundle) {
+      state.data = bundle || {};
+      state.version = (bundle && bundle.version) || state.version;
+      saveLocal();
+      render();
+      return flushQueue();
+    }).then(function () { return refreshPending(); })
       .catch(function (e) {
-        if (e && e.message === "SESSION_EXPIRED") {
-          Transport.setToken("");
-          window.logout();
-          return;
-        }
+        if (e && e.message === "SESSION_EXPIRED") { Transport.setToken(""); window.logout(); return; }
         syncBadge();
       });
   }
 
   var sn = $("#syncNow");
   if (sn) sn.onclick = function () { syncNow(); };
-
   window.addEventListener("online", function () { syncNow(); });
   window.addEventListener("offline", function () { syncBadge(); });
 
