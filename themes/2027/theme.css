@@ -1,0 +1,23 @@
+/* ------------------------------------------------------------------
+ * Beauregard — thème de l'édition 2027.
+ * Identité graphique annuelle uniquement. Aucune règle structurelle.
+ * Le changement d'année ne doit jamais imposer de modifier index.html.
+ * Le thème 2027 reprend pour l'instant l'identité Beauregard 2026.
+ * ------------------------------------------------------------------ */
+
+:root {
+  --primary: #174d43;
+  --secondary: #8a4b24;
+  --accent: #c8934a;
+  --background: #ebe2d4;
+  --surface: #f5efe2;
+  --text: #103b35;
+  --muted: #6f7364;
+  --danger: #9b1c1c;
+  --warning: #a16207;
+  --success: #0f5a4f;
+
+  --edition: "2027";
+  --logo: url("./themes/2027/logo.svg");
+  --splash: var(--primary);
+}
