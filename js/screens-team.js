@@ -1,6 +1,9 @@
 /* Beauregard V2 — écran Équipe : liste, fiche, création, accès.
  * Points 8 à 11 du cahier des charges : fiche complète, création manuelle
- * depuis smartphone, suppression, génération des codes personnels en lot.
+ * depuis smartphone, suppression, génération des codes personnels.
+ *
+ * Le serveur ne transmet JAMAIS le hash d'accès : il envoie seulement
+ * `hasCode` et `active`. L'écran s'appuie donc sur hasCode.
  */
 (function (root) {
   "use strict";
@@ -79,6 +82,8 @@
     var p = (ctx.data.people || []).filter(function (x) { return x.id === id; })[0];
     if (!p) return '<div class="empty"><b>Fiche introuvable</b>Elle a peut-\u00eatre \u00e9t\u00e9 supprim\u00e9e.</div>';
     var acc = (ctx.data.access || []).filter(function (a) { return a.personId === id; })[0];
+    /* Le serveur ne transmet jamais le hash : seulement hasCode. */
+    var hasCode = !!(acc && (acc.hasCode || acc.hash));
 
     return '<div class="toolbar"><button class="button secondary" data-team="back">\u2039 \u00c9quipe</button>' +
       '<span class="badge">' + esc(p.role === "referent" ? "R\u00e9f\u00e9rent" : "B\u00e9n\u00e9vole") + "</span></div>" +
@@ -102,13 +107,13 @@
       checks(p) +
       '<div class="full"><label>Note interne<textarea name="internalNote" rows="3">' + esc(p.internalNote || "") + "</textarea></label></div>" +
       '<div class="full modal-actions">' +
-      '<button type="button" class="button secondary" data-team="access-one">' +
-      (acc && acc.hash ? "R\u00e9initialiser le code" : "Cr\u00e9er l\u2019acc\u00e8s") + "</button>" +
+      '<button type="button" class="button secondary" data-team="access-one" data-id="' + esc(p.id) + '">' +
+      (hasCode ? "R\u00e9initialiser le code" : "Cr\u00e9er l\u2019acc\u00e8s") + "</button>" +
       '<button class="button primary">Enregistrer</button></div>' +
       "</form>" +
       '<div class="toolbar"><button class="button secondary" data-team="remove">Supprimer la fiche</button></div>' +
       '<div class="notice" data-type="info">' +
-      (acc ? "Acc\u00e8s : " + (acc.hash ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
+      (acc ? "Acc\u00e8s : " + (hasCode ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
            : "Aucun acc\u00e8s cr\u00e9\u00e9 pour cette personne.") + "</div>";
   }
 
@@ -156,9 +161,7 @@
   function accessResult(rows) {
     if (!rows || !rows.length)
       return '<div class="empty"><b>Aucun code g\u00e9n\u00e9r\u00e9</b>Toutes les personnes actives ont d\u00e9j\u00e0 un acc\u00e8s.</div>';
-    var lines = rows.map(function (r) {
-      return r.nom + " " + r.prenom + "\t" + r.code;
-    }).join("\n");
+    var lines = rows.map(function (r) { return r.nom + " " + r.prenom + "\t" + r.code; }).join("\n");
     return '<div class="notice" data-type="success">' + rows.length + " code(s) g\u00e9n\u00e9r\u00e9(s). Note-les maintenant : ils ne seront plus affich\u00e9s.</div>" +
       '<div class="card"><table class="codes"><thead><tr><th>Nom</th><th>Pr\u00e9nom</th><th>Code</th></tr></thead><tbody>' +
       rows.map(function (r) {
