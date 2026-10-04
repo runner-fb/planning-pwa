@@ -563,8 +563,9 @@
     var S = window.ScreenShifts;
     if (!f || !S) { notice("Formulaire Créneaux indisponible.", "error"); return; }
 
-    var row = S.readShift(f);
+    var row = S.readShift(f, { data: state.data });
     if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
+    if (!row.date) { notice("La date est obligatoire : elle definit le jour et l'ordre du creneau.", "error"); return; }
     if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
     row.name = S.slotLabel(row.start, row.end, row.id);
 
