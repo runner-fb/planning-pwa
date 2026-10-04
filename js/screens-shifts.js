@@ -6,6 +6,11 @@
  * le jour choisi qui fait foi, jamais l'horloge — aucun décalage à
  * appliquer. L'ordre de la semaine est celui du festival : mardi → lundi.
  *
+ * LE TRI SUIT CETTE JOURNÉE, PAS L'HORLOGE.
+ * Dans un même bloc, 01:00 vient APRÈS 23:00 — c'est la fin de la soirée,
+ * pas son début. Deux mesures du temps coexistent : voir mins() et
+ * minsJour().
+ *
  * REGROUPEMENT : LA DATE EST LA SEULE CLÉ.
  * Deux lignes de même date appartiennent toujours au même bloc. Le libellé
  * de jour ne crée jamais un groupe à lui : il sert à retrouver la date
@@ -13,10 +18,9 @@
  * « Mercredi 30/06 ».
  *
  * LE FORMULAIRE N'ENVOIE QUE CE QUI EST SAISI.
- * Le serveur (Code.gs) attend : id, day, date, start, end, target,
- * vehicles, active, brunch. `ordre`, `c3`, le libellé et la DATE sont
- * CALCULÉS côté serveur : le formulaire ne les envoie pas et ne les
- * affiche pas.
+ * Le serveur (Code.gs) attend : id, day, start, end, target, vehicles,
+ * active, brunch. `ordre`, `c3`, le libellé et la DATE sont CALCULÉS
+ * côté serveur : le formulaire ne les envoie pas et ne les affiche pas.
  *
  * CRÉNEAUX : mardi → lundi. CONCERTS : mercredi → dimanche, la plage
  * que le serveur accepte.
@@ -57,9 +61,6 @@
 
   /* ---------- JOURS DU FESTIVAL ----------
    * L'ordre est celui du festival : mardi -> lundi.
-   * Une journee va du matin au petit matin : un creneau qui commence
-   * a 01:00 le samedi appartient a la soiree du VENDREDI. C'est le jour
-   * choisi qui fait foi, jamais l'horloge : aucun decalage a appliquer.
    * Le jour se CHOISIT ; la date s'en DEDUIT (calendrier de l'edition). */
   var JOURS = ["mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "lundi"];
 
@@ -190,19 +191,41 @@
 
   var isFallbackKey = function (k) { return DAY_NAMES.indexOf(k) >= 0; };
 
+  /* ------------------------------------------------------------------
+   * DEUX MESURES DU TEMPS, ET ELLES NE SERVENT PAS À LA MÊME CHOSE.
+   *
+   * mins() : l'heure brute, pour calculer une DURÉE.
+   *   21:00 → 02:30 doit donner 5 h 30, pas une valeur négative.
+   *
+   * minsJour() : l'heure replacée dans la JOURNÉE du festival, pour TRIER.
+   *   Une journée va du matin au petit matin : un concert à 01:00
+   *   appartient à la FIN de la soirée, pas à son début. On le décale de
+   *   24 h, pour que 01:00 (1500) passe APRÈS 23:00 (1380) et non avant
+   *   18:45 (1125).
+   *   La coupure est fixée à 06:00 : aucun spectacle ne commence entre
+   *   05:00 et 08:00 dans une soirée de festival.
+   * ------------------------------------------------------------------ */
   var mins = function (t) {
     var p = String(t || "").split(":");
     return (Number(p[0]) || 0) * 60 + (Number(p[1]) || 0);
   };
 
-  /* Tri : la date d'abord (les clés non-date passent à la fin), puis l'heure. */
+  var minsJour = function (t) {
+    var p = String(t || "").split(":");
+    var h = Number(p[0]) || 0;
+    if (h < 6) h += 24;
+    return h * 60 + (Number(p[1]) || 0);
+  };
+
+  /* Tri : la date d'abord (les clés non-date passent à la fin), puis
+   * l'heure DANS LA JOURNÉE — 01:00 vient après 23:00. */
   var byDayThenTime = function (a, b) {
     var ka = dayKeyOf(a), kb = dayKeyOf(b);
     var fa = isFallbackKey(ka) || ka === "autre", fb = isFallbackKey(kb) || kb === "autre";
     if (fa !== fb) return fa ? 1 : -1;
     var d = ka.localeCompare(kb);
     if (d) return d;
-    return mins(a.start) - mins(b.start);
+    return minsJour(a.start) - minsJour(b.start);
   };
 
   var crossesMidnight = function (a, b) { return mins(b) <= mins(a); };
