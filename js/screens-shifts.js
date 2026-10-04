@@ -5,14 +5,14 @@
  * C'était la cause du message « Date invalide » : le formulaire n'envoyait
  * qu'un libellé de jour (« mardi ») et le serveur n'avait aucune date à lire.
  *
- * Conséquences, toutes voulues :
- *   - plus de table DAY_ORDER ni de dayRank : la date ordonne d'elle-même ;
- *   - plus de liste déroulante « Jour » : un sélecteur de date donne le
- *     jour ET le rang, et survit au décalage des jours d'une année sur l'autre ;
- *   - `jour` reste envoyé (calculé depuis la date) car le planning et le
- *     terrain s'appuient dessus ;
- *   - `ordre` est calculé : rang de la date, puis heure de début dans la
- *     journée. C'est ce qui produit l'ordre 1..19 de la feuille.
+ * LE FORMULAIRE N'ENVOIE QUE CE QUI EST SAISI.
+ * Le serveur (Code.gs) attend : id, date, start, end, target, vehicles,
+ * active, c3, brunch. `ordre` et `libelle` (name) sont CALCULÉS côté serveur
+ * ou déduits à l'affichage : le formulaire ne les envoie pas. `jour` est
+ * envoyé car le serveur le relit, mais il est déduit de la date, jamais saisi.
+ *
+ * Le champ de saisie est `target` dans le formulaire HTML et dans le serveur.
+ * `effectif` n'existe que pour l'affichage (rétrocompatibilité de l'écran).
  *
  * Signature des formulaires : (ctx, mode, id)
  *   mode = "new"  → création, fiche vide
@@ -105,33 +105,6 @@
     return mins(a.start) - mins(b.start);
   };
 
-  /* Rang d'une date dans l'édition, pour calculer `ordre`.
-   * Les jours d'un festival sont consécutifs : le rang du jour dans la série
-   * suffit, puis l'heure de début départage deux créneaux du même jour. */
-  var orderFor = function (ctx, date, start) {
-    var iso = isoDate(date);
-    if (!iso) return 0;
-    var dates = {};
-    (ctx.data.shifts || []).forEach(function (s) {
-      var k = isoDate(s.date);
-      if (k) dates[k] = true;
-    });
-    /* La date saisie fait partie de l'édition, même si elle est nouvelle. */
-    dates[iso] = true;
-    var sorted = Object.keys(dates).sort();
-    var index = sorted.indexOf(iso);
-    if (index < 0) index = sorted.length;
-    var dayRank = index * 100; /* 100 créneaux par jour : largement suffisant. */
-    var slot = 0;
-    var sameDay = (ctx.data.shifts || []).filter(function (s) {
-      return isoDate(s.date) === iso && s.id;
-    });
-    sameDay.forEach(function (s) {
-      if (mins(s.start) < mins(start)) slot++;
-    });
-    return dayRank + slot + 1;
-  };
-
   var crossesMidnight = function (a, b) { return mins(b) <= mins(a); };
 
   var duration = function (a, b) {
@@ -176,7 +149,7 @@
           if (s.c3) badges.push("C3");
           if (s.brunch) badges.push("Brunch");
           if (s.active === false) badges.push("Inactif");
-          var total = Number(s.effectif || s.target || 0);
+          var total = Number(s.target || s.effectif || 0);
           return '<button class="person-row" data-shift="' + esc(s.id) + '">' +
             '<span class="shift-time"><b>' + esc(s.start || "—") + "</b><small>" + esc(s.end || "") + "</small></span>" +
             '<span class="person-main"><b>' + esc(slotLabel(s.start, s.end, s.id) || s.name || s.id) + "</b><small>" +
@@ -200,7 +173,7 @@
   function shiftForm(ctx, mode, id) {
     var isNew = mode === "new";
     var s = isNew
-      ? { start: "", end: "", effectif: 0, vehicles: 0, active: true, date: "" }
+      ? { start: "", end: "", target: 0, vehicles: 0, active: true, date: "" }
       : ((ctx.data.shifts || []).filter(function (x) { return x.id === id; })[0] || {});
 
     var dateValue = isoDate(s.date);
@@ -215,7 +188,7 @@
       '<div><label>Date<input name="date" type="date" value="' + esc(dateValue) + '" required></label></div>' +
       '<div><label>Jour (déduit de la date)<input name="dayshow" value="' +
       esc(dateValue ? dayDisplay(dateValue) : "") + '" readonly placeholder="se déduit de la date"></label></div>' +
-      '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.effectif || s.target || 0) + '"></label></div>' +
+      '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.target || s.effectif || 0) + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(s.start || "") + '" required></label></div>' +
       '<div><label>Fin<input name="end" type="time" value="' + esc(s.end || "") + '" required></label></div>' +
       '<div><label>Véhicules prévus<input name="vehicles" type="number" min="0" value="' + esc(s.vehicles || 0) + '"></label></div>' +
@@ -235,22 +208,23 @@
         "</div>");
   }
 
-  function readShift(form, ctx) {
+  /* Lecture du formulaire : SEULEMENT ce que la personne a saisi.
+   * Le serveur attend `target` (voir Code.gs : Number.isInteger(row.target)).
+   * `jours`, `ordre` et `libelle` sont des données dérivées ou calculées
+   * côté serveur — elles ne sortent jamais d'ici. */
+  function readShift(form) {
     var f = form.elements;
     var get = function (n) { return f[n] ? String(f[n].value).trim() : ""; };
     var on = function (n) { return !!(f[n] && f[n].checked); };
     var date = get("date");
-    var start = get("start");
     return {
       id: get("id"),
-      name: slotLabel(start, get("end"), get("id")),
       date: date,
-      day: dateToDay(date) || "",
-      start: start,
+      jour: dateToDay(date) || "",
+      start: get("start"),
       end: get("end"),
-      effectif: Number(get("target")) || 0,
+      target: Number(get("target")) || 0,
       vehicles: Number(get("vehicles")) || 0,
-      ordre: ctx ? orderFor(ctx, date, start) : 0,
       active: on("active"),
       c3: on("c3"),
       brunch: on("brunch")
@@ -331,6 +305,7 @@
         "</div>");
   }
 
+  /* Même principe : seuls les champs saisis partent au serveur. */
   function readConcert(form) {
     var f = form.elements;
     var get = function (n) { return f[n] ? String(f[n].value).trim() : ""; };
@@ -339,7 +314,7 @@
     return {
       artist: get("artist"),
       date: date,
-      day: dateToDay(date) || "",
+      jour: dateToDay(date) || "",
       scene: get("scene"),
       start: get("start"),
       end: get("end"),
