@@ -1,6 +1,6 @@
 /* Beauregard V2 — app.js (socle)
  * Dialogue repris de la V1 : Transport = fetch GET JSON.
- * Actions serveur réelles : login, sync, save, mutate, documents…
+ * Actions serveur réelles : login, sync, save, logout, read.
  */
 (function () {
   "use strict";
@@ -66,6 +66,20 @@
 
   var state = { user: null, role: "", data: null, page: "home", version: 0 };
   var CACHE_KEY = "planning_v2_bundle";
+  var BOOT = window.Boot || null;
+
+  /* L'écran de premier chargement ne doit jamais survivre à une erreur. */
+  function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
+  function bootFail(msg) { if (BOOT && BOOT.fail) BOOT.fail(msg); else { hideBoot(); showLogin(); } }
+  function bootSkip() { if (BOOT && BOOT.skip) BOOT.skip(); else hideBoot(); }
+  function hideBoot() {
+    var b = $("#bootScreen");
+    if (b) b.classList.add("hidden");
+  }
+  function showLogin() {
+    var l = $("#loginScreen");
+    if (l) l.classList.remove("hidden");
+  }
 
   function saveLocal() {
     try {
@@ -76,11 +90,10 @@
     } catch (e) {}
   }
 
-  function readLocal(expectedRole) {
+  function readLocal() {
     try {
       var raw = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
       if (!raw || !raw.data) return null;
-      if (expectedRole && raw.role && raw.role !== expectedRole) return null;
       return raw;
     } catch (e) {
       return null;
@@ -122,21 +135,26 @@
     };
     var primary = items.slice(0, 4);
     var extra = items.slice(4);
-    $("#desktopNav").innerHTML = items.map(make).join("");
-    $("#mobileNav").innerHTML =
-      primary.map(make).join("") +
-      (extra.length
-        ? '<button class="nav-more" id="navMore" aria-expanded="false" aria-label="Plus de fonctions">' +
-          '<span class="nav-icon">\u203A</span><span>Plus</span></button>'
-        : "");
-    var more = $("#navMore");
-    if (more) more.onclick = toggleMore;
+    var dn = $("#desktopNav");
+    if (dn) dn.innerHTML = items.map(make).join("");
+    var mn = $("#mobileNav");
+    if (mn) {
+      mn.innerHTML =
+        primary.map(make).join("") +
+        (extra.length
+          ? '<button class="nav-more" id="navMore" aria-expanded="false" aria-label="Plus de fonctions">' +
+            '<span class="nav-icon">\u203A</span><span>Plus</span></button>'
+          : "");
+      var more = $("#navMore");
+      if (more) more.onclick = toggleMore;
+    }
     wireNav();
   }
 
   function toggleMore() {
     var items = (NAV[state.role] || NAV.benevole).slice(4);
     var more = $("#navMore");
+    if (!more) return;
     var open = more.getAttribute("aria-expanded") === "true";
     var existing = $("#navDrawer");
     if (existing) existing.remove();
@@ -189,11 +207,10 @@
       (badge ? '<span class="badge ' + (kind || "") + '">' + esc(badge) + "</span>" : "") + "</div>";
   }
 
-  function person(id) {
+  function personLabel(id) {
     var p = ((state.data && state.data.people) || []).filter(function (x) { return x.id === id; })[0];
-    if (!p) return { label: "—", photo: "" };
-    p.label = [p.firstName, p.lastName].filter(Boolean).join(" ");
-    return p;
+    if (!p) return "—";
+    return [p.firstName, p.lastName].filter(Boolean).join(" ");
   }
 
   function shift(id) {
@@ -202,6 +219,7 @@
 
   function render() {
     var c = $("#pageContent");
+    if (!c) return;
     var d = state.data || {};
     if (state.page === "home") return renderHome(c, d);
     if (state.page === "myshifts") return renderMyShifts(c, d);
@@ -209,7 +227,7 @@
     if (state.page === "contacts") return renderContacts(c, d);
     if (state.page === "messages") return renderMessages(c, d);
     if (state.page === "vehicles") return renderVehicles(c, d);
-    c.innerHTML = empty("Module en préparation", "Cette partie sera branchée à l'étape suivante.");
+    c.innerHTML = empty("Module en préparation", "Cet écran sera branché à l'étape suivante.");
   }
 
   function renderHome(c, d) {
@@ -220,7 +238,8 @@
       .map(function (a) { return shift(a.shiftId); })
       .filter(Boolean)
       .sort(function (a, b) { return String(a.date + a.start).localeCompare(String(b.date + b.start)); })[0];
-    $("#editionLabel").textContent = (cfg.name || "Beauregard") + " " + (cfg.year || "");
+    var lab = $("#editionLabel");
+    if (lab) lab.textContent = (cfg.name || "Beauregard") + " " + (cfg.year || "");
     var msgs = (d.messages || []).slice(0, 3);
     c.innerHTML =
       '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "BEAUREGARD") + "</p>" +
@@ -257,7 +276,7 @@
   function renderPlanning(c, d) {
     var rows = (d.assignments || []).map(function (a) {
       var s = shift(a.shiftId) || {};
-      return listRow(person(a.personId).label, (s.date || "") + " · " + (s.name || ""), s.start ? s.start + "–" + s.end : "");
+      return listRow(personLabel(a.personId), (s.date || "") + " · " + (s.name || ""), s.start ? s.start + "–" + s.end : "");
     });
     c.innerHTML = rows.length
       ? '<article class="card"><h2>Planning publié</h2>' + rows.join("") + "</article>"
@@ -268,7 +287,7 @@
     var refs = [];
     var others = [];
     (d.people || []).forEach(function (p) {
-      if (p.deleted || (p.role !== "referent" && !p.phone)) return;
+      if (p.deleted) return;
       (p.role === "referent" ? refs : others).push(p);
     });
     var block = function (list) {
@@ -283,10 +302,9 @@
           "</div></article>";
       }).join("");
     };
-    c.innerHTML =
-      (refs.length ? '<div class="section-title">Référents</div>' + block(refs) : "") +
-      (others.length ? '<div class="section-title">Équipe</div>' + block(others) : "") ||
-      empty("Aucun contact", "Les fiches d'équipe apparaîtront ici.");
+    var html = (refs.length ? '<div class="section-title">Référents</div>' + block(refs) : "") +
+      (others.length ? '<div class="section-title">Équipe</div>' + block(others) : "");
+    c.innerHTML = html || empty("Aucun contact", "Les fiches d'équipe apparaîtront ici.");
   }
 
   function renderMessages(c, d) {
@@ -318,11 +336,17 @@
   }
 
   function start() {
-    $("#loginScreen").classList.add("hidden");
-    $("#appShell").classList.remove("hidden");
-    $("#roleLabel").textContent = ROLE[state.role] || "Bénévole";
-    $("#userLabel").textContent = (state.user && state.user.name) || "Mon espace";
-    $("#userAvatar").textContent = String((state.user && state.user.name) || "B").trim().slice(0, 1).toUpperCase();
+    hideBoot();
+    var l = $("#loginScreen");
+    if (l) l.classList.add("hidden");
+    var s = $("#appShell");
+    if (s) s.classList.remove("hidden");
+    var rl = $("#roleLabel");
+    if (rl) rl.textContent = ROLE[state.role] || "Bénévole";
+    var ul = $("#userLabel");
+    if (ul) ul.textContent = (state.user && state.user.name) || "Mon espace";
+    var ua = $("#userAvatar");
+    if (ua) ua.textContent = String((state.user && state.user.name) || "B").trim().slice(0, 1).toUpperCase();
     nav();
     setTitle();
     render();
@@ -334,34 +358,42 @@
       e.preventDefault();
       var err = $("#loginError");
       err.textContent = "Connexion…";
-      Transport.login($("#accessCode").value, "")
+      if (BOOT && BOOT.start) BOOT.start();
+      Transport.login($("#accessCode").value, ($("#operatorName") || {}).value || "")
         .then(function (out) {
+          if (!out || !out.user) throw new Error("Réponse de connexion incomplète.");
           state.user = out.user;
-          state.role = out.user.role;
+          state.role = out.user.role || "benevole";
           err.textContent = "";
-          return Transport.sync(0, state.role).then(function (bundle) {
-            state.data = bundle;
-            state.version = bundle.version || 0;
-            saveLocal();
-            syncBadge("En ligne · à jour", "ok");
-            start();
-          });
+          return Transport.sync(0, state.role);
+        })
+        .then(function (bundle) {
+          state.data = bundle || {};
+          state.version = (bundle && bundle.version) || 0;
+          saveLocal();
+          syncBadge("En ligne · à jour", "ok");
+          bootDone();
+          start();
         })
         .catch(function (x) {
-          err.textContent = x.message || "Connexion impossible";
+          var msg = (x && x.message) || "Connexion impossible";
+          err.textContent = msg;
+          syncBadge("Hors ligne · données disponibles", "offline");
+          bootFail(msg);
         });
     });
   }
 
   window.logout = function () {
-    Transport.logout().catch(function () {}).then(function () {
-      state.user = null;
-      state.data = null;
-      try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
-      $("#appShell").classList.add("hidden");
-      $("#loginScreen").classList.remove("hidden");
-      $("#accessCode").value = "";
-    });
+    try { Transport.logout().catch(function () {}); } catch (e) {}
+    state.user = null;
+    state.data = null;
+    try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+    var s = $("#appShell");
+    if (s) s.classList.add("hidden");
+    showLogin();
+    var ac = $("#accessCode");
+    if (ac) ac.value = "";
   };
 
   window.navigate = go;
@@ -370,14 +402,14 @@
     syncBadge("Synchronisation…", "busy");
     Transport.sync(state.version, state.role)
       .then(function (bundle) {
-        state.data = bundle;
-        state.version = bundle.version || state.version;
+        state.data = bundle || {};
+        state.version = (bundle && bundle.version) || state.version;
         saveLocal();
         syncBadge("En ligne · à jour", "ok");
         render();
       })
       .catch(function (e) {
-        if (e.message === "SESSION_EXPIRED") {
+        if (e && e.message === "SESSION_EXPIRED") {
           Transport.setToken("");
           window.logout();
           return;
@@ -389,16 +421,28 @@
   window.addEventListener("online", function () { if (state.role) syncNow(); });
   window.addEventListener("offline", function () { syncBadge("Hors ligne · données disponibles", "offline"); });
 
-  if (Transport.token()) {
-    var local = readLocal("");
-    if (local) {
-      state.data = local.data;
-      state.role = local.role;
-      state.version = local.version;
-      state.user = { id: (local.data.user || {}).id, name: (local.data.user || {}).name, role: local.role };
-      start();
-      if (navigator.onLine) syncNow();
-      else syncBadge("Hors ligne · données disponibles", "offline");
+  /* Démarrage. Rien ne doit rester bloqué sur l'écran de préparation. */
+  try {
+    if (window.Transport && Transport.token()) {
+      var local = readLocal();
+      if (local) {
+        state.data = local.data;
+        state.role = local.role;
+        state.version = local.version;
+        state.user = { id: (local.data.user || {}).id, name: (local.data.user || {}).name, role: local.role };
+        bootSkip();
+        start();
+        if (navigator.onLine) syncNow();
+        else syncBadge("Hors ligne · données disponibles", "offline");
+      } else {
+        bootSkip();
+        showLogin();
+      }
+    } else {
+      bootSkip();
+      showLogin();
     }
+  } catch (e) {
+    bootFail(String(e.message || e));
   }
 })();
