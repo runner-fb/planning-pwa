@@ -7,6 +7,10 @@
  * (`full: true`), puis seulement les éléments modifiés. L'application FUSIONNE
  * ces paquets au lieu de les écraser, sinon les données disparaissent de
  * l'affichage à chaque synchronisation différentielle.
+ *
+ * Accès : le nom affiché vient de l'identifiant renvoyé par le SERVEUR, jamais
+ * d'un identifiant mémorisé à part — sinon l'écran peut afficher une autre
+ * personne que celle réellement traitée.
  */
 (function () {
   "use strict";
@@ -50,16 +54,15 @@
     forms: ["INSCRIPTIONS", "Formulaires", "Ouverture et suivi des disponibilités."],
     simulations: ["AFFECTATIONS", "Simulations", "Construire puis comparer les propositions."],
     arbitrations: ["DÉCISIONS", "Arbitrages", "Traiter les points à décider."],
-    rotations: ["ÉQUILIBRE", "Rotations", "Répartition Charg\u00aeur."],
+    rotations: ["ÉQUILIBRE", "Rotations", "Répartition Conducteur / Chargeur."],
     checks: ["QUALITÉ", "Contrôles", "Repérer et résoudre les anomalies."],
     validation: ["AVANT PUBLICATION", "Validation", "Dernières vérifications du planning."],
     publication: ["MISE EN LIGNE", "Publication", "Publier la version retenue."],
     terrain: ["PENDANT LE FESTIVAL", "Suivi terrain", "Créneaux et changements sur place."]
   };
 
-  /* Collections renvoyées par le serveur dans un paquet de synchronisation. */
   var COLLECTIONS = [
-    "people", "shifts", "missions", "concerts", "forms", "simulations",
+    "people", "access", "shifts", "missions", "concerts", "forms", "simulations",
     "assignments", "rotations", "arbitrations", "terrain", "vehicles",
     "receptions", "incidents", "messages", "reads", "publications",
     "conflicts", "amendments", "deliveries"
@@ -90,14 +93,18 @@
   /* ---------- Fusion d'un paquet de synchronisation ----------
    * Le serveur envoie `full: true` au premier appel, puis uniquement les
    * éléments modifiés depuis la version connue. `ids` liste ce qui existe
-   * encore côté serveur. On fusionne donc, collection par collection, au lieu
-   * de remplacer l'état local — sinon la liste se vide à chaque sync.
+   * encore côté serveur. On fusionne donc au lieu de remplacer l'état local.
+   * `access` est indexé par `personId`, pas par `id`.
    */
+  var keyOf = function (k, row) {
+    if (!row) return "";
+    return k === "access" ? row.personId : row.id;
+  };
+
   function mergeBundle(bundle) {
     if (!bundle) return state.data || {};
     var current = state.data || {};
 
-    /* Paquet complet : il fait autorité, on repart de lui. */
     if (bundle.full === true || !current.config) {
       var fresh = { config: bundle.config || current.config || {}, user: bundle.user || current.user || {} };
       COLLECTIONS.forEach(function (k) { fresh[k] = bundle[k] || []; });
@@ -108,26 +115,17 @@
     COLLECTIONS.forEach(function (k) {
       var received = bundle[k];
       var hasIds = bundle.ids && Object.prototype.hasOwnProperty.call(bundle.ids, k);
-
-      /* Collection non concernée par ce paquet : on garde ce qu'on a. */
       if (received === undefined && !hasIds) { next[k] = current[k] || []; return; }
 
-      var byId = {};
-      (current[k] || []).forEach(function (row) { if (row && row.id) byId[row.id] = row; });
-
-      /* Les éléments modifiés reçus écrasent leur version locale. */
-      (received || []).forEach(function (row) {
-        if (row && row.id) byId[row.id] = row;
-      });
-
-      /* Un identifiant disparu de `ids` signifie : supprimé côté serveur. */
+      var byKey = {};
+      (current[k] || []).forEach(function (row) { var id = keyOf(k, row); if (id) byKey[id] = row; });
+      (received || []).forEach(function (row) { var id = keyOf(k, row); if (id) byKey[id] = row; });
       if (hasIds) {
         var keep = {};
-        (bundle.ids[k] || []).forEach(function (id) { if (byId[id]) keep[id] = byId[id]; });
-        byId = keep;
+        (bundle.ids[k] || []).forEach(function (id) { if (byKey[id]) keep[id] = byKey[id]; });
+        byKey = keep;
       }
-
-      next[k] = Object.keys(byId).map(function (id) { return byId[id]; });
+      next[k] = Object.keys(byKey).map(function (id) { return byKey[id]; });
     });
     return next;
   }
@@ -294,7 +292,10 @@
     }
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-person]"), function (b) {
-      b.onclick = function () { state.personId = b.dataset.person; render(); };
+      b.onclick = function () {
+        state.personId = String(b.dataset.person || "");
+        render();
+      };
     });
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-team]"), function (b) {
@@ -303,7 +304,7 @@
         if (act === "back") { state.personId = ""; render(); return; }
         if (act === "new") { openPersonForm(); return; }
         if (act === "remove") { removePerson(); return; }
-        if (act === "access-one") { createAccessOne(); return; }
+        if (act === "access-one") { createAccessOne(b.dataset.id || state.personId); return; }
         if (act === "access") { createAccessBatch(); return; }
         if (act === "copy") { copyCodes(b.dataset.payload || ""); return; }
       };
@@ -368,15 +369,28 @@
       .catch(function (e) { notice(String(e.message || e), "error"); });
   }
 
-  /* Le serveur renvoie le code en clair une seule fois (point 11 du CDC). */
-  function createAccessOne() {
-    var id = state.personId;
-    if (!id) return;
-    var p = (state.data.people || []).filter(function (x) { return x.id === id; })[0];
-    Transport.mutate("access", { personId: id })
+  /* ---------- Accès ----------
+   * Le nom affiché est calculé à partir de l'identifiant renvoyé par le
+   * SERVEUR, relaté à la fiche locale. Le serveur ne montre le code qu'une
+   * fois : au rejeu il signale `codeAlreadyShown` et l'écran le dit.
+   */
+  function accessRow(personId, code, alreadyShown) {
+    var p = (state.data.people || []).filter(function (x) { return x.id === personId; })[0];
+    if (!p) return { nom: personId, prenom: "(fiche locale inconnue)", code: code || "", alreadyShown: !!alreadyShown };
+    return { nom: p.lastName, prenom: p.firstName, code: code || "", alreadyShown: !!alreadyShown };
+  }
+
+  function createAccessOne(id) {
+    var target = String(id || state.personId || "");
+    if (!target) { notice("Aucune fiche sélectionnée.", "error"); return; }
+
+    Transport.mutate("access", { personId: target })
       .then(function (out) {
+        var pid = (out && out.personId) || target;
+        var code = (out && out.code) || "";
+        var shown = !!(out && out.codeAlreadyShown);
         var c = $("#pageContent");
-        c.innerHTML = window.ScreenTeam.accessResult([{ nom: p.lastName, prenom: p.firstName, code: (out && out.code) || "—" }]);
+        c.innerHTML = window.ScreenTeam.accessResult([accessRow(pid, code, shown)]);
         wireTeam();
       })
       .catch(function (e) { notice(String(e.message || e), "error"); });
@@ -392,7 +406,8 @@
     people.forEach(function (p) {
       chain = chain.then(function () {
         return Transport.mutate("access", { personId: p.id }).then(function (out) {
-          if (out && out.code) rows.push({ nom: p.lastName, prenom: p.firstName, code: out.code });
+          var pid = (out && out.personId) || p.id;
+          rows.push(accessRow(pid, (out && out.code) || "", !!(out && out.codeAlreadyShown)));
         }).catch(function () {});
       });
     });
@@ -422,13 +437,13 @@
       ["Créneaux & missions", (d.shifts || []).length + " créneau(x), " + (d.missions || []).length + " mission(s)"],
       ["Concerts", (d.concerts || []).length + " concert(s)"],
       ["Paramètres planning", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s) prévu(s)" : "à renseigner"],
-      ["Accès", (d.access || []).filter(function (a) { return a.active; }).length + " accès actif(s)"],
+      ["Accès", (d.access || []).filter(function (a) { return a.hasCode; }).length + " code(s) créé(s)"],
       ["Formulaire", cfg.formOpen ? "ouvert" : "fermé"]
     ];
     c.innerHTML =
       '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
       esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
-      '<span class="hero-date">V" + esc(state.version) + "</span></div>' +
+      '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
       card("État de la préparation", blocks.map(function (b) { return listRow(b[0], b[1], "", ""); }).join("")) +
       card("État de l'appareil",
         listRow("Version des données", "V" + state.version, "", "") +
@@ -655,8 +670,6 @@
   function syncNow() {
     if (!navigator.onLine) { syncBadge(); return; }
     Transport.sync(state.version, state.role).then(function (bundle) {
-      /* FUSION, pas remplacement : un paquet différentiel ne contient que les
-       * éléments modifiés, pas la totalité des données. */
       state.data = mergeBundle(bundle);
       state.version = (bundle && bundle.version) || state.version;
       saveLocal();
