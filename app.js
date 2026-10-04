@@ -1,12 +1,13 @@
-/* Beauregard V2 — app.js (socle, écrans Équipe, Créneaux, Concerts)
+/* Beauregard V2 — app.js (socle, Équipe, Créneaux, Concerts)
  * Transport = fetch GET JSON, repris de la V1.
  * Queue = file d'actions hors ligne (IndexedDB, point 62 du cahier des charges).
  *
  * Synchronisation : le serveur renvoie un paquet complet au premier appel,
  * puis seulement les éléments modifiés. L'application FUSIONNE ces paquets.
  *
- * Les clics des écrans Créneaux et Concerts sont délégués par
- * js/screens-shifts-bind.js, qui appelle window.BeauregardShiftAction.
+ * Créneaux et Concerts : les clics sont délégués par le conteneur, jamais
+ * posés sur des boutons recréés. La soumission lit le mode DANS le formulaire
+ * (`data-mode="new"` ou `"edit"`), jamais dans un état global volatil.
  */
 (function () {
   "use strict";
@@ -73,10 +74,12 @@
     "conflicts", "amendments", "deliveries"
   ];
 
-  var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0, personId: "", shiftId: "", concertId: "" };
+  var state = {
+    user: null, role: "", data: null, page: "home", version: 0, pending: 0,
+    personId: "", shiftMode: "", shiftId: "", concertMode: "", concertId: ""
+  };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
-  var NEW = "__new__";
 
   function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
   function bootFail(m) { if (BOOT && BOOT.fail) BOOT.fail(m); else { hideBoot(); showLogin(); } }
@@ -227,8 +230,8 @@
     if (more) more.setAttribute("aria-expanded", "false");
     state.page = key;
     if (key !== "team") state.personId = "";
-    if (key !== "creneaux") state.shiftId = "";
-    if (key !== "concerts") state.concertId = "";
+    if (key !== "creneaux") { state.shiftMode = ""; state.shiftId = ""; }
+    if (key !== "concerts") { state.concertMode = ""; state.concertId = ""; }
     nav();
     setTitle();
     render();
@@ -432,79 +435,129 @@
   function renderCreneaux(c, d) {
     var S = window.ScreenShifts;
     if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Créneaux n'est pas chargé."); return; }
-    c.innerHTML = state.shiftId ? S.shiftForm({ data: d }, state.shiftId) : S.shifts({ data: d });
+    if (!state.shiftMode) { c.innerHTML = S.shifts({ data: d }); return; }
+    c.innerHTML = S.shiftForm({ data: d }, state.shiftMode, state.shiftId);
   }
 
   /* ---------- Concerts ---------- */
   function renderConcerts(c, d) {
     var S = window.ScreenShifts;
     if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Concerts n'est pas chargé."); return; }
-    c.innerHTML = state.concertId ? S.concertForm({ data: d }, state.concertId) : S.concerts({ data: d });
+    if (!state.concertMode) { c.innerHTML = S.concerts({ data: d }); return; }
+    c.innerHTML = S.concertForm({ data: d }, state.concertMode, state.concertId);
   }
 
-  /* ---------- Action unique pour les créneaux et concerts ----------
-   * Appelée par la délégation de js/screens-shifts-bind.js. */
-  rootAction(function (b) {
+  /* ---------- Action déléguée des créneaux et concerts ---------- */
+  function scenesAction(b) {
+    if (b.dataset.creneaux !== undefined) { state.shiftMode = ""; state.shiftId = ""; render(); return; }
+    if (b.dataset.concerts !== undefined) { state.concertMode = ""; state.concertId = ""; render(); return; }
+    if (b.dataset.newShift !== undefined) { state.shiftMode = "new"; state.shiftId = ""; render(); return; }
+    if (b.dataset.newConcert !== undefined) { state.concertMode = "new"; state.concertId = ""; render(); return; }
+    if (b.dataset.shift) { state.shiftMode = "edit"; state.shiftId = String(b.dataset.shift); render(); return; }
+    if (b.dataset.concert) { state.concertMode = "edit"; state.concertId = String(b.dataset.concert); render(); return; }
+    if (b.dataset.shiftReset !== undefined || b.dataset.concertReset !== undefined) {
+      notice("Champs rechargés depuis les données enregistrées.", "info");
+      render();
+      return;
+    }
+    if (b.dataset.shiftRemove !== undefined) { removeShift(); return; }
+    if (b.dataset.concertRemove !== undefined) { removeConcert(); return; }
+  }
+
+  function removeShift() {
+    var s = (state.data.shifts || []).filter(function (x) { return x.id === state.shiftId; })[0];
+    if (!s) return;
+    if (!window.confirm("Supprimer le créneau " + (s.name || s.id) + " ?")) return;
+    var row = Object.assign({}, s, { deleted: true, active: false });
+    sendSave("shifts", row, s.version || 0, s).then(function () {
+      state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== s.id; });
+      saveLocal();
+      state.shiftMode = "";
+      state.shiftId = "";
+      notice("Créneau supprimé.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function removeConcert() {
+    var k = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
+    if (!k) return;
+    if (!window.confirm("Supprimer le concert " + (k.artist || k.id) + " ?")) return;
+    var row = Object.assign({}, k, { deleted: true, active: false });
+    sendSave("concerts", row, k.version || 0, k).then(function () {
+      state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== k.id; });
+      saveLocal();
+      state.concertMode = "";
+      state.concertId = "";
+      notice("Concert supprimé.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function saveShift(row, old) {
+    var full = old ? Object.assign({}, old, row) : row;
+    full.version = old ? old.version || 0 : 0;
+    sendSave("shifts", full, old ? old.version || 0 : 0, old).then(function () {
+      state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== full.id; }).concat([full]);
+      saveLocal();
+      state.shiftMode = "";
+      state.shiftId = "";
+      notice("Créneau " + full.id + " enregistré.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function saveConcert(row, old) {
+    var full = old ? Object.assign({}, old, row) : row;
+    if (!full.id) full.id = "co-" + Transport.requestId().slice(0, 8);
+    full.version = old ? old.version || 0 : 0;
+    sendSave("concerts", full, old ? old.version || 0 : 0, old).then(function () {
+      state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== full.id; }).concat([full]);
+      saveLocal();
+      state.concertMode = "";
+      state.concertId = "";
+      notice("Concert enregistré.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  /* Soumission des deux formulaires. Le mode est lu DANS le formulaire :
+   * un état global serait remis à zéro entre l'affichage et la soumission. */
+  document.addEventListener("submit", function (e) {
+    var f = e.target;
+    if (!f || (f.id !== "shiftForm" && f.id !== "concertForm")) return;
+    e.preventDefault();
     var S = window.ScreenShifts;
     if (!S) return;
 
-    if (b.dataset.creneaux !== undefined) { state.shiftId = ""; render(); return; }
-    if (b.dataset.concerts !== undefined) { state.concertId = ""; render(); return; }
-    if (b.dataset.newShift !== undefined) { state.shiftId = NEW; render(); return; }
-    if (b.dataset.newConcert !== undefined) { state.concertId = NEW; render(); return; }
+    var isNew = f.getAttribute("data-mode") === "new";
+    var current = f.getAttribute("data-id") || "";
 
-    if (b.dataset.shift) { state.shiftId = String(b.dataset.shift); render(); return; }
-    if (b.dataset.concert) { state.concertId = String(b.dataset.concert); render(); return; }
-
-    if (b.dataset.shiftReset !== undefined) {
-      notice("Champs rechargés depuis les données enregistrées.", "info");
-      render();
-      return;
-    }
-    if (b.dataset.concertReset !== undefined) {
-      notice("Champs rechargés depuis les données enregistrées.", "info");
-      render();
-      return;
-    }
-
-    if (b.dataset.shiftRemove !== undefined) {
-      var s = (state.data.shifts || []).filter(function (x) { return x.id === state.shiftId; })[0];
-      if (!s) return;
-      if (!window.confirm("Supprimer le créneau " + (s.name || s.id) + " ?")) return;
-      var r1 = Object.assign({}, s, { deleted: true, active: false });
-      sendSave("shifts", r1, s.version || 0, s).then(function () {
-        state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== s.id; });
-        saveLocal();
-        state.shiftId = "";
-        notice("Créneau supprimé.", "success");
-        render();
-      }).catch(function (e) { notice(String(e.message || e), "error"); });
+    if (f.id === "shiftForm") {
+      var row = S.readShift(f);
+      if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
+      if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
+      row.name = S.slotLabel(row.start, row.end, row.id);
+      if (isNew && (state.data.shifts || []).some(function (x) { return x.id === row.id; })) {
+        notice("Cet identifiant existe déjà.", "error");
+        return;
+      }
+      var oldS = isNew ? null : (state.data.shifts || []).filter(function (x) { return x.id === current; })[0];
+      saveShift(row, oldS);
       return;
     }
 
-    if (b.dataset.concertRemove !== undefined) {
-      var k = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
-      if (!k) return;
-      if (!window.confirm("Supprimer le concert " + (k.artist || k.id) + " ?")) return;
-      var r2 = Object.assign({}, k, { deleted: true, active: false });
-      sendSave("concerts", r2, k.version || 0, k).then(function () {
-        state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== k.id; });
-        saveLocal();
-        state.concertId = "";
-        notice("Concert supprimé.", "success");
-        render();
-      }).catch(function (e) { notice(String(e.message || e), "error"); });
-      return;
-    }
-  });
+    var con = S.readConcert(f);
+    if (!con.artist) { notice("Artiste obligatoire.", "error"); return; }
+    if (!con.start || !con.end) { notice("Horaires obligatoires.", "error"); return; }
+    var oldC = isNew ? null : (state.data.concerts || []).filter(function (x) { return x.id === current; })[0];
+    saveConcert(con, oldC);
+  }, true);
 
-  function rootAction(fn) {
-    window.BeauregardShiftAction = fn;
-    if (window.ScreenShiftsBind && window.ScreenShiftsBind.wire) window.ScreenShiftsBind.wire();
-  }
-
-  /* Soumission des deux formulaires : déléguée, car ils sont recréés. */
-  if (window.ScreenShiftsBind && window.ScreenShiftsBind.wire) window.ScreenShiftsBind.wire();
+  /* La délégation de clic est posée par js/screens-shifts-bind.js, qui appelle
+   * cette fonction. Poser un gestionnaire sur chaque bouton ne survit pas au
+   * rendre suivant : les boutons sont recréés. */
+  window.BeauregardShiftAction = scenesAction;
 
   /* ---------- Préparation ---------- */
   function renderSetup(c, d) {
@@ -696,54 +749,6 @@
     });
   }
 
-  /* Soumission des formulaires de créneau et de concert : déléguée elle aussi. */
-  document.addEventListener("submit", function (e) {
-    var f = e.target;
-    if (!f || !f.id) return;
-    if (f.id !== "shiftForm" && f.id !== "concertForm") return;
-    e.preventDefault();
-    var S = window.ScreenShifts;
-    if (!S) return;
-
-    if (f.id === "shiftForm") {
-      var row = S.readShift(f);
-      if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
-      if (!/^\d{2}:\d{2}$/.test(row.start) || !/^\d{2}:\d{2}$/.test(row.end)) {
-        notice("Horaires obligatoires.", "error"); return;
-      }
-      var isNewS = state.shiftId === NEW;
-      var oldS = isNewS ? null : (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
-      if (isNewS && (state.data.shifts || []).some(function (x) { return x.id === row.id; })) {
-        notice("Cet identifiant existe déjà.", "error"); return;
-      }
-      var fullS = oldS ? Object.assign({}, oldS, row) : row;
-      fullS.version = oldS ? oldS.version || 0 : 0;
-      sendSave("shifts", fullS, oldS ? oldS.version || 0 : 0, oldS).then(function () {
-        state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== fullS.id; }).concat([fullS]);
-        saveLocal();
-        state.shiftId = "";
-        notice("Créneau enregistré.", "success");
-        render();
-      }).catch(function (err) { notice(String(err.message || err), "error"); });
-      return;
-    }
-
-    var row2 = S.readConcert(f);
-    if (!row2.artist) { notice("Artiste obligatoire.", "error"); return; }
-    var isNewC = state.concertId === NEW;
-    var oldC = isNewC ? null : (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
-    var fullC = oldC ? Object.assign({}, oldC, row2) : row2;
-    if (!fullC.id) fullC.id = "co-" + Transport.requestId().slice(0, 8);
-    fullC.version = oldC ? oldC.version || 0 : 0;
-    sendSave("concerts", fullC, oldC ? oldC.version || 0 : 0, oldC).then(function () {
-      state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== fullC.id; }).concat([fullC]);
-      saveLocal();
-      state.concertId = "";
-      notice("Concert enregistré.", "success");
-      render();
-    }).catch(function (err) { notice(String(err.message || err), "error"); });
-  });
-
   var loginForm = $("#loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", function (e) {
@@ -778,7 +783,8 @@
 
   window.logout = function () {
     try { Transport.logout().catch(function () {}); } catch (e) {}
-    state.user = null; state.data = null; state.personId = ""; state.shiftId = ""; state.concertId = "";
+    state.user = null; state.data = null; state.personId = "";
+    state.shiftMode = ""; state.shiftId = ""; state.concertMode = ""; state.concertId = "";
     try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
     if (window.Queue) Queue.clear().catch(function () {});
     var s = $("#appShell"); if (s) s.classList.add("hidden");
