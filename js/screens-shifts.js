@@ -1,7 +1,7 @@
 /* Beauregard V2 — écran Créneaux et Concerts.
  * L'ordre d'affichage se déduit du jour puis de l'heure de début.
+ * Le libellé d'un créneau est construit automatiquement : « 09h00 - 17h00 (Ma1) ».
  * Le jour est reconnu quelle que soit la casse ou les accents.
- * Les boutons « Nouveau » créent une ligne vide éditable.
  */
 (function (root) {
   "use strict";
@@ -47,6 +47,19 @@
   var dayTitle = function (d) { return d.charAt(0).toUpperCase() + d.slice(1); };
   var dayLabel = function (d) { return d === "autre" ? "Jours non renseignés" : dayTitle(d); };
 
+  /* Le libellé d'un créneau est construit automatiquement :
+   * « 09h00 - 17h00 (Ma1) ». L'utilisateur ne le saisit jamais. */
+  var hhmmFr = function (t) {
+    var p = String(t || "").split(":");
+    if (p.length < 2 || !p[0]) return "";
+    return p[0].padStart(2, "0") + "h" + (p[1] || "00").padStart(2, "0");
+  };
+  var slotLabel = function (start, end, id) {
+    var a = hhmmFr(start), b = hhmmFr(end), k = String(id || "").trim();
+    if (!a || !b) return "";
+    return a + " - " + b + (k ? " (" + k + ")" : "");
+  };
+
   var byDayThenTime = function (a, b) {
     var d = dayRank(a.day) - dayRank(b.day);
     if (d) return d;
@@ -75,7 +88,7 @@
           var total = Number(s.effectif || s.target || 0);
           return '<button class="person-row" data-shift="' + esc(s.id) + '">' +
             '<span class="shift-time"><b>' + esc(s.start || "—") + "</b><small>" + esc(s.end || "") + "</small></span>" +
-            '<span class="person-main"><b>' + esc(s.name || s.id) + "</b><small>" +
+            '<span class="person-main"><b>' + esc(s.name || slotLabel(s.start, s.end, s.id) || s.id) + "</b><small>" +
             esc(duration(s.start, s.end)) + " · " + total + " personne(s)" +
             (crossesMidnight(s.start, s.end) ? " · passe minuit" : "") + "</small></span>" +
             '<span class="person-flags">' + esc(badges.join(" · ")) + "</span>" +
@@ -108,7 +121,8 @@
       '<form id="shiftForm" class="form-grid">' +
       '<div><label>Identifiant<input name="id" value="' + esc(s.id || "") + '"' +
       (isNew ? ' placeholder="ex. Ma1"' : " readonly") + "></label></div>" +
-      '<div><label>Libellé<input name="name" value="' + esc(s.name || "") + '" required placeholder="ex. 09h00 - 17h00 (Ma1)"></label></div>' +
+      '<div><label>Libellé (automatique)<input name="name" value="' +
+      esc(s.name || slotLabel(s.start, s.end, s.id)) + '" readonly placeholder="se construit avec les horaires"></label></div>' +
       '<div><label>Jour<select name="day">' + dayOptions + "</select></label></div>" +
       '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.effectif || s.target || 0) + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(s.start || "") + '" required></label></div>' +
@@ -136,7 +150,7 @@
     var on = function (n) { return !!(f[n] && f[n].checked); };
     return {
       id: get("id"),
-      name: get("name"),
+      name: slotLabel(get("start"), get("end"), get("id")),
       day: get("day"),
       start: get("start"),
       end: get("end"),
@@ -239,6 +253,7 @@
     readShift: readShift,
     concerts: concerts,
     concertForm: concertForm,
-    readConcert: readConcert
+    readConcert: readConcert,
+    slotLabel: slotLabel
   };
 })(window);
