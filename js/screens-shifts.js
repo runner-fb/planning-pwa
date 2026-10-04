@@ -2,8 +2,11 @@
  * Points 19, 23 et 26 du cahier des charges : aucun créneau codé en dur,
  * tout est modifiable par l'Admin depuis le smartphone.
  *
- * Créneau : jour, libellé, début, fin, effectif cible, véhicules, ordre, actif,
- * C3, brunch. Concert : artiste, jour, début, fin, scène, ordre, actif, photo.
+ * L'ordre d'affichage se déduit du jour puis de l'heure de début : aucun
+ * numéro d'ordre n'est demandé à l'utilisateur.
+ *
+ * Créneau : jour, libellé, début, fin, effectif cible, véhicules, actif, C3,
+ * brunch. Concert : artiste, jour, début, fin, scène, actif, photo.
  */
 (function (root) {
   "use strict";
@@ -41,13 +44,16 @@
 
   var dayTitle = function (d) { return d.charAt(0).toUpperCase() + d.slice(1); };
 
+  /* Ordre : le jour du festival, puis l'heure de début. Rien à saisir. */
+  var byDayThenTime = function (a, b) {
+    var d = dayRank(a.day) - dayRank(b.day);
+    if (d) return d;
+    return String(a.start || "").localeCompare(String(b.start || ""));
+  };
+
   /* ---------- CRÉNEAUX ---------- */
   function shifts(ctx) {
-    var list = (ctx.data.shifts || []).slice().sort(function (a, b) {
-      var d = dayRank(a.day) - dayRank(b.day);
-      if (d) return d;
-      return String(a.start || "").localeCompare(String(b.start || ""));
-    });
+    var list = (ctx.data.shifts || []).slice().sort(byDayThenTime);
 
     var byDay = {};
     list.forEach(function (s) {
@@ -102,10 +108,9 @@
       (isNew ? ' placeholder="ex. Ma1"' : " readonly") + "></label></div>" +
       '<div><label>Libellé<input name="name" value="' + esc(s.name || "") + '" required placeholder="ex. 09h00 - 17h00 (Ma1)"></label></div>' +
       '<div><label>Jour<select name="day">' + dayOptions + "</select></label></div>" +
-      '<div><label>Ordre<input name="order" type="number" min="0" value="' + esc(s.order || 0) + '"></label></div>' +
+      '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.effectif || s.target || 0) + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(s.start || "") + '" required></label></div>' +
       '<div><label>Fin<input name="end" type="time" value="' + esc(s.end || "") + '" required></label></div>' +
-      '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.effectif || s.target || 0) + '"></label></div>' +
       '<div><label>Véhicules prévus<input name="vehicles" type="number" min="0" value="' + esc(s.vehicles || 0) + '"></label></div>' +
       '<div class="full contraintes">' +
       '<label class="check"><input type="checkbox" name="active"' + (s.active === false ? "" : " checked") + "><span>Créneau actif</span></label>" +
@@ -126,7 +131,6 @@
       id: get("id"),
       name: get("name"),
       day: get("day"),
-      order: Number(get("order")) || 0,
       start: get("start"),
       end: get("end"),
       effectif: Number(get("target")) || 0,
@@ -139,11 +143,7 @@
 
   /* ---------- CONCERTS ---------- */
   function concerts(ctx) {
-    var list = (ctx.data.concerts || []).slice().sort(function (a, b) {
-      var d = dayRank(a.day) - dayRank(b.day);
-      if (d) return d;
-      return String(a.start || "").localeCompare(String(b.start || ""));
-    });
+    var list = (ctx.data.concerts || []).slice().sort(byDayThenTime);
 
     var byDay = {};
     list.forEach(function (c) {
@@ -193,7 +193,6 @@
       '<div><label>Scène<input name="scene" value="' + esc(c.scene || "") + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(c.start || "") + '" required></label></div>' +
       '<div><label>Fin<input name="end" type="time" value="' + esc(c.end || "") + '" required></label></div>' +
-      '<div><label>Ordre<input name="order" type="number" min="0" value="' + esc(c.order || 0) + '"></label></div>' +
       '<div class="full"><label>Photo (adresse)<input name="photo" value="' + esc(c.photo || "") + '"></label></div>' +
       '<div class="full contraintes">' +
       '<label class="check"><input type="checkbox" name="active"' + (c.active === false ? "" : " checked") + "><span>Concert actif</span></label>" +
@@ -214,7 +213,6 @@
       scene: get("scene"),
       start: get("start"),
       end: get("end"),
-      order: Number(get("order")) || 0,
       photo: get("photo"),
       active: on("active")
     };
