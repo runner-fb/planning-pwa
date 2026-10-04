@@ -180,6 +180,106 @@ table.codes th { text-align: left; font-size: 11px; letter-spacing: 0.08em; text
 table.codes td { padding: 8px; border-top: 1px solid rgba(222,212,194,0.7); }
 table.codes td b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; letter-spacing: 0.06em; }
 
+/* ---------- Formulaire Créneaux / Concerts : habillage ---------- */
+.form-grid {
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(31,53,44,0.10);
+}
+.form-grid label {
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  min-height: 52px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--line-dark);
+  font-size: 17px;
+  font-weight: 700;
+  background: #fff;
+  color: var(--text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+  outline: none;
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+.form-grid input[readonly] {
+  background: rgba(23,77,67,0.05);
+  border-style: dashed;
+  color: var(--muted);
+  font-weight: 600;
+}
+.form-grid input[name="date"],
+.form-grid input[name="dayshow"] {
+  font-weight: 800;
+}
+.form-grid .contraintes {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: rgba(23,77,67,0.045);
+  border: 1px solid var(--border);
+}
+.form-grid .modal-actions {
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+.form-grid .modal-actions .button {
+  min-height: 50px;
+  min-width: 140px;
+}
+.danger-zone {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.danger-zone .button { min-height: 46px; }
+.toolbar {
+  gap: 10px;
+  padding: 2px 0;
+}
+.toolbar .badge { margin-left: auto; }
+.section-title {
+  margin: 14px 0 2px;
+  padding-left: 2px;
+}
+.person-row {
+  gap: 14px;
+  padding: 13px 6px;
+}
+.person-row:active { background: rgba(23,77,67,0.07); border-radius: 14px; }
+.shift-time {
+  min-width: 64px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(23,77,67,0.09);
+}
+.shift-time b { font-size: 15px; }
+.person-main b { font-size: 15px; line-height: 1.25; }
+.person-main small { font-size: 12.5px; }
+.person-flags { color: var(--secondary); font-size: 10.5px; }
+
+@media (max-width: 699px) {
+  .form-grid { padding: 14px; }
+  .form-grid .modal-actions { flex-direction: column-reverse; }
+  .form-grid .modal-actions .button { width: 100%; min-height: 52px; }
+  .form-grid input, .form-grid select { font-size: 16px; }
+}
+
 /* ---------- Créneaux et concerts ---------- */
 .shift-time { display: grid; justify-items: center; align-content: center; min-width: 58px; padding: 6px 8px; border-radius: 12px; background: rgba(23,77,67,0.08); flex: 0 0 auto; }
 .shift-time b { font-size: 14px; font-weight: 900; line-height: 1.1; }
