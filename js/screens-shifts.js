@@ -1,11 +1,11 @@
-/* Beauregard V2 — écrans Créneaux et Concerts.
+/* Beauregard V2 — écran Créneaux et Concerts.
  * L'ordre d'affichage se déduit du jour puis de l'heure de début.
  * Le libellé d'un créneau est construit automatiquement : « 09h00 - 17h00 (Ma1) ».
  *
- * Le formulaire porte lui-même son mode :
- *   data-mode="new"  → création
- *   data-mode="edit" → modification, avec data-id
- * C'est la source de vérité, plus aucun état global volatil.
+ * Signature des formulaires : (ctx, mode, id)
+ *   mode = "new"  → création, fiche vide
+ *   mode = "edit" → modification de la fiche d'identifiant id
+ * app.js appelle donc S.shiftForm(ctx, mode, id) et S.concertForm(ctx, mode, id).
  */
 (function (root) {
   "use strict";
@@ -51,8 +51,6 @@
   var dayTitle = function (d) { return d.charAt(0).toUpperCase() + d.slice(1); };
   var dayLabel = function (d) { return d === "autre" ? "Jours non renseignés" : dayTitle(d); };
 
-  /* Le libellé d'un créneau est construit automatiquement :
-   * « 09h00 - 17h00 (Ma1) ». L'utilisateur ne le saisit jamais. */
   var hhmmFr = function (t) {
     var p = String(t || "").split(":");
     if (p.length < 2 || !p[0]) return "";
