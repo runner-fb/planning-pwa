@@ -2,7 +2,7 @@
  * Rôle : servir la coquille (HTML/CSS/JS) même hors réseau.
  * L'API Apps Script n'est jamais mise en cache.
  */
-const SHELL = 'beauregard-v2-shell-7';
+const SHELL = 'beauregard-v2-shell-8';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -15,7 +15,7 @@ const SHELL_FILES = [
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './js/screens-shifts-bind.js',
+  './js/screens-shifts-save.js',
   './app.js',
   './manifest.json',
   './icon.svg'
@@ -53,6 +53,13 @@ self.addEventListener('fetch', (e) => {
   }
   if (url.origin !== self.location.origin) return;
 
+  /* Le HTML n'est jamais mis en cache : une page périmée fait tourner
+   * l'ancien code indéfiniment. */
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    e.respondWith(fetch(req).catch(() => caches.match('./index.html')));
+    return;
+  }
+
   e.respondWith(
     fetch(req)
       .then((response) => {
@@ -64,11 +71,7 @@ self.addEventListener('fetch', (e) => {
       })
       .catch(() =>
         caches.match(req).then(
-          (hit) =>
-            hit ||
-            (req.mode === 'navigate'
-              ? caches.match('./index.html')
-              : Promise.reject(new Error('hors ligne')))
+          (hit) => hit || Promise.reject(new Error('hors ligne'))
         )
       )
   );
