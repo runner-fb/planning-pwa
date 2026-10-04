@@ -1,18 +1,18 @@
 /* Beauregard V2 — écran Créneaux et Concerts.
  *
- * LE JOUR EST UNE DATE, PAS UN LIBELLÉ.
- * La feuille CRENEAUX porte une colonne `date` (2027-06-29, 2027-06-30, …).
- * C'était la cause du message « Date invalide » : le formulaire n'envoyait
- * qu'un libellé de jour (« mardi ») et le serveur n'avait aucune date à lire.
+ * LE JOUR SE CHOISIT, LA DATE S'EN DÉDUIT.
+ * Une journée de festival va du matin au petit matin : un créneau qui
+ * commence à 01:00 le samedi appartient à la soirée du VENDREDI. C'est
+ * le jour choisi qui fait foi, jamais l'horloge — aucun décalage à
+ * appliquer. L'ordre de la semaine est celui du festival : mardi → lundi.
  *
  * LE FORMULAIRE N'ENVOIE QUE CE QUI EST SAISI.
- * Le serveur (Code.gs) attend : id, date, start, end, target, vehicles,
- * active, c3, brunch. `ordre` et `libelle` (name) sont CALCULÉS côté serveur
- * ou déduits à l'affichage : le formulaire ne les envoie pas. `jour` est
- * envoyé car le serveur le relit, mais il est déduit de la date, jamais saisi.
+ * Le serveur (Code.gs) attend : id, day, date, start, end, target,
+ * vehicles, active, brunch. `ordre`, `c3` et le libellé sont CALCULÉS
+ * côté serveur : le formulaire ne les envoie pas et ne les affiche pas.
  *
- * Le champ de saisie est `target` dans le formulaire HTML et dans le serveur.
- * `effectif` n'existe que pour l'affichage (rétrocompatibilité de l'écran).
+ * Le champ de saisie est `target` dans le formulaire et dans le serveur.
+ * `effectif` n'existe que pour l'affichage (rétrocompatibilité).
  *
  * Signature des formulaires : (ctx, mode, id)
  *   mode = "new"  → création, fiche vide
@@ -44,6 +44,56 @@
   };
 
   var dayTitle = function (d) { d = dayKey(d); return d ? d.charAt(0).toUpperCase() + d.slice(1) : ""; };
+
+  /* ---------- JOURS DU FESTIVAL ----------
+   * L'ordre est celui du festival : mardi -> lundi.
+   * Une journee va du matin au petit matin : un creneau qui commence
+   * a 01:00 le samedi appartient a la soiree du VENDREDI. C'est le jour
+   * choisi qui fait foi, jamais l'horloge : aucun decalage a appliquer.
+   * Le jour se CHOISIT ; la date s'en DEDUIT (calendrier de l'edition). */
+  var JOURS = ["mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "lundi"];
+
+  var jourKey = function (v) {
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  };
+
+  var jourOptions = function (s) {
+    var courant = jourKey((s && (s.day || s.jour)) || "");
+    return JOURS.map(function (j) {
+      return '<option value="' + j + '"' + (j === courant ? " selected" : "") + ">" +
+        j.charAt(0).toUpperCase() + j.slice(1) + "</option>";
+    }).join("");
+  };
+
+  /* Date du jour choisi. Le calendrier de l'edition vit dans
+   * config.jours = { "2027-06-29": "mardi", ... }, rempli a la creation
+   * de la saison. A defaut, on reprend la date deja portee par un creneau
+   * de ce jour : ce qui fonctionne avec les donnees 2027 actuelles. */
+  var dateDuJour = function (ctx, jour) {
+    var k = jourKey(jour);
+    if (JOURS.indexOf(k) < 0) return "";
+
+    var cfg = (ctx && ctx.data && ctx.data.config) || {};
+    var table = cfg.jours || cfg.calendrier || null;
+    if (table) {
+      for (var iso in table) {
+        if (jourKey(table[iso]) === k) return isoDate(iso);
+      }
+    }
+
+    var connu = "";
+    ((ctx && ctx.data && ctx.data.shifts) || []).forEach(function (s) {
+      if (jourKey(s.day || s.jour) === k) {
+        var d = isoDate(s.date);
+        if (d && (!connu || d < connu)) connu = d;
+      }
+    });
+    return connu;
+  };
 
   /* ---------- DATES ---------- */
 
@@ -176,25 +226,21 @@
       ? { start: "", end: "", target: 0, vehicles: 0, active: true, date: "" }
       : ((ctx.data.shifts || []).filter(function (x) { return x.id === id; })[0] || {});
 
-    var dateValue = isoDate(s.date);
-
     return '<div class="toolbar"><button class="button secondary" data-creneaux="back">\u2039 Créneaux</button>' +
       '<span class="badge">' + (isNew ? "Nouveau créneau" : "Modifier le créneau") + "</span></div>" +
       '<form id="shiftForm" data-mode="' + (isNew ? "new" : "edit") + '" data-id="' + esc(s.id || "") + '" class="form-grid">' +
+      /* --- Le créneau : ce qu'il est et quand il a lieu --- */
       '<div><label>Identifiant<input name="id" value="' + esc(s.id || "") + '"' +
       (isNew ? ' placeholder="ex. Ma3"' : " readonly") + "></label></div>" +
-      '<div><label>Libellé (automatique)<input name="name" value="' +
-      esc(slotLabel(s.start, s.end, s.id)) + '" readonly placeholder="se construit avec les horaires"></label></div>' +
-      '<div><label>Date<input name="date" type="date" value="' + esc(dateValue) + '" required></label></div>' +
-      '<div><label>Jour (déduit de la date)<input name="dayshow" value="' +
-      esc(dateValue ? dayDisplay(dateValue) : "") + '" readonly placeholder="se déduit de la date"></label></div>' +
-      '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.target || s.effectif || 0) + '"></label></div>' +
+      '<div><label>Jour<select name="day">' + jourOptions(s) + "</select></label></div>" +
       '<div><label>Début<input name="start" type="time" value="' + esc(s.start || "") + '" required></label></div>' +
       '<div><label>Fin<input name="end" type="time" value="' + esc(s.end || "") + '" required></label></div>' +
-      '<div><label>Véhicules prévus<input name="vehicles" type="number" min="0" value="' + esc(s.vehicles || 0) + '"></label></div>' +
+      /* --- Le besoin : combien de monde, combien de véhicules --- */
+      '<div><label>Effectif cible<input name="target" type="number" min="0" step="1" inputmode="numeric" value="' + esc(s.target || s.effectif || 0) + '"></label></div>' +
+      '<div><label>Véhicules prévus<input name="vehicles" type="number" min="0" step="1" inputmode="numeric" value="' + esc(s.vehicles || 0) + '"></label></div>' +
+      /* --- Options --- */
       '<div class="full contraintes">' +
       '<label class="check"><input type="checkbox" name="active"' + (s.active === false ? "" : " checked") + "><span>Créneau actif</span></label>" +
-      '<label class="check"><input type="checkbox" name="c3"' + (s.c3 ? " checked" : "") + "><span>C3 (créneau de nuit)</span></label>" +
       '<label class="check"><input type="checkbox" name="brunch"' + (s.brunch ? " checked" : "") + "><span>Brunch (hors planning principal)</span></label>" +
       "</div>" +
       '<div class="full modal-actions">' +
@@ -208,25 +254,24 @@
         "</div>");
   }
 
-  /* Lecture du formulaire : SEULEMENT ce que la personne a saisi.
-   * Le serveur attend `target` (voir Code.gs : Number.isInteger(row.target)).
-   * `jours`, `ordre` et `libelle` sont des données dérivées ou calculées
-   * côté serveur — elles ne sortent jamais d'ici. */
-  function readShift(form) {
+  /* Lecture du formulaire : SEULEMENT ce qui est saisi.
+   * Le jour est choisi, la date s'en deduit. `ordre`, `c3` et le libelle
+   * se calculent cote serveur : ils ne sont ni affiches, ni envoyes. */
+  function readShift(form, ctx) {
     var f = form.elements;
     var get = function (n) { return f[n] ? String(f[n].value).trim() : ""; };
     var on = function (n) { return !!(f[n] && f[n].checked); };
-    var date = get("date");
+    var jour = jourKey(get("day"));
     return {
       id: get("id"),
-      date: date,
-      jour: dateToDay(date) || "",
+      day: jour,
+      date: dateDuJour(ctx, jour),
       start: get("start"),
       end: get("end"),
       target: Number(get("target")) || 0,
+      effectif: Number(get("target")) || 0,
       vehicles: Number(get("vehicles")) || 0,
       active: on("active"),
-      c3: on("c3"),
       brunch: on("brunch")
     };
   }
@@ -285,8 +330,6 @@
       (c.photo ? '<img class="concert-photo" src="' + esc(c.photo) + '" alt="">' : "") +
       '<div class="full"><label>Artiste<input name="artist" value="' + esc(c.artist || "") + '" required></label></div>' +
       '<div><label>Date<input name="date" type="date" value="' + esc(dateValue) + '" required></label></div>' +
-      '<div><label>Jour (déduit de la date)<input name="dayshow" value="' +
-      esc(dateValue ? dayDisplay(dateValue) : "") + '" readonly placeholder="se déduit de la date"></label></div>' +
       '<div><label>Scène<input name="scene" value="' + esc(c.scene || "") + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(c.start || "") + '" required></label></div>' +
       '<div><label>Fin<input name="end" type="time" value="' + esc(c.end || "") + '" required></label></div>' +
@@ -333,6 +376,8 @@
     slotLabel: slotLabel,
     isoDate: isoDate,
     dateToDay: dateToDay,
-    dayDisplay: dayDisplay
+    dayDisplay: dayDisplay,
+    JOURS: JOURS,
+    dateDuJour: dateDuJour
   };
 })(window);
