@@ -1,12 +1,7 @@
 /* Beauregard V2 — écran Créneaux et Concerts.
- * Points 19, 23 et 26 du cahier des charges : aucun créneau codé en dur,
- * tout est modifiable par l'Admin depuis le smartphone.
- *
- * L'ordre d'affichage se déduit du jour puis de l'heure de début : aucun
- * numéro d'ordre n'est demandé à l'utilisateur.
- *
- * Créneau : jour, libellé, début, fin, effectif cible, véhicules, actif, C3,
- * brunch. Concert : artiste, jour, début, fin, scène, actif, photo.
+ * L'ordre d'affichage se déduit du jour puis de l'heure de début.
+ * Le jour est reconnu quelle que soit la casse ou les accents.
+ * Les boutons « Nouveau » créent une ligne vide éditable.
  */
 (function (root) {
   "use strict";
@@ -22,8 +17,16 @@
 
   var DAY_ORDER = ["mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "lundi"];
 
+  var dayKey = function (s) {
+    return String(s || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  };
+
   var dayRank = function (s) {
-    var i = DAY_ORDER.indexOf(String(s || "").toLowerCase());
+    var i = DAY_ORDER.indexOf(dayKey(s));
     return i < 0 ? 99 : i;
   };
 
@@ -32,7 +35,6 @@
     return (Number(p[0]) || 0) * 60 + (Number(p[1]) || 0);
   };
 
-  /* Un créneau qui passe minuit a une fin inférieure à son début. */
   var crossesMidnight = function (a, b) { return mins(b) <= mins(a); };
 
   var duration = function (a, b) {
@@ -43,8 +45,8 @@
   };
 
   var dayTitle = function (d) { return d.charAt(0).toUpperCase() + d.slice(1); };
+  var dayLabel = function (d) { return d === "autre" ? "Jours non renseignés" : dayTitle(d); };
 
-  /* Ordre : le jour du festival, puis l'heure de début. Rien à saisir. */
   var byDayThenTime = function (a, b) {
     var d = dayRank(a.day) - dayRank(b.day);
     if (d) return d;
@@ -57,7 +59,7 @@
 
     var byDay = {};
     list.forEach(function (s) {
-      var d = String(s.day || "autre");
+      var d = dayKey(s.day) || "autre";
       if (!byDay[d]) byDay[d] = [];
       byDay[d].push(s);
     });
@@ -79,14 +81,14 @@
             '<span class="person-flags">' + esc(badges.join(" · ")) + "</span>" +
             "</button>";
         }).join("");
-        return '<div class="section-title">' + esc(dayTitle(day)) + '</div><div class="card">' + rows + "</div>";
+        return '<div class="section-title">' + esc(dayLabel(day)) + '</div><div class="card">' + rows + "</div>";
       })
       .join("");
 
     return '<div class="toolbar">' +
       '<button class="button secondary" data-creneaux="back">\u2039 Retour</button>' +
       '<span class="badge">' + list.length + " créneau(x)</span>" +
-      '<button class="button primary" data-shift="new">Nouveau créneau</button>' +
+      '<button class="button primary" data-new-shift="1">Nouveau créneau</button>' +
       "</div>" +
       (blocks || '<div class="empty"><b>Aucun créneau</b>Crée le premier créneau de l\u2019édition.</div>');
   }
@@ -97,7 +99,7 @@
     if (isNew) s = { start: "", end: "", effectif: 0, active: true };
 
     var dayOptions = DAY_ORDER.map(function (d) {
-      var sel = String(s.day || "").toLowerCase() === d ? " selected" : "";
+      var sel = dayKey(s.day) === d ? " selected" : "";
       return '<option value="' + d + '"' + sel + ">" + dayTitle(d) + "</option>";
     }).join("");
 
@@ -120,7 +122,12 @@
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-creneaux="back">Annuler</button>' +
       '<button class="button primary">Enregistrer</button></div>' +
-      "</form>";
+      "</form>" +
+      (isNew ? "" :
+        '<div class="danger-zone">' +
+        '<button class="button secondary" data-shift-reset="1">Réinitialiser les champs</button>' +
+        '<button class="button danger" data-shift-remove="1">Supprimer ce créneau</button>' +
+        "</div>");
   }
 
   function readShift(form) {
@@ -147,7 +154,7 @@
 
     var byDay = {};
     list.forEach(function (c) {
-      var d = String(c.day || "autre");
+      var d = dayKey(c.day) || "autre";
       if (!byDay[d]) byDay[d] = [];
       byDay[d].push(c);
     });
@@ -157,20 +164,22 @@
       .map(function (day) {
         var rows = byDay[day].map(function (c) {
           return '<button class="person-row" data-concert="' + esc(c.id) + '">' +
-            '<span class="shift-time"><b>' + esc(c.start || "—") + "</b><small>" + esc(c.end || "") + "</small></span>" +
+            (c.photo
+              ? '<img class="concert-thumb" src="' + esc(c.photo) + '" alt="">'
+              : '<span class="shift-time"><b>' + esc(c.start || "—") + "</b><small>" + esc(c.end || "") + "</small></span>") +
             '<span class="person-main"><b>' + esc(c.artist || c.id) + "</b><small>" +
-            esc(c.scene || "scène non précisée") + "</small></span>" +
+            esc((c.start || "—") + "–" + (c.end || "")) + " · " + esc(c.scene || "scène non précisée") + "</small></span>" +
             '<span class="person-flags">' + (c.active === false ? "Inactif" : "") + "</span>" +
             "</button>";
         }).join("");
-        return '<div class="section-title">' + esc(dayTitle(day)) + '</div><div class="card">' + rows + "</div>";
+        return '<div class="section-title">' + esc(dayLabel(day)) + '</div><div class="card">' + rows + "</div>";
       })
       .join("");
 
     return '<div class="toolbar">' +
       '<button class="button secondary" data-concerts="back">\u2039 Retour</button>' +
       '<span class="badge">' + list.length + " concert(s)</span>" +
-      '<button class="button primary" data-concert="new">Nouveau concert</button>' +
+      '<button class="button primary" data-new-concert="1">Nouveau concert</button>' +
       "</div>" +
       (blocks || '<div class="empty"><b>Aucun concert</b>La programmation se configure avant l\u2019ouverture du formulaire.</div>');
   }
@@ -181,13 +190,14 @@
     if (isNew) c = { active: true };
 
     var dayOptions = DAY_ORDER.map(function (d) {
-      var sel = String(c.day || "").toLowerCase() === d ? " selected" : "";
+      var sel = dayKey(c.day) === d ? " selected" : "";
       return '<option value="' + d + '"' + sel + ">" + dayTitle(d) + "</option>";
     }).join("");
 
     return '<div class="toolbar"><button class="button secondary" data-concerts="back">\u2039 Concerts</button>' +
       '<span class="badge">' + (isNew ? "Nouveau concert" : "Modifier le concert") + "</span></div>" +
       '<form id="concertForm" class="form-grid">' +
+      (c.photo ? '<img class="concert-photo" src="' + esc(c.photo) + '" alt="">' : "") +
       '<div class="full"><label>Artiste<input name="artist" value="' + esc(c.artist || "") + '" required></label></div>' +
       '<div><label>Jour<select name="day">' + dayOptions + "</select></label></div>" +
       '<div><label>Scène<input name="scene" value="' + esc(c.scene || "") + '"></label></div>' +
@@ -200,7 +210,12 @@
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-concerts="back">Annuler</button>' +
       '<button class="button primary">Enregistrer</button></div>' +
-      "</form>";
+      "</form>" +
+      (isNew ? "" :
+        '<div class="danger-zone">' +
+        '<button class="button secondary" data-concert-reset="1">Réinitialiser les champs</button>' +
+        '<button class="button danger" data-concert-remove="1">Supprimer ce concert</button>' +
+        "</div>");
   }
 
   function readConcert(form) {
