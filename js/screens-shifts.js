@@ -1,7 +1,11 @@
-/* Beauregard V2 — écran Créneaux et Concerts.
+/* Beauregard V2 — écrans Créneaux et Concerts.
  * L'ordre d'affichage se déduit du jour puis de l'heure de début.
  * Le libellé d'un créneau est construit automatiquement : « 09h00 - 17h00 (Ma1) ».
- * Le jour est reconnu quelle que soit la casse ou les accents.
+ *
+ * Le formulaire porte lui-même son mode :
+ *   data-mode="new"  → création
+ *   data-mode="edit" → modification, avec data-id
+ * C'est la source de vérité, plus aucun état global volatil.
  */
 (function (root) {
   "use strict";
@@ -88,7 +92,7 @@
           var total = Number(s.effectif || s.target || 0);
           return '<button class="person-row" data-shift="' + esc(s.id) + '">' +
             '<span class="shift-time"><b>' + esc(s.start || "—") + "</b><small>" + esc(s.end || "") + "</small></span>" +
-            '<span class="person-main"><b>' + esc(s.name || slotLabel(s.start, s.end, s.id) || s.id) + "</b><small>" +
+            '<span class="person-main"><b>' + esc(slotLabel(s.start, s.end, s.id) || s.name || s.id) + "</b><small>" +
             esc(duration(s.start, s.end)) + " · " + total + " personne(s)" +
             (crossesMidnight(s.start, s.end) ? " · passe minuit" : "") + "</small></span>" +
             '<span class="person-flags">' + esc(badges.join(" · ")) + "</span>" +
@@ -106,10 +110,11 @@
       (blocks || '<div class="empty"><b>Aucun créneau</b>Crée le premier créneau de l\u2019édition.</div>');
   }
 
-  function shiftForm(ctx, id) {
-    var s = (ctx.data.shifts || []).filter(function (x) { return x.id === id; })[0];
-    var isNew = !s;
-    if (isNew) s = { start: "", end: "", effectif: 0, active: true };
+  function shiftForm(ctx, mode, id) {
+    var isNew = mode === "new";
+    var s = isNew
+      ? { start: "", end: "", effectif: 0, active: true, day: "jeudi" }
+      : ((ctx.data.shifts || []).filter(function (x) { return x.id === id; })[0] || {});
 
     var dayOptions = DAY_ORDER.map(function (d) {
       var sel = dayKey(s.day) === d ? " selected" : "";
@@ -118,11 +123,11 @@
 
     return '<div class="toolbar"><button class="button secondary" data-creneaux="back">\u2039 Créneaux</button>' +
       '<span class="badge">' + (isNew ? "Nouveau créneau" : "Modifier le créneau") + "</span></div>" +
-      '<form id="shiftForm" class="form-grid">' +
+      '<form id="shiftForm" data-mode="' + (isNew ? "new" : "edit") + '" data-id="' + esc(s.id || "") + '" class="form-grid">' +
       '<div><label>Identifiant<input name="id" value="' + esc(s.id || "") + '"' +
       (isNew ? ' placeholder="ex. Ma1"' : " readonly") + "></label></div>" +
       '<div><label>Libellé (automatique)<input name="name" value="' +
-      esc(s.name || slotLabel(s.start, s.end, s.id)) + '" readonly placeholder="se construit avec les horaires"></label></div>' +
+      esc(slotLabel(s.start, s.end, s.id)) + '" readonly placeholder="se construit avec les horaires"></label></div>' +
       '<div><label>Jour<select name="day">' + dayOptions + "</select></label></div>" +
       '<div><label>Effectif cible<input name="target" type="number" min="0" value="' + esc(s.effectif || s.target || 0) + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(s.start || "") + '" required></label></div>' +
@@ -135,7 +140,7 @@
       "</div>" +
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-creneaux="back">Annuler</button>' +
-      '<button class="button primary">Enregistrer</button></div>' +
+      '<button class="button primary" type="submit">Enregistrer</button></div>' +
       "</form>" +
       (isNew ? "" :
         '<div class="danger-zone">' +
@@ -198,10 +203,11 @@
       (blocks || '<div class="empty"><b>Aucun concert</b>La programmation se configure avant l\u2019ouverture du formulaire.</div>');
   }
 
-  function concertForm(ctx, id) {
-    var c = (ctx.data.concerts || []).filter(function (x) { return x.id === id; })[0];
-    var isNew = !c;
-    if (isNew) c = { active: true };
+  function concertForm(ctx, mode, id) {
+    var isNew = mode === "new";
+    var c = isNew
+      ? { active: true, day: "jeudi" }
+      : ((ctx.data.concerts || []).filter(function (x) { return x.id === id; })[0] || {});
 
     var dayOptions = DAY_ORDER.map(function (d) {
       var sel = dayKey(c.day) === d ? " selected" : "";
@@ -210,7 +216,7 @@
 
     return '<div class="toolbar"><button class="button secondary" data-concerts="back">\u2039 Concerts</button>' +
       '<span class="badge">' + (isNew ? "Nouveau concert" : "Modifier le concert") + "</span></div>" +
-      '<form id="concertForm" class="form-grid">' +
+      '<form id="concertForm" data-mode="' + (isNew ? "new" : "edit") + '" data-id="' + esc(c.id || "") + '" class="form-grid">' +
       (c.photo ? '<img class="concert-photo" src="' + esc(c.photo) + '" alt="">' : "") +
       '<div class="full"><label>Artiste<input name="artist" value="' + esc(c.artist || "") + '" required></label></div>' +
       '<div><label>Jour<select name="day">' + dayOptions + "</select></label></div>" +
@@ -223,7 +229,7 @@
       "</div>" +
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-concerts="back">Annuler</button>' +
-      '<button class="button primary">Enregistrer</button></div>' +
+      '<button class="button primary" type="submit">Enregistrer</button></div>' +
       "</form>" +
       (isNew ? "" :
         '<div class="danger-zone">' +
