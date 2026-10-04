@@ -1,16 +1,13 @@
-/* Beauregard V2 — app.js (socle + écran Équipe)
+/* Beauregard V2 — app.js (socle, écrans Équipe, Créneaux, Concerts)
  * Transport = fetch GET JSON, repris de la V1.
  * Queue = file d'actions hors ligne (IndexedDB, point 62 du cahier des charges).
- * Écran Équipe branché sur js/screens-team.js.
  *
  * Synchronisation : le serveur renvoie un paquet complet au premier appel
  * (`full: true`), puis seulement les éléments modifiés. L'application FUSIONNE
- * ces paquets au lieu de les écraser, sinon les données disparaissent de
- * l'affichage à chaque synchronisation différentielle.
+ * ces paquets au lieu de les écraser, sinon les données disparaissent.
  *
- * Accès : le nom affiché vient de l'identifiant renvoyé par le SERVEUR, jamais
- * d'un identifiant mémorisé à part — sinon l'écran peut afficher une autre
- * personne que celle réellement traitée.
+ * Accès : le nom affiché vient de l'identifiant renvoyé par le SERVEUR.
+ * Créneaux et concerts : l'ordre se déduit du jour puis de l'heure de début.
  */
 (function () {
   "use strict";
@@ -30,14 +27,21 @@
   var ICON = {
     Accueil: "\u2302", "Mes créneaux": "\u25A6", Planning: "\u25A4", Contacts: "\u2663",
     Équipe: "\u2659", Véhicules: "\u25B0", Messages: "\u2709", Outils: "\u2699",
-    Préparation: "\u25F7", Formulaires: "\u25A7", Simulations: "\u27F3", Arbitrages: "\u25C7",
+    "Préparation": "\u25F7", "Créneaux": "\u25F4", "Concerts": "\u266B",
+    Formulaires: "\u25A7", Simulations: "\u27F3", Arbitrages: "\u25C7",
     Rotations: "\u21BB", Contrôles: "\u2713", Validation: "\u25C9", Publication: "\u2197", Terrain: "\u2316"
   };
 
   var NAV = {
     benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]],
     referent: [["Accueil", "home"], ["Équipe", "team"], ["Véhicules", "vehicles"], ["Planning", "planning"], ["Messages", "messages"], ["Contacts", "contacts"], ["Outils", "tools"]],
-    admin: [["Équipe", "team"], ["Préparation", "setup"], ["Formulaires", "forms"], ["Simulations", "simulations"], ["Planning", "planning"], ["Arbitrages", "arbitrations"], ["Rotations", "rotations"], ["Contrôles", "checks"], ["Validation", "validation"], ["Publication", "publication"], ["Terrain", "terrain"], ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]],
+    admin: [
+      ["Équipe", "team"], ["Préparation", "setup"], ["Créneaux", "creneaux"], ["Concerts", "concerts"],
+      ["Formulaires", "forms"], ["Simulations", "simulations"], ["Planning", "planning"],
+      ["Arbitrages", "arbitrations"], ["Rotations", "rotations"], ["Contrôles", "checks"],
+      ["Validation", "validation"], ["Publication", "publication"], ["Terrain", "terrain"],
+      ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]
+    ],
     vehicles: [["Accueil", "home"], ["Véhicules", "vehicles"]]
   };
 
@@ -51,6 +55,8 @@
     messages: ["INFORMATIONS", "Messages", "Consignes et actualités de l'équipe."],
     tools: ["ESPACE RÉFÉRENT", "Outils", "Accès aux modules de suivi."],
     setup: ["CYCLE DE L'ÉDITION", "Préparation", "Paramètres et progression de l'édition."],
+    creneaux: ["CYCLE DE L'ÉDITION", "Créneaux & missions", "Horaires, effectifs et journées de l'édition."],
+    concerts: ["PROGRAMMATION", "Concerts", "Artistes, scènes et horaires de passage."],
     forms: ["INSCRIPTIONS", "Formulaires", "Ouverture et suivi des disponibilités."],
     simulations: ["AFFECTATIONS", "Simulations", "Construire puis comparer les propositions."],
     arbitrations: ["DÉCISIONS", "Arbitrages", "Traiter les points à décider."],
@@ -68,7 +74,7 @@
     "conflicts", "amendments", "deliveries"
   ];
 
-  var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0, personId: "" };
+  var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0, personId: "", shiftId: "", concertId: "" };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
 
@@ -91,11 +97,7 @@
   }
 
   /* ---------- Fusion d'un paquet de synchronisation ----------
-   * Le serveur envoie `full: true` au premier appel, puis uniquement les
-   * éléments modifiés depuis la version connue. `ids` liste ce qui existe
-   * encore côté serveur. On fusionne donc au lieu de remplacer l'état local.
-   * `access` est indexé par `personId`, pas par `id`.
-   */
+   * `access` est indexé par personId, les autres collections par id. */
   var keyOf = function (k, row) {
     if (!row) return "";
     return k === "access" ? row.personId : row.id;
@@ -227,6 +229,8 @@
     if (more) more.setAttribute("aria-expanded", "false");
     state.page = key;
     if (key !== "team") state.personId = "";
+    if (key !== "creneaux") state.shiftId = "";
+    if (key !== "concerts") state.concertId = "";
     nav();
     setTitle();
     render();
@@ -258,6 +262,8 @@
     var p = state.page;
     if (p === "home") return renderHome(c, d);
     if (p === "team") return renderTeam(c, d);
+    if (p === "creneaux") return renderCreneaux(c, d);
+    if (p === "concerts") return renderConcerts(c, d);
     if (p === "myshifts") return renderMyShifts(c, d);
     if (p === "planning") return renderPlanning(c, d);
     if (p === "contacts") return renderContacts(c, d);
@@ -369,11 +375,7 @@
       .catch(function (e) { notice(String(e.message || e), "error"); });
   }
 
-  /* ---------- Accès ----------
-   * Le nom affiché est calculé à partir de l'identifiant renvoyé par le
-   * SERVEUR, relaté à la fiche locale. Le serveur ne montre le code qu'une
-   * fois : au rejeu il signale `codeAlreadyShown` et l'écran le dit.
-   */
+  /* Le nom affiché vient de la réponse du serveur ; un rejeu est signalé. */
   function accessRow(personId, code, alreadyShown) {
     var p = (state.data.people || []).filter(function (x) { return x.id === personId; })[0];
     if (!p) return { nom: personId, prenom: "(fiche locale inconnue)", code: code || "", alreadyShown: !!alreadyShown };
@@ -429,21 +431,124 @@
     }
   }
 
+  /* ---------- Créneaux ---------- */
+  function renderCreneaux(c, d) {
+    var S = window.ScreenShifts;
+    if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Créneaux n'est pas chargé."); return; }
+    c.innerHTML = state.shiftId ? S.shiftForm({ data: d }, state.shiftId) : S.shifts({ data: d });
+    wireCreneaux();
+  }
+
+  function wireCreneaux() {
+    var S = window.ScreenShifts;
+    if (!S) return;
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-creneaux]"), function (b) {
+      b.onclick = function () { state.shiftId = ""; render(); };
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-shift]"), function (b) {
+      b.onclick = function () {
+        state.shiftId = b.dataset.shift === "new" ? "" : b.dataset.shift;
+        render();
+      };
+    });
+
+    var form = $("#shiftForm");
+    if (form) {
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        var row = S.readShift(form);
+        if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
+        if (!/^\d{2}:\d{2}$/.test(row.start) || !/^\d{2}:\d{2}$/.test(row.end)) {
+          notice("Horaires obligatoires.", "error");
+          return;
+        }
+        var old = (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
+        var full = old ? Object.assign({}, old, row) : row;
+        full.version = old ? old.version || 0 : 0;
+        sendSave("shifts", full, old ? old.version || 0 : 0, old)
+          .then(function () {
+            state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== full.id; }).concat([full]);
+            saveLocal();
+            state.shiftId = "";
+            notice("Créneau enregistré.", "success");
+            render();
+          })
+          .catch(function (err) { notice(String(err.message || err), "error"); });
+      };
+    }
+  }
+
+  /* ---------- Concerts ---------- */
+  function renderConcerts(c, d) {
+    var S = window.ScreenShifts;
+    if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Concerts n'est pas chargé."); return; }
+    c.innerHTML = state.concertId ? S.concertForm({ data: d }, state.concertId) : S.concerts({ data: d });
+    wireConcerts();
+  }
+
+  function wireConcerts() {
+    var S = window.ScreenShifts;
+    if (!S) return;
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-concerts]"), function (b) {
+      b.onclick = function () { state.concertId = ""; render(); };
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-concert]"), function (b) {
+      b.onclick = function () {
+        state.concertId = b.dataset.concert === "new" ? "" : b.dataset.concert;
+        render();
+      };
+    });
+
+    var form = $("#concertForm");
+    if (form) {
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        var row = S.readConcert(form);
+        if (!row.artist) { notice("Artiste obligatoire.", "error"); return; }
+        var old = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
+        var full = old ? Object.assign({}, old, row) : row;
+        if (!full.id) full.id = "co-" + Transport.requestId().slice(0, 8);
+        full.version = old ? old.version || 0 : 0;
+        sendSave("concerts", full, old ? old.version || 0 : 0, old)
+          .then(function () {
+            state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== full.id; }).concat([full]);
+            saveLocal();
+            state.concertId = "";
+            notice("Concert enregistré.", "success");
+            render();
+          })
+          .catch(function (err) { notice(String(err.message || err), "error"); });
+      };
+    }
+  }
+
   /* ---------- Préparation ---------- */
   function renderSetup(c, d) {
     var cfg = d.config || {};
+    var n = function (k) { return (d[k] || []).filter(function (x) { return !x.deleted; }).length; };
+    var withCode = (d.access || []).filter(function (a) { return a.hasCode; }).length;
     var blocks = [
-      ["Équipe", (d.people || []).filter(function (p) { return !p.deleted; }).length + " fiche(s)"],
-      ["Créneaux & missions", (d.shifts || []).length + " créneau(x), " + (d.missions || []).length + " mission(s)"],
-      ["Concerts", (d.concerts || []).length + " concert(s)"],
-      ["Paramètres planning", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s) prévu(s)" : "à renseigner"],
-      ["Accès", (d.access || []).filter(function (a) { return a.hasCode; }).length + " code(s) créé(s)"],
+      ["Équipe", n("people") + " fiche(s)"],
+      ["Créneaux", n("shifts") + " créneau(x)"],
+      ["Concerts", n("concerts") + " concert(s)"],
+      ["Missions", n("missions") + " mission(s)"],
+      ["Véhicules prévus", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner"],
+      ["Accès", withCode + " code(s) créé(s)"],
       ["Formulaire", cfg.formOpen ? "ouvert" : "fermé"]
     ];
     c.innerHTML =
       '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
       esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
       '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
+      '<div class="toolbar">' +
+      '<button class="button secondary" data-page="team">Équipe</button>' +
+      '<button class="button secondary" data-page="creneaux">Créneaux</button>' +
+      '<button class="button secondary" data-page="concerts">Concerts</button>' +
+      "</div>" +
       card("État de la préparation", blocks.map(function (b) { return listRow(b[0], b[1], "", ""); }).join("")) +
       card("État de l'appareil",
         listRow("Version des données", "V" + state.version, "", "") +
@@ -644,7 +749,7 @@
 
   window.logout = function () {
     try { Transport.logout().catch(function () {}); } catch (e) {}
-    state.user = null; state.data = null; state.personId = "";
+    state.user = null; state.data = null; state.personId = ""; state.shiftId = ""; state.concertId = "";
     try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
     if (window.Queue) Queue.clear().catch(function () {});
     var s = $("#appShell"); if (s) s.classList.add("hidden");
