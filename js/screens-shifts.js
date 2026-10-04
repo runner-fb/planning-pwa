@@ -5,7 +5,9 @@
  * Signature des formulaires : (ctx, mode, id)
  *   mode = "new"  → création, fiche vide
  *   mode = "edit" → modification de la fiche d'identifiant id
- * app.js appelle donc S.shiftForm(ctx, mode, id) et S.concertForm(ctx, mode, id).
+ *
+ * Les boutons « Enregistrer » sont en type="button" avec data-save-shift /
+ * data-save-concert : l'enregistrement ne dépend plus de l'événement submit.
  */
 (function (root) {
   "use strict";
@@ -138,12 +140,12 @@
       "</div>" +
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-creneaux="back">Annuler</button>' +
-      '<button class="button primary" type="submit">Enregistrer</button></div>' +
+      '<button type="button" class="button primary" data-save-shift="1">Enregistrer</button></div>' +
       "</form>" +
       (isNew ? "" :
         '<div class="danger-zone">' +
-        '<button class="button secondary" data-shift-reset="1">Réinitialiser les champs</button>' +
-        '<button class="button danger" data-shift-remove="1">Supprimer ce créneau</button>' +
+        '<button type="button" class="button secondary" data-shift-reset="1">Réinitialiser les champs</button>' +
+        '<button type="button" class="button danger" data-shift-remove="1">Supprimer ce créneau</button>' +
         "</div>");
   }
 
@@ -227,12 +229,12 @@
       "</div>" +
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-concerts="back">Annuler</button>' +
-      '<button class="button primary" type="submit">Enregistrer</button></div>' +
+      '<button type="button" class="button primary" data-save-concert="1">Enregistrer</button></div>' +
       "</form>" +
       (isNew ? "" :
         '<div class="danger-zone">' +
-        '<button class="button secondary" data-concert-reset="1">Réinitialiser les champs</button>' +
-        '<button class="button danger" data-concert-remove="1">Supprimer ce concert</button>' +
+        '<button type="button" class="button secondary" data-concert-reset="1">Réinitialiser les champs</button>' +
+        '<button type="button" class="button danger" data-concert-remove="1">Supprimer ce concert</button>' +
         "</div>");
   }
 
