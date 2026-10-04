@@ -12,7 +12,25 @@
   <title>Beauregard — Espace festival</title>
 </head>
 <body>
-  <section id="loginScreen" class="login-screen">
+  <section id="bootScreen" class="boot-screen">
+    <div class="boot-card">
+      <span class="brand-mark">B</span>
+      <div class="spinner" role="status" aria-live="polite"></div>
+      <p class="boot-title" id="bootTitle">Préparation de ton espace…</p>
+      <p class="boot-note" id="bootNote">Le premier chargement peut prendre quelques instants : les données utiles sont téléchargées pour fonctionner hors ligne.</p>
+      <div class="boot-track"><i id="bootBar"></i></div>
+      <ol class="boot-steps" id="bootSteps">
+        <li>Édition</li>
+        <li>Planning</li>
+        <li>Équipe</li>
+        <li>Concerts</li>
+        <li>Notifications</li>
+        <li>Finalisation</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="loginScreen" class="login-screen hidden">
     <div class="login-brand"><span class="brand-mark">B</span><span>BEAUREGARD</span></div>
     <div class="login-card">
       <p class="eyebrow">ESPACE FESTIVAL</p>
@@ -21,6 +39,8 @@
       <form id="loginForm">
         <label for="accessCode">Code d’accès</label>
         <input id="accessCode" name="accessCode" type="password" autocomplete="current-password" required>
+        <label for="operatorName">Nom (espace véhicules uniquement)</label>
+        <input id="operatorName" name="operatorName" type="text" autocomplete="name">
         <button class="button primary wide" type="submit">Entrer dans mon espace</button>
       </form>
       <p id="loginError" class="form-error" role="alert"></p>
@@ -36,7 +56,8 @@
       <div class="edition-label" id="editionLabel">ÉDITION</div>
       <div id="desktopNav" class="desktop-nav"></div>
       <div class="side-bottom">
-        <div class="connection-pill"><i></i><span id="connectionText">En ligne</span></div>
+        <div class="connection-pill" data-kind=""><i></i><span id="connectionText">En ligne</span></div>
+        <button class="quiet-button" id="syncNow" type="button">Synchroniser maintenant</button>
         <button class="quiet-button" onclick="logout()">Se déconnecter</button>
       </div>
     </aside>
@@ -58,6 +79,7 @@
 
   <div id="modalRoot"></div>
   <script src="./config.js"></script>
+  <script src="./js/transport.js"></script>
   <script src="./app.js"></script>
   <script>if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script>
 </body>
