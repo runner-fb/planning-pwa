@@ -11,6 +11,9 @@
  * vehicles, active, brunch. `ordre`, `c3` et le libellé sont CALCULÉS
  * côté serveur : le formulaire ne les envoie pas et ne les affiche pas.
  *
+ * CRÉNEAUX : mardi → lundi. CONCERTS : mercredi → dimanche, la plage
+ * que le serveur accepte.
+ *
  * Le champ de saisie est `target` dans le formulaire et dans le serveur.
  * `effectif` n'existe que pour l'affichage (rétrocompatibilité).
  *
@@ -69,10 +72,22 @@
     }).join("");
   };
 
+  /* Les concerts se jouent du mercredi au dimanche : le serveur refuse
+   * un concert hors de cette plage, donc la liste ne propose que ces jours. */
+  var JOURS_CONCERT = ["mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+
+  var jourOptionsConcert = function (c) {
+    var courant = jourKey((c && (c.day || c.jour)) || "");
+    return JOURS_CONCERT.map(function (j) {
+      return '<option value="' + j + '"' + (j === courant ? " selected" : "") + ">" +
+        j.charAt(0).toUpperCase() + j.slice(1) + "</option>";
+    }).join("");
+  };
+
   /* Date du jour choisi. Le calendrier de l'edition vit dans
    * config.jours = { "2027-06-29": "mardi", ... }, rempli a la creation
    * de la saison. A defaut, on reprend la date deja portee par un creneau
-   * de ce jour : ce qui fonctionne avec les donnees 2027 actuelles. */
+   * ou un concert de ce jour : ce qui fonctionne avec les donnees 2027. */
   var dateDuJour = function (ctx, jour) {
     var k = jourKey(jour);
     if (JOURS.indexOf(k) < 0) return "";
@@ -86,12 +101,16 @@
     }
 
     var connu = "";
-    ((ctx && ctx.data && ctx.data.shifts) || []).forEach(function (s) {
-      if (jourKey(s.day || s.jour) === k) {
-        var d = isoDate(s.date);
-        if (d && (!connu || d < connu)) connu = d;
-      }
-    });
+    var chercher = function (liste) {
+      (liste || []).forEach(function (x) {
+        if (jourKey(x.day || x.jour) === k) {
+          var d = isoDate(x.date);
+          if (d && (!connu || d < connu)) connu = d;
+        }
+      });
+    };
+    chercher(ctx && ctx.data && ctx.data.shifts);
+    chercher(ctx && ctx.data && ctx.data.concerts);
     return connu;
   };
 
@@ -329,7 +348,7 @@
       '<form id="concertForm" data-mode="' + (isNew ? "new" : "edit") + '" data-id="' + esc(c.id || "") + '" class="form-grid">' +
       (c.photo ? '<img class="concert-photo" src="' + esc(c.photo) + '" alt="">' : "") +
       '<div class="full"><label>Artiste<input name="artist" value="' + esc(c.artist || "") + '" required></label></div>' +
-      '<div><label>Date<input name="date" type="date" value="' + esc(dateValue) + '" required></label></div>' +
+      '<div><label>Jour<select name="day">' + jourOptionsConcert(c) + "</select></label></div>" +
       '<div><label>Scène<input name="scene" value="' + esc(c.scene || "") + '"></label></div>' +
       '<div><label>Début<input name="start" type="time" value="' + esc(c.start || "") + '" required></label></div>' +
       '<div><label>Fin<input name="end" type="time" value="' + esc(c.end || "") + '" required></label></div>' +
@@ -348,16 +367,18 @@
         "</div>");
   }
 
-  /* Même principe : seuls les champs saisis partent au serveur. */
-  function readConcert(form) {
+  /* Même principe : le jour est choisi, la date s'en déduit.
+   * Le serveur n'accepte que mercredi -> dimanche. */
+  function readConcert(form, ctx) {
     var f = form.elements;
     var get = function (n) { return f[n] ? String(f[n].value).trim() : ""; };
     var on = function (n) { return !!(f[n] && f[n].checked); };
-    var date = get("date");
+    var jour = jourKey(get("day"));
     return {
       artist: get("artist"),
-      date: date,
-      jour: dateToDay(date) || "",
+      day: jour,
+      jour: jour,
+      date: dateDuJour(ctx, jour),
       scene: get("scene"),
       start: get("start"),
       end: get("end"),
@@ -378,6 +399,7 @@
     dateToDay: dateToDay,
     dayDisplay: dayDisplay,
     JOURS: JOURS,
+    JOURS_CONCERT: JOURS_CONCERT,
     dateDuJour: dateDuJour
   };
 })(window);
