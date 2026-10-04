@@ -6,7 +6,13 @@
  * le jour choisi qui fait foi, jamais l'horloge — aucun décalage à
  * appliquer. L'ordre de la semaine est celui du festival : mardi → lundi.
  *
- * LE TRI SUIT CETTE JOURNÉE, PAS L'HORLOGE.
+ * L'ORDRE VIENT DU SERVEUR. Code.gs calcule `order` et l'écrit en base :
+ * c'est cette valeur qui fait foi. Le tri par heure ne sert qu'aux lignes
+ * qui n'en portent pas encore — données anciennes, ou affichage optimiste
+ * juste après une création avant que la réponse serveur ne remplace la
+ * ligne.
+ *
+ * LE TRI SUIT LA JOURNÉE, PAS L'HORLOGE.
  * Dans un même bloc, 01:00 vient APRÈS 23:00 — c'est la fin de la soirée,
  * pas son début. Deux mesures du temps coexistent : voir mins() et
  * minsJour().
@@ -217,14 +223,27 @@
     return h * 60 + (Number(p[1]) || 0);
   };
 
-  /* Tri : la date d'abord (les clés non-date passent à la fin), puis
-   * l'heure DANS LA JOURNÉE — 01:00 vient après 23:00. */
+  /* ------------------------------------------------------------------
+   * TRI : la date d'abord, puis l'ordre DU SERVEUR, puis l'heure.
+   *
+   * Code.gs calcule `order` — rang du jour puis rang dans la journée —
+   * et l'écrit en base. C'est cette valeur qui fait foi, sinon le front
+   * et le serveur finiraient par diverger sur le même sujet.
+   *
+   * Le tri par heure ne sert qu'aux lignes qui n'ont pas encore d'`order` :
+   * données anciennes, ou ligne optimiste affichée juste après une
+   * création, avant que la réponse du serveur ne la remplace.
+   * ------------------------------------------------------------------ */
   var byDayThenTime = function (a, b) {
     var ka = dayKeyOf(a), kb = dayKeyOf(b);
     var fa = isFallbackKey(ka) || ka === "autre", fb = isFallbackKey(kb) || kb === "autre";
     if (fa !== fb) return fa ? 1 : -1;
     var d = ka.localeCompare(kb);
     if (d) return d;
+
+    var oa = Number(a.order), ob = Number(b.order);
+    if (!isNaN(oa) && !isNaN(ob) && oa !== ob) return oa - ob;
+
     return minsJour(a.start) - minsJour(b.start);
   };
 
