@@ -1,5 +1,6 @@
 /* Beauregard V2 — app.js (socle)
  * Dialogue repris de la V1 : Transport = fetch GET JSON.
+ * File d'actions hors ligne : Queue = IndexedDB (point 62 du cahier des charges).
  * Actions serveur réelles : login, sync, save, logout, read.
  */
 (function () {
@@ -64,22 +65,15 @@
     terrain: ["PENDANT LE FESTIVAL", "Suivi terrain", "Créneaux et changements sur place."]
   };
 
-  var state = { user: null, role: "", data: null, page: "home", version: 0 };
+  var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0 };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
 
-  /* L'écran de premier chargement ne doit jamais survivre à une erreur. */
   function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
   function bootFail(msg) { if (BOOT && BOOT.fail) BOOT.fail(msg); else { hideBoot(); showLogin(); } }
   function bootSkip() { if (BOOT && BOOT.skip) BOOT.skip(); else hideBoot(); }
-  function hideBoot() {
-    var b = $("#bootScreen");
-    if (b) b.classList.add("hidden");
-  }
-  function showLogin() {
-    var l = $("#loginScreen");
-    if (l) l.classList.remove("hidden");
-  }
+  function hideBoot() { var b = $("#bootScreen"); if (b) b.classList.add("hidden"); }
+  function showLogin() { var l = $("#loginScreen"); if (l) l.classList.remove("hidden"); }
 
   function saveLocal() {
     try {
@@ -95,9 +89,7 @@
       var raw = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
       if (!raw || !raw.data) return null;
       return raw;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
   function notice(msg, type) {
@@ -110,11 +102,35 @@
     notice.t = setTimeout(function () { n.classList.add("hidden"); }, 6500);
   }
 
-  function syncBadge(text, kind) {
+  /* Le bandeau reflète toujours l'état réel : réseau, file d'attente, synchro. */
+  function syncBadge() {
     var el = $("#connectionText");
-    if (el) el.textContent = text;
-    var pill = el && el.parentElement;
-    if (pill) pill.dataset.kind = kind || "";
+    if (!el) return;
+    var pill = el.parentElement;
+    var text, kind;
+    if (!navigator.onLine) {
+      text = state.pending
+        ? "Hors ligne · " + state.pending + " modification(s) en attente"
+        : "Hors ligne · données disponibles";
+      kind = "offline";
+    } else if (state.pending) {
+      text = state.pending + " modification(s) en attente";
+      kind = "busy";
+    } else {
+      text = "En ligne · à jour";
+      kind = "ok";
+    }
+    el.textContent = text;
+    if (pill) pill.dataset.kind = kind;
+  }
+
+  function refreshPending() {
+    if (!window.Queue) return Promise.resolve(0);
+    return Queue.count().then(function (n) {
+      state.pending = n;
+      syncBadge();
+      return n;
+    }).catch(function () { return 0; });
   }
 
   function setTitle() {
@@ -158,10 +174,7 @@
     var open = more.getAttribute("aria-expanded") === "true";
     var existing = $("#navDrawer");
     if (existing) existing.remove();
-    if (open) {
-      more.setAttribute("aria-expanded", "false");
-      return;
-    }
+    if (open) { more.setAttribute("aria-expanded", "false"); return; }
     var drawer = document.createElement("div");
     drawer.id = "navDrawer";
     drawer.className = "nav-drawer";
@@ -196,23 +209,19 @@
   function card(title, body) {
     return '<article class="card"><h2>' + esc(title) + "</h2>" + body + "</article>";
   }
-
   function empty(title, text) {
     return '<div class="empty"><b>' + esc(title) + "</b>" + esc(text) + "</div>";
   }
-
   function listRow(main, sub, badge, kind) {
     return '<div class="list-row"><div class="list-main"><b>' + esc(main) + "</b>" +
       (sub ? "<small>" + esc(sub) + "</small>" : "") + "</div>" +
       (badge ? '<span class="badge ' + (kind || "") + '">' + esc(badge) + "</span>" : "") + "</div>";
   }
-
   function personLabel(id) {
     var p = ((state.data && state.data.people) || []).filter(function (x) { return x.id === id; })[0];
     if (!p) return "—";
     return [p.firstName, p.lastName].filter(Boolean).join(" ");
   }
-
   function shift(id) {
     return ((state.data && state.data.shifts) || []).filter(function (x) { return x.id === id; })[0] || null;
   }
@@ -227,7 +236,32 @@
     if (state.page === "contacts") return renderContacts(c, d);
     if (state.page === "messages") return renderMessages(c, d);
     if (state.page === "vehicles") return renderVehicles(c, d);
+    if (state.page === "setup") return renderSetup(c, d);
     c.innerHTML = empty("Module en préparation", "Cet écran sera branché à l'étape suivante.");
+  }
+
+  /* Écran de préparation : l'état de chaque bloc, selon le point 7 du CDC. */
+  function renderSetup(c, d) {
+    var cfg = d.config || {};
+    var blocks = [
+      ["Équipe", (d.people || []).filter(function (p) { return !p.deleted; }).length + " fiche(s)"],
+      ["Créneaux & missions", (d.shifts || []).length + " créneau(x), " + (d.missions || []).length + " mission(s)"],
+      ["Concerts", (d.concerts || []).length + " concert(s)"],
+      ["Paramètres planning", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s) prévu(s)" : "à renseigner"],
+      ["Accès", (d.access || []).filter(function (a) { return a.active; }).length + " accès actif(s)"],
+      ["Formulaire", cfg.formOpen ? "ouvert" : "fermé"]
+    ];
+    c.innerHTML =
+      '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
+      esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
+      '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
+      card("État de la préparation",
+        blocks.map(function (b) { return listRow(b[0], b[1], "", ""); }).join("")) +
+      card("État de l'appareil",
+        listRow("Version des données", "V" + state.version, "", "") +
+        listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune",
+          state.pending ? "bad" : "good") +
+        listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", ""));
   }
 
   function renderHome(c, d) {
@@ -312,14 +346,13 @@
     c.innerHTML = msgs.length
       ? msgs.map(function (m) {
           return '<article class="card"><h2>' + esc(m.title) + "</h2><p>" + esc(m.body) +
-            "</p>" + (m.priority === "Urgent" ? '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>' : "") + "</article>";
+            "</p>" + (m.priority === "Urgent" && !m.read ? '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>' : "") + "</article>";
         }).join("")
       : empty("Aucun message", "Les consignes de l'équipe apparaîtront ici.");
     Array.prototype.forEach.call(document.querySelectorAll("[data-read]"), function (b) {
       b.onclick = function () {
-        Transport.read("read", { messageId: b.dataset.read })
-          .then(function () { notice("Message marqué comme lu.", "success"); })
-          .catch(function (e) { notice(e.message, "error"); });
+        send("read", { messageId: b.dataset.read }, "Message marqué comme lu.")
+          .then(function () { render(); });
       };
     });
   }
@@ -329,7 +362,7 @@
     c.innerHTML = v.length
       ? v.map(function (x) {
           return '<article class="card"><h2>' + esc(x.plate || "Véhicule") + "</h2><p>" +
-            esc([x.make, x.model].filter(Boolean).join(" ")) + "</p>" +
+            esc(x.make || "") + "</p>" +
             '<span class="badge ' + (x.active === false ? "bad" : "good") + '">' + (x.active === false ? "HS" : "En service") + "</span></article>";
         }).join("")
       : empty("Aucun véhicule", "Les véhicules reçus apparaîtront ici.");
@@ -350,6 +383,33 @@
     nav();
     setTitle();
     render();
+    syncBadge();
+    if (state.role === "admin" && state.page === "home") go("setup");
+  }
+
+  /* Envoi d'une action : direct si le réseau est là, sinon mise en file.
+   * Une action hors ligne reste visible dans le bandeau, jamais perdue. */
+  function send(action, data, okMessage) {
+    if (!navigator.onLine && window.Queue) {
+      return Queue.enqueue({ action: action, payload: data }).then(function () {
+        notice("Action enregistrée hors ligne. Elle partira au retour du réseau.", "info");
+        return refreshPending();
+      });
+    }
+    return Transport.mutate(action, data).then(function (out) {
+      if (okMessage) notice(okMessage, "success");
+      return out;
+    }).catch(function (e) {
+      var msg = String((e && e.message) || e);
+      if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+        return Queue.enqueue({ action: action, payload: data }).then(function () {
+          notice("Réseau instable : action gardée et envoyée plus tard.", "info");
+          return refreshPending();
+        });
+      }
+      notice(msg, "error");
+      throw e;
+    });
   }
 
   var loginForm = $("#loginForm");
@@ -371,14 +431,14 @@
           state.data = bundle || {};
           state.version = (bundle && bundle.version) || 0;
           saveLocal();
-          syncBadge("En ligne · à jour", "ok");
           bootDone();
           start();
+          return refreshPending();
         })
+        .then(function () { return flushQueue(); })
         .catch(function (x) {
           var msg = (x && x.message) || "Connexion impossible";
           err.textContent = msg;
-          syncBadge("Hors ligne · données disponibles", "offline");
           bootFail(msg);
         });
     });
@@ -389,6 +449,7 @@
     state.user = null;
     state.data = null;
     try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+    if (window.Queue) Queue.clear().catch(function () {});
     var s = $("#appShell");
     if (s) s.classList.add("hidden");
     showLogin();
@@ -398,30 +459,51 @@
 
   window.navigate = go;
 
+  /* Vidage de la file puis synchronisation. Un conflit laisse l'action en
+   * place : rien n'est décidé à la place de l'humain (point 62 du CDC). */
+  function flushQueue() {
+    if (!window.Queue) return Promise.resolve();
+    return Queue.flush()
+      .then(function (r) {
+        state.pending = r && r.remaining ? r.remaining : 0;
+        syncBadge();
+        if (r && r.sent) notice(r.sent + " modification(s) envoyée(s).", "success");
+        return Queue.list();
+      })
+      .then(function (rows) {
+        var conflicts = (rows || []).filter(function (x) { return x.state === "conflict"; });
+        if (conflicts.length) notice(conflicts.length + " modification(s) en conflit à arbitrer.", "error");
+      })
+      .catch(function () {});
+  }
+
   function syncNow() {
-    syncBadge("Synchronisation…", "busy");
+    if (!navigator.onLine) { syncBadge(); return; }
     Transport.sync(state.version, state.role)
       .then(function (bundle) {
         state.data = bundle || {};
         state.version = (bundle && bundle.version) || state.version;
         saveLocal();
-        syncBadge("En ligne · à jour", "ok");
         render();
+        return flushQueue();
       })
+      .then(function () { return refreshPending(); })
       .catch(function (e) {
         if (e && e.message === "SESSION_EXPIRED") {
           Transport.setToken("");
           window.logout();
           return;
         }
-        syncBadge("Hors ligne · données disponibles", "offline");
+        syncBadge();
       });
   }
 
-  window.addEventListener("online", function () { if (state.role) syncNow(); });
-  window.addEventListener("offline", function () { syncBadge("Hors ligne · données disponibles", "offline"); });
+  var sn = $("#syncNow");
+  if (sn) sn.onclick = function () { syncNow(); };
 
-  /* Démarrage. Rien ne doit rester bloqué sur l'écran de préparation. */
+  window.addEventListener("online", function () { syncNow(); });
+  window.addEventListener("offline", function () { syncBadge(); });
+
   try {
     if (window.Transport && Transport.token()) {
       var local = readLocal();
@@ -432,8 +514,7 @@
         state.user = { id: (local.data.user || {}).id, name: (local.data.user || {}).name, role: local.role };
         bootSkip();
         start();
-        if (navigator.onLine) syncNow();
-        else syncBadge("Hors ligne · données disponibles", "offline");
+        refreshPending().then(function () { if (navigator.onLine) syncNow(); });
       } else {
         bootSkip();
         showLogin();
