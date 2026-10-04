@@ -1,9 +1,8 @@
 /* Beauregard V2 — service worker.
  * Rôle : servir la coquille (HTML/CSS/JS) même hors réseau.
- * L'API Apps Script n'est jamais mise en cache : ses appels sont en GET et
- * portent une action précise, un cache périmé serait dangereux.
+ * L'API Apps Script n'est jamais mise en cache.
  */
-const SHELL = 'beauregard-v2-shell-6';
+const SHELL = 'beauregard-v2-shell-7';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -16,6 +15,7 @@ const SHELL_FILES = [
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
+  './js/screens-shifts-bind.js',
   './app.js',
   './manifest.json',
   './icon.svg'
@@ -23,10 +23,7 @@ const SHELL_FILES = [
 
 self.addEventListener('install', (e) =>
   e.waitUntil(
-    caches
-      .open(SHELL)
-      .then((c) => c.addAll(SHELL_FILES))
-      .then(() => self.skipWaiting())
+    caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting())
   )
 );
 
@@ -45,13 +42,9 @@ self.addEventListener('activate', (e) =>
   )
 );
 
-/* Réseau d'abord, cache en secours. Le clone est fait AVANT que la réponse
- * soit renvoyée à la page : un clone après consommation lève une erreur
- * et le document n'est plus jamais servi. */
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
-
   let url;
   try {
     url = new URL(req.url);
@@ -65,11 +58,7 @@ self.addEventListener('fetch', (e) => {
       .then((response) => {
         if (response && response.ok) {
           const copy = response.clone();
-          return caches
-            .open(SHELL)
-            .then((c) => c.put(req, copy))
-            .catch(() => {})
-            .then(() => response);
+          return caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}).then(() => response);
         }
         return response;
       })
