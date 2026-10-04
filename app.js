@@ -5,9 +5,10 @@
  * Synchronisation : le serveur renvoie un paquet complet au premier appel,
  * puis seulement les éléments modifiés. L'application FUSIONNE ces paquets.
  *
- * Créneaux et Concerts : les clics sont délégués par le conteneur, jamais
- * posés sur des boutons recréés. La soumission lit le mode DANS le formulaire
- * (`data-mode="new"` ou `"edit"`), jamais dans un état global volatil.
+ * Créneaux et Concerts : un seul écouteur de clic, posé sur #pageContent qui
+ * existe en permanence. Il n'est jamais posé sur les boutons eux-mêmes :
+ * les boutons sont détruits et recréés à chaque render().
+ * L'enregistrement ne dépend plus de l'événement submit.
  */
 (function () {
   "use strict";
@@ -521,43 +522,83 @@
     }).catch(function (e) { notice(String(e.message || e), "error"); });
   }
 
-  /* Soumission des deux formulaires. Le mode est lu DANS le formulaire :
-   * un état global serait remis à zéro entre l'affichage et la soumission. */
-  document.addEventListener("submit", function (e) {
-    var f = e.target;
-    if (!f || (f.id !== "shiftForm" && f.id !== "concertForm")) return;
+  /* ---------- Écouteur unique des créneaux et concerts ----------
+   * Un seul écouteur, posé sur #pageContent qui existe en permanence.
+   * Il n'est jamais posé sur un bouton : les boutons sont recréés à
+   * chaque render(), un gestionnaire posé dessus ne survivrait pas.
+   * L'enregistrement ne dépend pas de l'événement submit. */
+
+  var SELECTEUR_ACTIONS = [
+    "[data-creneaux]", "[data-concerts]",
+    "[data-new-shift]", "[data-new-concert]",
+    "[data-shift]", "[data-concert]",
+    "[data-shift-reset]", "[data-concert-reset]",
+    "[data-shift-remove]", "[data-concert-remove]",
+    "[data-save-shift]", "[data-save-concert]"
+  ].join(",");
+
+  function actionsListener(e) {
+    var b = e.target && e.target.closest ? e.target.closest(SELECTEUR_ACTIONS) : null;
+    if (!b) return;
+    var host = document.getElementById("pageContent");
+    if (host && !host.contains(b)) return;
     e.preventDefault();
+
+    if (b.dataset.saveShift !== undefined) { handleShiftSave(); return; }
+    if (b.dataset.saveConcert !== undefined) { handleConcertSave(); return; }
+    scenesAction(b);
+  }
+
+  function wirePageContent() {
+    var host = document.getElementById("pageContent");
+    if (!host) return;
+    if (host.dataset.wired === "1") return;
+    host.dataset.wired = "1";
+    host.addEventListener("click", actionsListener);
+  }
+
+  /* Enregistrement d'un créneau : le mode est lu DANS le formulaire. */
+  function handleShiftSave() {
+    var f = document.getElementById("shiftForm");
     var S = window.ScreenShifts;
-    if (!S) return;
+    if (!f || !S) { notice("Formulaire Créneaux indisponible.", "error"); return; }
+
+    var row = S.readShift(f);
+    if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
+    if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
+    row.name = S.slotLabel(row.start, row.end, row.id);
 
     var isNew = f.getAttribute("data-mode") === "new";
     var current = f.getAttribute("data-id") || "";
+    var existant = (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
+    if (isNew && existant) { notice("Cet identifiant existe déjà.", "error"); return; }
 
-    if (f.id === "shiftForm") {
-      var row = S.readShift(f);
-      if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
-      if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
-      row.name = S.slotLabel(row.start, row.end, row.id);
-      if (isNew && (state.data.shifts || []).some(function (x) { return x.id === row.id; })) {
-        notice("Cet identifiant existe déjà.", "error");
-        return;
-      }
-      var oldS = isNew ? null : (state.data.shifts || []).filter(function (x) { return x.id === current; })[0];
-      saveShift(row, oldS);
-      return;
-    }
+    var old = isNew ? null : (state.data.shifts || []).filter(function (x) { return x.id === current; })[0];
+    saveShift(row, old);
+  }
+
+  /* Enregistrement d'un concert : même principe. */
+  function handleConcertSave() {
+    var f = document.getElementById("concertForm");
+    var S = window.ScreenShifts;
+    if (!f || !S) { notice("Formulaire Concerts indisponible.", "error"); return; }
 
     var con = S.readConcert(f);
     if (!con.artist) { notice("Artiste obligatoire.", "error"); return; }
     if (!con.start || !con.end) { notice("Horaires obligatoires.", "error"); return; }
-    var oldC = isNew ? null : (state.data.concerts || []).filter(function (x) { return x.id === current; })[0];
-    saveConcert(con, oldC);
-  }, true);
 
-  /* La délégation de clic est posée par js/screens-shifts-bind.js, qui appelle
-   * cette fonction. Poser un gestionnaire sur chaque bouton ne survit pas au
-   * rendre suivant : les boutons sont recréés. */
-  window.BeauregardShiftAction = scenesAction;
+    var isNew = f.getAttribute("data-mode") === "new";
+    var current = f.getAttribute("data-id") || "";
+    var old = isNew ? null : (state.data.concerts || []).filter(function (x) { return x.id === current; })[0];
+    saveConcert(con, old);
+  }
+
+  /* Installation de l'écouteur, une seule fois, dès que #pageContent existe. */
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wirePageContent);
+  } else {
+    wirePageContent();
+  }
 
   /* ---------- Préparation ---------- */
   function renderSetup(c, d) {
@@ -702,6 +743,7 @@
     setTitle();
     render();
     syncBadge();
+    wirePageContent();
   }
 
   /* ---------- Envoi ---------- */
