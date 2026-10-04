@@ -2,12 +2,11 @@
  * Transport = fetch GET JSON, repris de la V1.
  * Queue = file d'actions hors ligne (IndexedDB, point 62 du cahier des charges).
  *
- * Synchronisation : le serveur renvoie un paquet complet au premier appel
- * (`full: true`), puis seulement les éléments modifiés. L'application FUSIONNE
- * ces paquets au lieu de les écraser, sinon les données disparaissent.
+ * Synchronisation : le serveur renvoie un paquet complet au premier appel,
+ * puis seulement les éléments modifiés. L'application FUSIONNE ces paquets.
  *
- * Accès : le nom affiché vient de l'identifiant renvoyé par le SERVEUR.
- * Créneaux et concerts : l'ordre se déduit du jour puis de l'heure de début.
+ * Les clics des écrans Créneaux et Concerts sont délégués par
+ * js/screens-shifts-bind.js, qui appelle window.BeauregardShiftAction.
  */
 (function () {
   "use strict";
@@ -77,6 +76,7 @@
   var state = { user: null, role: "", data: null, page: "home", version: 0, pending: 0, personId: "", shiftId: "", concertId: "" };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
+  var NEW = "__new__";
 
   function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
   function bootFail(m) { if (BOOT && BOOT.fail) BOOT.fail(m); else { hideBoot(); showLogin(); } }
@@ -96,8 +96,6 @@
     } catch (e) { return null; }
   }
 
-  /* ---------- Fusion d'un paquet de synchronisation ----------
-   * `access` est indexé par personId, les autres collections par id. */
   var keyOf = function (k, row) {
     if (!row) return "";
     return k === "access" ? row.personId : row.id;
@@ -375,7 +373,6 @@
       .catch(function (e) { notice(String(e.message || e), "error"); });
   }
 
-  /* Le nom affiché vient de la réponse du serveur ; un rejeu est signalé. */
   function accessRow(personId, code, alreadyShown) {
     var p = (state.data.people || []).filter(function (x) { return x.id === personId; })[0];
     if (!p) return { nom: personId, prenom: "(fiche locale inconnue)", code: code || "", alreadyShown: !!alreadyShown };
@@ -436,48 +433,6 @@
     var S = window.ScreenShifts;
     if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Créneaux n'est pas chargé."); return; }
     c.innerHTML = state.shiftId ? S.shiftForm({ data: d }, state.shiftId) : S.shifts({ data: d });
-    wireCreneaux();
-  }
-
-  function wireCreneaux() {
-    var S = window.ScreenShifts;
-    if (!S) return;
-
-    Array.prototype.forEach.call(document.querySelectorAll("[data-creneaux]"), function (b) {
-      b.onclick = function () { state.shiftId = ""; render(); };
-    });
-
-    Array.prototype.forEach.call(document.querySelectorAll("[data-shift]"), function (b) {
-      b.onclick = function () {
-        state.shiftId = b.dataset.shift === "new" ? "" : b.dataset.shift;
-        render();
-      };
-    });
-
-    var form = $("#shiftForm");
-    if (form) {
-      form.onsubmit = function (e) {
-        e.preventDefault();
-        var row = S.readShift(form);
-        if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
-        if (!/^\d{2}:\d{2}$/.test(row.start) || !/^\d{2}:\d{2}$/.test(row.end)) {
-          notice("Horaires obligatoires.", "error");
-          return;
-        }
-        var old = (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
-        var full = old ? Object.assign({}, old, row) : row;
-        full.version = old ? old.version || 0 : 0;
-        sendSave("shifts", full, old ? old.version || 0 : 0, old)
-          .then(function () {
-            state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== full.id; }).concat([full]);
-            saveLocal();
-            state.shiftId = "";
-            notice("Créneau enregistré.", "success");
-            render();
-          })
-          .catch(function (err) { notice(String(err.message || err), "error"); });
-      };
-    }
   }
 
   /* ---------- Concerts ---------- */
@@ -485,46 +440,71 @@
     var S = window.ScreenShifts;
     if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Concerts n'est pas chargé."); return; }
     c.innerHTML = state.concertId ? S.concertForm({ data: d }, state.concertId) : S.concerts({ data: d });
-    wireConcerts();
   }
 
-  function wireConcerts() {
+  /* ---------- Action unique pour les créneaux et concerts ----------
+   * Appelée par la délégation de js/screens-shifts-bind.js. */
+  rootAction(function (b) {
     var S = window.ScreenShifts;
     if (!S) return;
 
-    Array.prototype.forEach.call(document.querySelectorAll("[data-concerts]"), function (b) {
-      b.onclick = function () { state.concertId = ""; render(); };
-    });
+    if (b.dataset.creneaux !== undefined) { state.shiftId = ""; render(); return; }
+    if (b.dataset.concerts !== undefined) { state.concertId = ""; render(); return; }
+    if (b.dataset.newShift !== undefined) { state.shiftId = NEW; render(); return; }
+    if (b.dataset.newConcert !== undefined) { state.concertId = NEW; render(); return; }
 
-    Array.prototype.forEach.call(document.querySelectorAll("[data-concert]"), function (b) {
-      b.onclick = function () {
-        state.concertId = b.dataset.concert === "new" ? "" : b.dataset.concert;
-        render();
-      };
-    });
+    if (b.dataset.shift) { state.shiftId = String(b.dataset.shift); render(); return; }
+    if (b.dataset.concert) { state.concertId = String(b.dataset.concert); render(); return; }
 
-    var form = $("#concertForm");
-    if (form) {
-      form.onsubmit = function (e) {
-        e.preventDefault();
-        var row = S.readConcert(form);
-        if (!row.artist) { notice("Artiste obligatoire.", "error"); return; }
-        var old = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
-        var full = old ? Object.assign({}, old, row) : row;
-        if (!full.id) full.id = "co-" + Transport.requestId().slice(0, 8);
-        full.version = old ? old.version || 0 : 0;
-        sendSave("concerts", full, old ? old.version || 0 : 0, old)
-          .then(function () {
-            state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== full.id; }).concat([full]);
-            saveLocal();
-            state.concertId = "";
-            notice("Concert enregistré.", "success");
-            render();
-          })
-          .catch(function (err) { notice(String(err.message || err), "error"); });
-      };
+    if (b.dataset.shiftReset !== undefined) {
+      notice("Champs rechargés depuis les données enregistrées.", "info");
+      render();
+      return;
     }
+    if (b.dataset.concertReset !== undefined) {
+      notice("Champs rechargés depuis les données enregistrées.", "info");
+      render();
+      return;
+    }
+
+    if (b.dataset.shiftRemove !== undefined) {
+      var s = (state.data.shifts || []).filter(function (x) { return x.id === state.shiftId; })[0];
+      if (!s) return;
+      if (!window.confirm("Supprimer le créneau " + (s.name || s.id) + " ?")) return;
+      var r1 = Object.assign({}, s, { deleted: true, active: false });
+      sendSave("shifts", r1, s.version || 0, s).then(function () {
+        state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== s.id; });
+        saveLocal();
+        state.shiftId = "";
+        notice("Créneau supprimé.", "success");
+        render();
+      }).catch(function (e) { notice(String(e.message || e), "error"); });
+      return;
+    }
+
+    if (b.dataset.concertRemove !== undefined) {
+      var k = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
+      if (!k) return;
+      if (!window.confirm("Supprimer le concert " + (k.artist || k.id) + " ?")) return;
+      var r2 = Object.assign({}, k, { deleted: true, active: false });
+      sendSave("concerts", r2, k.version || 0, k).then(function () {
+        state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== k.id; });
+        saveLocal();
+        state.concertId = "";
+        notice("Concert supprimé.", "success");
+        render();
+      }).catch(function (e) { notice(String(e.message || e), "error"); });
+      return;
+    }
+  });
+
+  function rootAction(fn) {
+    window.BeauregardShiftAction = fn;
+    if (window.ScreenShiftsBind && window.ScreenShiftsBind.wire) window.ScreenShiftsBind.wire();
   }
+
+  /* Soumission des deux formulaires : déléguée, car ils sont recréés. */
+  if (window.ScreenShiftsBind && window.ScreenShiftsBind.wire) window.ScreenShiftsBind.wire();
 
   /* ---------- Préparation ---------- */
   function renderSetup(c, d) {
@@ -554,6 +534,7 @@
         listRow("Version des données", "V" + state.version, "", "") +
         listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune", state.pending ? "bad" : "good") +
         listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", ""));
+    wireNav();
   }
 
   /* ---------- Autres écrans ---------- */
@@ -714,6 +695,54 @@
       throw e;
     });
   }
+
+  /* Soumission des formulaires de créneau et de concert : déléguée elle aussi. */
+  document.addEventListener("submit", function (e) {
+    var f = e.target;
+    if (!f || !f.id) return;
+    if (f.id !== "shiftForm" && f.id !== "concertForm") return;
+    e.preventDefault();
+    var S = window.ScreenShifts;
+    if (!S) return;
+
+    if (f.id === "shiftForm") {
+      var row = S.readShift(f);
+      if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
+      if (!/^\d{2}:\d{2}$/.test(row.start) || !/^\d{2}:\d{2}$/.test(row.end)) {
+        notice("Horaires obligatoires.", "error"); return;
+      }
+      var isNewS = state.shiftId === NEW;
+      var oldS = isNewS ? null : (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
+      if (isNewS && (state.data.shifts || []).some(function (x) { return x.id === row.id; })) {
+        notice("Cet identifiant existe déjà.", "error"); return;
+      }
+      var fullS = oldS ? Object.assign({}, oldS, row) : row;
+      fullS.version = oldS ? oldS.version || 0 : 0;
+      sendSave("shifts", fullS, oldS ? oldS.version || 0 : 0, oldS).then(function () {
+        state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== fullS.id; }).concat([fullS]);
+        saveLocal();
+        state.shiftId = "";
+        notice("Créneau enregistré.", "success");
+        render();
+      }).catch(function (err) { notice(String(err.message || err), "error"); });
+      return;
+    }
+
+    var row2 = S.readConcert(f);
+    if (!row2.artist) { notice("Artiste obligatoire.", "error"); return; }
+    var isNewC = state.concertId === NEW;
+    var oldC = isNewC ? null : (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
+    var fullC = oldC ? Object.assign({}, oldC, row2) : row2;
+    if (!fullC.id) fullC.id = "co-" + Transport.requestId().slice(0, 8);
+    fullC.version = oldC ? oldC.version || 0 : 0;
+    sendSave("concerts", fullC, oldC ? oldC.version || 0 : 0, oldC).then(function () {
+      state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== fullC.id; }).concat([fullC]);
+      saveLocal();
+      state.concertId = "";
+      notice("Concert enregistré.", "success");
+      render();
+    }).catch(function (err) { notice(String(err.message || err), "error"); });
+  });
 
   var loginForm = $("#loginForm");
   if (loginForm) {
