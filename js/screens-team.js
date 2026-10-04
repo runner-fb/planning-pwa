@@ -4,6 +4,7 @@
  *
  * Le serveur ne transmet JAMAIS le hash d'accès : il envoie seulement
  * `hasCode` et `active`. L'écran s'appuie donc sur hasCode.
+ * L'écran de codes comporte toujours un bouton de retour.
  */
 (function (root) {
   "use strict";
@@ -34,6 +35,10 @@
       return label(a).localeCompare(label(b), "fr");
     });
 
+    var access = ctx.data.access || [];
+    var hasCode = {};
+    access.forEach(function (a) { if (a.hasCode) hasCode[a.personId] = true; });
+
     var rows = people.map(function (p) {
       var flags = [];
       if (p.role === "referent") flags.push("Référent");
@@ -43,6 +48,7 @@
       if (p.priorityLoader) flags.push("PC");
       if (p.noLoader) flags.push("NC");
       if (p.firstYear) flags.push("1A");
+      if (!hasCode[p.id]) flags.push("sans accès");
       var sub = (p.phone || "sans téléphone") + " \u00b7 " + (p.email || "sans email");
       return '<button class="person-row" data-person="' + esc(p.id) + '">' +
         (p.photo ? '<img class="avatar" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar">' + esc(label(p).slice(0, 1)) + "</span>") +
@@ -51,11 +57,14 @@
         "</button>";
     }).join("");
 
+    var withCode = access.filter(function (a) { return a.hasCode; }).length;
+
     return '<div class="toolbar">' +
       '<input class="search" id="teamSearch" type="search" placeholder="Chercher un nom, un t\u00e9l\u00e9phone\u2026" value="' + esc(filter) + '">' +
       '<span class="badge">' + people.length + " / " + all.length + " fiche(s)</span>" +
       "</div>" +
       '<div class="toolbar">' +
+      '<span class="badge">' + withCode + " acc\u00e8s cr\u00e9\u00e9(s)</span>" +
       '<button class="button primary" data-team="new">Nouvelle fiche</button>' +
       '<button class="button secondary" data-team="access">Cr\u00e9er les acc\u00e8s</button>' +
       "</div>" +
@@ -80,13 +89,16 @@
 
   function sheet(ctx, id) {
     var p = (ctx.data.people || []).filter(function (x) { return x.id === id; })[0];
-    if (!p) return '<div class="empty"><b>Fiche introuvable</b>Elle a peut-\u00eatre \u00e9t\u00e9 supprim\u00e9e.</div>';
+    if (!p) return '<div class="empty"><b>Fiche introuvable</b>Elle a peut-\u00eatre \u00e9t\u00e9 supprim\u00e9e.</div>' +
+      '<div class="toolbar"><button class="button secondary" data-team="back">\u2039 \u00c9quipe</button></div>';
     var acc = (ctx.data.access || []).filter(function (a) { return a.personId === id; })[0];
     /* Le serveur ne transmet jamais le hash : seulement hasCode. */
-    var hasCode = !!(acc && (acc.hasCode || acc.hash));
+    var codeOk = !!(acc && (acc.hasCode || acc.hash));
 
     return '<div class="toolbar"><button class="button secondary" data-team="back">\u2039 \u00c9quipe</button>' +
-      '<span class="badge">' + esc(p.role === "referent" ? "R\u00e9f\u00e9rent" : "B\u00e9n\u00e9vole") + "</span></div>" +
+      '<span class="badge">' + esc(p.role === "referent" ? "R\u00e9f\u00e9rent" : "B\u00e9n\u00e9vole") + "</span>" +
+      (codeOk ? '<span class="badge good">Acc\u00e8s cr\u00e9\u00e9</span>' : '<span class="badge bad">Sans acc\u00e8s</span>') +
+      "</div>" +
       '<div class="card contact-head">' +
       (p.photo ? '<img class="avatar big" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar big">' + esc(label(p).slice(0, 1)) + "</span>") +
       "<div><b>" + esc(label(p)) + "</b><small>" + esc(p.status || "Actif") + "</small></div></div>" +
@@ -108,12 +120,12 @@
       '<div class="full"><label>Note interne<textarea name="internalNote" rows="3">' + esc(p.internalNote || "") + "</textarea></label></div>" +
       '<div class="full modal-actions">' +
       '<button type="button" class="button secondary" data-team="access-one" data-id="' + esc(p.id) + '">' +
-      (hasCode ? "R\u00e9initialiser le code" : "Cr\u00e9er l\u2019acc\u00e8s") + "</button>" +
+      (codeOk ? "R\u00e9initialiser le code" : "Cr\u00e9er l\u2019acc\u00e8s") + "</button>" +
       '<button class="button primary">Enregistrer</button></div>' +
       "</form>" +
       '<div class="toolbar"><button class="button secondary" data-team="remove">Supprimer la fiche</button></div>' +
       '<div class="notice" data-type="info">' +
-      (acc ? "Acc\u00e8s : " + (hasCode ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
+      (acc ? "Acc\u00e8s : " + (codeOk ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
            : "Aucun acc\u00e8s cr\u00e9\u00e9 pour cette personne.") + "</div>";
   }
 
@@ -157,19 +169,45 @@
   }
 
   /* \u00c9cran de g\u00e9n\u00e9ration des codes : nom, pr\u00e9nom, code, copie.
-   * Le code n'est affich\u00e9 qu'une fois (point 11 du CDC). */
+   * Le code n'est affich\u00e9 qu'une fois (point 11 du CDC).
+   * Un bouton de retour encadre toujours l'\u00e9cran : jamais de cul-de-sac.
+   */
   function accessResult(rows) {
+    var back = '<div class="toolbar">' +
+      '<button class="button secondary" data-team="back">\u2039 Retour \u00e0 l\u2019\u00e9quipe</button>' +
+      "</div>";
+
     if (!rows || !rows.length)
-      return '<div class="empty"><b>Aucun code g\u00e9n\u00e9r\u00e9</b>Toutes les personnes actives ont d\u00e9j\u00e0 un acc\u00e8s.</div>';
-    var lines = rows.map(function (r) { return r.nom + " " + r.prenom + "\t" + r.code; }).join("\n");
-    return '<div class="notice" data-type="success">' + rows.length + " code(s) g\u00e9n\u00e9r\u00e9(s). Note-les maintenant : ils ne seront plus affich\u00e9s.</div>" +
-      '<div class="card"><table class="codes"><thead><tr><th>Nom</th><th>Pr\u00e9nom</th><th>Code</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        return "<tr><td>" + esc(r.nom) + "</td><td>" + esc(r.prenom) + "</td><td><b>" + esc(r.code) + "</b></td></tr>";
-      }).join("") +
-      "</tbody></table></div>" +
-      '<div class="toolbar"><button class="button secondary" data-team="copy" data-payload="' + esc(lines) + '">Copier la liste</button>' +
-      '<button class="button secondary" onclick="window.print()">Imprimer</button></div>';
+      return back + '<div class="empty"><b>Aucun code g\u00e9n\u00e9r\u00e9</b>Toutes les personnes actives ont d\u00e9j\u00e0 un acc\u00e8s.</div>';
+
+    var fresh = rows.filter(function (r) { return !r.alreadyShown && r.code; });
+    var old = rows.filter(function (r) { return r.alreadyShown || !r.code; });
+
+    var head =
+      (fresh.length
+        ? '<div class="notice" data-type="success">' + fresh.length + " code(s) g\u00e9n\u00e9r\u00e9(s). Note-les maintenant : ils ne seront plus affich\u00e9s.</div>"
+        : "") +
+      (old.length
+        ? '<div class="notice" data-type="info">' + old.length + " acc\u00e8s existaient d\u00e9j\u00e0 : leur code n\u2019est plus affichable. Utilise \u00ab R\u00e9initialiser le code \u00bb pour en obtenir un nouveau.</div>"
+        : "");
+
+    var table = fresh.length
+      ? '<div class="card"><table class="codes"><thead><tr><th>Nom</th><th>Pr\u00e9nom</th><th>Code</th></tr></thead><tbody>' +
+        fresh.map(function (r) {
+          return "<tr><td>" + esc(r.nom) + "</td><td>" + esc(r.prenom) + "</td><td><b>" + esc(r.code) + "</b></td></tr>";
+        }).join("") +
+        "</tbody></table></div>"
+      : "";
+
+    var lines = fresh.map(function (r) { return r.nom + " " + r.prenom + "\t" + r.code; }).join("\n");
+    var tools = fresh.length
+      ? '<div class="toolbar">' +
+        '<button class="button secondary" data-team="copy" data-payload="' + esc(lines) + '">Copier la liste</button>' +
+        '<button class="button secondary" onclick="window.print()">Imprimer</button>' +
+        "</div>"
+      : "";
+
+    return back + head + table + tools + back;
   }
 
   root.ScreenTeam = {
