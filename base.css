@@ -382,3 +382,106 @@ body {
   color: var(--text);
 }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ---------- Équipe : liste de personnes ---------- */
+.search {
+  flex: 1 1 auto;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 16px;
+  background: #fff;
+  color: var(--text);
+  min-width: 0;
+}
+
+.person-row {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-top: 1px solid rgba(222, 212, 194, 0.7);
+  color: inherit;
+}
+.person-row:first-child { border-top: none; }
+.person-row:active { background: rgba(23, 77, 67, 0.06); }
+
+.person-main { display: grid; gap: 2px; min-width: 0; }
+.person-main b { font-size: 16px; }
+.person-main small { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-flags {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  text-align: right;
+  max-width: 40%;
+}
+
+/* ---------- Équipe : fiche ---------- */
+.avatar.big {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+}
+.contact-head b { font-size: 20px; }
+.contact-head small { display: block; color: var(--muted); font-size: 13px; }
+
+.contraintes {
+  display: grid;
+  gap: 8px;
+  padding: 4px 0;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.check input {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  accent-color: var(--secondary);
+}
+
+/* ---------- Équipe : codes générés ---------- */
+table.codes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+table.codes th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 8px;
+}
+table.codes td {
+  padding: 8px;
+  border-top: 1px solid rgba(222, 212, 194, 0.7);
+}
+table.codes td b {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}
