@@ -632,6 +632,12 @@ details > summary {
   }
 }
 
+/* Navigation fixe et contacts : reprise de la structure V1. */
+.extra-nav[hidden]{display:none}.extra-nav{position:absolute;bottom:100%;left:8px;right:8px;background:var(--secondary);border-radius:18px 18px 0 0;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);box-shadow:0 -8px 24px #0002}.extra-nav button{max-width:none;width:100%}
+.contacts-v1{max-width:700px;margin:auto}.contacts-v1 h2{font-size:18px;margin:0 0 12px}.contact-section{margin-bottom:14px}.referents{background:linear-gradient(180deg,#E6F1EB,#D6E8DF);border:1px solid #C4D9CE;border-radius:20px;padding:10px}.referents-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.referent-tile{display:flex;flex-direction:column;min-width:0;padding:8px 6px;gap:6px;min-height:98px;background:linear-gradient(180deg,#fff,#F6FBF8);border:1px solid #D0E2D8;border-radius:18px;box-shadow:0 5px 12px #0f5a4f15}.referent-tile .avatar{width:50px;height:50px;border-radius:16px}.contact-search{position:sticky;top:0;z-index:4;background:var(--background);padding:8px 0 14px}.contact-row{display:flex;align-items:center;gap:10px;min-height:64px;border-bottom:1px solid var(--line)}.contact-row:last-child{border:0}.contact-person{flex:1;display:flex;justify-content:flex-start;text-align:left;min-width:0;background:transparent;border:0;padding:8px 0}.contact-person span{overflow-wrap:anywhere}.contact-call{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:14px;background:#e6f1eb;text-decoration:none}.contact-detail{text-align:center}.contact-detail .avatar{margin:auto;width:80px;height:80px}
+@media(min-width:701px){.nav{display:none}body{padding-bottom:0}}
+@media(max-width:700px){.desktopnav{display:none!important}.topbar{padding:10px 16px}.layout{padding-top:12px}.festival{padding:18px}.festival h1{font-size:25px}.festival:after{display:none}.card{padding:15px}.demo-entry{padding:10px 16px!important}.demo-entry>p{font-size:12px}.demo-entry nav{gap:5px!important}.demo-entry a{font-size:12px;padding:7px 9px!important}.nav button{font-size:10px;min-height:56px}.nav .nav-icon{font-size:23px}}
+
 /* Identité Beauregard 2026, reprise des couleurs du CSS V1. */
 :root {
   --primary: #0f5a4f;
@@ -1430,77 +1436,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             "'": "&#39;",
           })[c],
       );
-    const van = type !== "Voiture",
-      wide = type === "Utilitaire",
-      body = 'fill="#edf3ed" stroke="#18443d" stroke-width="2.5"',
-      glass = 'fill="#b8d6d0" stroke="#18443d" stroke-width="2"';
+    const van = type !== "Voiture", cargo = type === "Utilitaire";
+    const line = 'stroke="#334155" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"';
     let shape = "";
     if (zone === "Avant" || zone === "Arrière") {
-      shape =
-        '<rect x="75" y="48" width="170" height="135" rx="' +
-        (van ? 12 : 32) +
-        '" ' +
-        body +
-        '/><rect x="92" y="62" width="136" height="52" rx="8" ' +
-        glass +
-        '/><path d="M80 137H240 M106 166H214" fill="none" stroke="#18443d" stroke-width="3"/><rect x="82" y="133" width="30" height="20" rx="5" fill="' +
-        (zone === "Avant" ? "#e8d296" : "#c96c64") +
-        '"/><rect x="208" y="133" width="30" height="20" rx="5" fill="' +
-        (zone === "Avant" ? "#e8d296" : "#c96c64") +
-        '"/>' +
-        (zone === "Arrière" && van
-          ? '<path d="M160 54V181" stroke="#18443d"/>'
-          : "");
+      const front = zone === "Avant";
+      shape = `<g ${line}><path d="M77 154V112L91 ${van ? 51 : 66}Q96 43 112 43H208Q224 43 229 ${van ? 51 : 66}L243 112V176H77Z" fill="#fff"/><path d="M99 59H221L229 105H91Z" fill="#e5edf2"/><path d="M95 111Q160 120 225 111M82 157H238M95 171H225" fill="none"/><rect x="67" y="101" width="14" height="18" rx="4" fill="#e2e8f0"/><rect x="239" y="101" width="14" height="18" rx="4" fill="#e2e8f0"/><rect x="80" y="120" width="33" height="15" rx="4" fill="${front ? '#f8fafc' : '#fde2e2'}"/><rect x="207" y="120" width="33" height="15" rx="4" fill="${front ? '#f8fafc' : '#fde2e2'}"/><rect x="135" y="151" width="50" height="13" rx="2" fill="#f1f5f9"/><path d="M82 176V187H103V176M217 176V187H238V176" fill="#475569"/>${front ? '<path d="M126 126H194M126 132H194M126 138H194" fill="none"/>' : '<path d="M87 143H233" fill="none"/>'}${!front && van ? '<path d="M160 48V147M152 127V139M168 127V139" fill="none"/>' : ''}</g>`;
     } else if (zone === "Intérieur") {
-      shape =
-        '<rect x="90" y="36" width="140" height="165" rx="20" ' + body + "/>";
-      const seats = wide
-        ? [
-            [110, 55],
-            [175, 55],
-          ]
-        : van
-          ? [
-              [110, 55],
-              [175, 55],
-              [110, 105],
-              [175, 105],
-              [110, 155],
-              [175, 155],
-            ]
-          : [
-              [110, 55],
-              [175, 55],
-              [110, 132],
-              [175, 132],
-            ];
-      shape += seats
-        .map(
-          ([x, y]) =>
-            '<rect x="' +
-            x +
-            '" y="' +
-            y +
-            '" width="32" height="30" rx="7" ' +
-            glass +
-            "/>",
-        )
-        .join("");
-      if (wide)
-        shape += '<rect x="103" y="105" width="114" height="76" ' + body + "/>";
+      const seats = van ? (cargo ? [[119,70],[160,70],[201,70]] : [[119,70],[160,70],[201,70],[119,119],[160,119],[201,119],[119,168],[160,168],[201,168]]) : [[125,82],[195,82],[120,157],[160,157],[200,157]];
+      shape = `<g ${line}><rect x="87" y="36" width="146" height="171" rx="25" fill="#fff"/><path d="M99 56Q160 34 221 56M93 105H100M220 105H227" fill="none"/><circle cx="119" cy="55" r="9" fill="none"/>${seats.map(([x,y])=>`<rect x="${x-14}" y="${y}" width="28" height="28" rx="7" fill="#e5edf2"/><rect x="${x-11}" y="${y-5}" width="22" height="10" rx="4" fill="#cbd5e1"/>`).join('')}${cargo ? '<path d="M99 111H221V192H99Z M99 111L221 192M221 111L99 192" fill="none" stroke="#94a3b8"/>' : ''}</g>`;
     } else {
-      shape =
-        "<g " +
-        (zone === "Droite" ? 'transform="translate(320 0) scale(-1 1)"' : "") +
-        '><path d="M30 158V105L' +
-        (van ? "62 54H252L277 102" : "75 100L105 62H199L244 104") +
-        'L291 114V167H30Z" ' +
-        body +
-        '/><path d="M80 104L110 73H160V105Z M169 73H195L231 105H169Z" ' +
-        glass +
-        "/>" +
-        (van ? '<path d="M165 56V163 M225 56V163" stroke="#18443d"/>' : "") +
-        '<circle cx="83" cy="167" r="22" fill="#18443d"/><circle cx="240" cy="167" r="22" fill="#18443d"/><circle cx="83" cy="167" r="10" fill="#f6f2e9"/><circle cx="240" cy="167" r="10" fill="#f6f2e9"/></g>';
+      shape = `<g ${line} ${zone === "Droite" ? 'transform="translate(320 0) scale(-1 1)"' : ''}><path d="${van ? 'M24 158V72Q24 54 42 54H206Q221 54 230 72L250 112L285 123Q295 127 295 139V166H277Q274 139 249 139Q224 139 221 166H99Q95 139 71 139Q46 139 43 166H24Z' : 'M23 158V129Q24 121 42 117L78 108L106 71Q112 63 128 63H199Q212 63 223 81L247 111L283 120Q295 123 297 141V166H276Q272 139 249 139Q223 139 221 166H100Q96 139 71 139Q46 139 43 166H23Z'}" fill="#fff"/><path d="${van ? 'M175 67H207Q214 67 218 78L234 109H175Z' : 'M92 108L116 76H161V108Z M171 76H198Q206 76 213 87L229 108H171Z'}" fill="#e5edf2"/>${van && !cargo ? '<path d="M39 68H99V108H39Z M111 68H163V108H111Z" fill="#e5edf2"/>' : ''}<path d="M164 64V158M176 117H188M107 119H120M107 154H209M27 137H37M280 131H294" fill="none"/><path d="M${van ? '104 59V159' : '88 115L100 152'}" fill="none"/>${[71,249].map(x=>`<circle cx="${x}" cy="166" r="22" fill="#475569"/><circle cx="${x}" cy="166" r="14" fill="#e2e8f0"/><circle cx="${x}" cy="166" r="5" fill="#94a3b8"/><path d="M${x-10} 156L${x+10} 176M${x+10} 156L${x-10} 176"/>`).join('')}</g>`;
     }
     const marks = damages
       .filter((d) => d.zone === zone)
@@ -1901,12 +1847,12 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
     demo = false;
   cols.forEach((k) => (state[k] = []));
   const tabs = {
-    home: ["Accueil", "⌂"],
-    my: ["Mes créneaux", "▦"],
-    planning: ["Planning", "▤"],
-    contacts: ["Contacts", "☎"],
-    team: ["Équipe", "♙"],
-    vehicles: ["Véhicules", "▰"],
+    home: ["Accueil", "🏠"],
+    my: ["Mes créneaux", "🗓️"],
+    planning: ["Planning", "📋"],
+    contacts: ["Contacts", "📞"],
+    team: ["Équipe", "👥"],
+    vehicles: ["Véhicules", "🚐"],
     messages: ["Messages", "✉"],
     tools: ["Outils", "⚙"],
     admin: ["Administration", "◈"],
@@ -2288,7 +2234,7 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
       !rows("forms").some((x) => x.personId === myId() && x.status === "Reçu");
     if (pendingForm) page = "form";
     $("#app").innerHTML =
-      `<header class="topbar"><div class="brand small">BEAU<br>REGARD<em>.</em></div><div class="identity"><div><b>${esc(session.user.name)}</b><br><small>${esc({ admin: "Organisation", referent: "Référent", benevole: "Bénévole", vehicles: "Réception véhicules" }[role()])}</small></div>${action("↗", "logout", {}, "quiet")}</div></header><main class="layout"><div class="row wrap"><small id="syncState">${esc(status())}</small>${action("Synchroniser", "sync", {}, "quiet small")}</div>${demo ? '<div class="alert orange">DÉMONSTRATION — données fictives, aucun envoi ni connexion à tes données.</div>' : ""}<div class="desktopnav">${nav.map((x) => action(tabs[x][0], "go", { page: x }, page === x ? "selected" : "")).join("")}</div><div id="content"></div></main><nav class="nav" id="nav" aria-label="Navigation principale"></nav>`;
+      `<header class="topbar"><div class="brand small">BEAU<br>REGARD<em>.</em></div><div class="identity"><div><b>${esc(session.user.name)}</b><br><small>${esc({ admin: "Organisation", referent: "Référent", benevole: "Bénévole", vehicles: "Réception véhicules" }[role()])}</small></div>${action("↗", "logout", {}, "quiet")}</div></header><main class="layout"><div class="row wrap"><small id="syncState">${esc(status())}</small>${action("Synchroniser", "sync", {}, "quiet small")}</div>${demo && !window.BEAUREGARD_CONFIG?.DEMO_ONLY ? '<div class="alert orange">DÉMONSTRATION — données fictives, aucun envoi ni connexion à tes données.</div>' : ""}<div class="desktopnav">${nav.map((x) => action(tabs[x][0], "go", { page: x }, page === x ? "selected" : "")).join("")}</div><div id="content"></div></main><nav class="nav" id="nav" aria-label="Navigation principale"></nav>`;
     drawNav();
     if (
       role() === "benevole" &&
@@ -2320,7 +2266,7 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
     if (page === "contacts" || page === "team")
       $("#search")?.addEventListener("input", (e) => {
         filter = e.target.value;
-        $("#peopleList").innerHTML = peopleList(page === "team");
+        $("#peopleList").innerHTML = page === "contacts" ? contactRows() : peopleList(true);
       });
     if (page === "team")
       $("#teamfilter")?.addEventListener("change", (e) => {
@@ -2329,30 +2275,17 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
       });
   }
   function drawNav() {
-    let nav = navItems(),
-      circular = staff();
-    let i = nav.indexOf(page);
-    if (i < 0) i = 0;
-    const items = circular
-      ? [-2, -1, 0, 1, 2].map((n) => nav[(i + n + nav.length) % nav.length])
-      : nav;
-    $("#nav").innerHTML = items
-      .map(
-        (x, n) =>
-          `<button data-act="go" data-args="${esc(JSON.stringify({ page: x }))}" class="${x === page ? "active" : ""} ${circular && n !== 2 ? "neighbor" : ""}" ${x === page ? 'aria-current="page"' : ""}><span class="nav-icon">${tabs[x][1]}</span>${x === "admin" ? "Admin." : tabs[x][0]}</button>`,
-      )
-      .join("");
-    if (circular) {
-      let start;
-      $("#nav").onpointerdown = (e) => (start = e.clientX);
-      $("#nav").onpointerup = (e) => {
-        if (start == null || Math.abs(e.clientX - start) < 45) return;
-        const n = e.clientX < start ? 1 : -1;
-        page = nav[(i + n + nav.length) % nav.length];
-        render();
-        start = null;
-      };
-    }
+    const nav = navItems();
+    const primary = staff() ? ["home", "planning", "vehicles", "team"] : nav;
+    const extra = nav.filter(x => !primary.includes(x));
+    const item = x => `<button data-act="go" data-args="${esc(JSON.stringify({page:x}))}" class="${x === page ? "active" : ""}" ${x === page ? 'aria-current="page"' : ""}><span class="nav-icon" aria-hidden="true">${tabs[x][1]}</span>${tabs[x][0]}</button>`;
+    $("#nav").innerHTML = primary.map(item).join("") + (extra.length ? `<button id="moreNav" aria-expanded="false" aria-controls="extraNav"><span class="nav-icon" aria-hidden="true">⌃</span>Plus</button><div id="extraNav" class="extra-nav" hidden>${extra.map(item).join("")}</div>` : "");
+    $("#moreNav")?.addEventListener("click", () => {
+      const panel = $("#extraNav"), open = panel.hidden;
+      panel.hidden = !open;
+      $("#moreNav").setAttribute("aria-expanded", String(open));
+      $("#moreNav .nav-icon").textContent = open ? "⌄" : "⌃";
+    });
   }
   function parisNow() {
     const parts = new Intl.DateTimeFormat("fr-CA", {
@@ -2498,8 +2431,18 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
             .join(""))
     );
   }
+  function contactRows() {
+    const normalize = x => String(x).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    return rows("people").filter(p => p.role !== "referent" && normalize(BG.label(p)).includes(normalize(filter)))
+      .sort((a,b) => BG.label(a).localeCompare(BG.label(b), "fr"))
+      .map(p => `<div class="contact-row">${action(avatar(p) + `<span><strong>${esc(p.firstName)}</strong> ${esc(p.lastName)}</span>`, "contactDetail", {id:p.id}, "contact-person")}${p.phone ? `<a class="contact-call" aria-label="Appeler ${esc(BG.label(p))}" href="tel:${esc(p.phone.replace(/[^+\d]/g,""))}">📞</a>` : ""}</div>`).join("") || empty("Aucun bénévole trouvé.");
+  }
   function contacts() {
-    return `<h1>Contacts</h1><input id="search" type="search" placeholder="Rechercher une personne" value="${esc(filter)}" aria-label="Rechercher une personne"><div id="peopleList" class="cards" style="margin-top:18px">${peopleList(false)}</div>`;
+    const refs = rows("people").filter(p => p.role === "referent").sort((a,b) => {
+      const order=["hervé","jérôme","anthony"], rank=p=>{const i=order.indexOf(String(p.firstName).toLowerCase());return i<0?99:i;};
+      return rank(a)-rank(b)||BG.label(a).localeCompare(BG.label(b),"fr");
+    });
+    return `<div class="contacts-v1"><h1>Contacts</h1><section class="card contact-section"><h2>Référents</h2><div class="referents"><div class="referents-row">${refs.map(p=>`<button class="referent-tile" data-act="contactDetail" data-args="${esc(JSON.stringify({id:p.id}))}">${avatar(p)}<strong>${esc(p.firstName)}</strong>${p.phone ? `<small>📞 Appeler</small>` : ""}</button>`).join("")||"Aucun référent."}</div></div></section><div class="contact-search"><input id="search" type="search" placeholder="Rechercher un bénévole…" value="${esc(filter)}" aria-label="Rechercher un bénévole"></div><section class="card contact-section"><h2>Bénévoles</h2><div id="peopleList">${contactRows()}</div></section></div>`;
   }
   function team() {
     return `<div class="heading"><h1>L’équipe</h1>${role() === "admin" ? action("Ajouter", "edit", { collection: "people" }, "primary") : ""}</div><div class="toolbar"><input id="search" type="search" placeholder="Rechercher" value="${esc(filter)}" aria-label="Rechercher"><select id="teamfilter" aria-label="Rôle terrain">${["Tous", "Conducteurs", "Chargeurs", "Absents"].map((x) => `<option ${teamFilter === x ? "selected" : ""}>${x}</option>`).join("")}</select></div><div id="peopleList" class="cards">${peopleList(true)}</div>`;
@@ -3436,6 +3379,12 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
   }
   async function act(a, d) {
     switch (a) {
+      case "contactDetail": {
+        const p = rows("people").find(x => x.id === d.id);
+        if (p) modal(BG.label(p), `<div class="contact-detail">${avatar(p)}<p>${p.role === "referent" ? "Référent" : "Bénévole"}</p>${p.phone ? `<a class="btn primary" href="tel:${esc(p.phone.replace(/[^+\d]/g,""))}">📞 Appeler ${esc(p.firstName)}</a>` : "<p>Téléphone non renseigné.</p>"}</div>`);
+        break;
+      }
+
       case "go":
         page = d.page;
         filter = "";
