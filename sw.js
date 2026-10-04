@@ -1,10 +1,9 @@
 /* Beauregard V2 — service worker.
- * Deux rôles : la coquille (HTML/CSS/JS) et les données métier du dernier
- * bundle synchronisé, pour que l'application reste exploitable hors réseau.
+ * Rôle : servir la coquille (HTML/CSS/JS) même hors réseau.
  * L'API Apps Script n'est jamais mise en cache : ses appels sont en GET et
  * portent une action précise, un cache périmé serait dangereux.
  */
-const SHELL = 'beauregard-v2-shell-2';
+const SHELL = 'beauregard-v2-shell-3';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -13,6 +12,7 @@ const SHELL_FILES = [
   './themes/2027/theme.css',
   './config.js',
   './js/transport.js',
+  './js/boot.js',
   './app.js',
   './manifest.json',
   './icon.svg'
@@ -20,7 +20,10 @@ const SHELL_FILES = [
 
 self.addEventListener('install', (e) =>
   e.waitUntil(
-    caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting())
+    caches
+      .open(SHELL)
+      .then((c) => c.addAll(SHELL_FILES))
+      .then(() => self.skipWaiting())
   )
 );
 
@@ -39,22 +42,42 @@ self.addEventListener('activate', (e) =>
   )
 );
 
-/* Les données viennent du cache applicatif (localStorage) côté app.js.
- * Ici on ne sert que la coquille, avec repli hors ligne sur index.html. */
+/* Réseau d'abord, cache en secours. Le clone est fait AVANT que la réponse
+ * soit renvoyée à la page : un clone après consommation lève une erreur
+ * et le document n'est plus jamais servi. */
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  const u = new URL(e.request.url);
-  if (u.origin !== self.location.origin) return;
+  const req = e.request;
+  if (req.method !== 'GET') return;
+
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch (err) {
+    return;
+  }
+  if (url.origin !== self.location.origin) return;
+
   e.respondWith(
-    fetch(e.request)
-      .then((r) => {
-        if (r.ok) caches.open(SHELL).then((c) => c.put(e.request, r.clone()));
-        return r;
+    fetch(req)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          return caches
+            .open(SHELL)
+            .then((c) => c.put(req, copy))
+            .catch(() => {})
+            .then(() => response);
+        }
+        return response;
       })
       .catch(() =>
-        caches
-          .match(e.request)
-          .then((r) => r || caches.match('./index.html'))
+        caches.match(req).then(
+          (hit) =>
+            hit ||
+            (req.mode === 'navigate'
+              ? caches.match('./index.html')
+              : Promise.reject(new Error('hors ligne')))
+        )
       )
   );
 });
