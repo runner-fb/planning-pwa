@@ -3,7 +3,7 @@
  * L'API Apps Script n'est jamais mise en cache : ses appels sont en GET et
  * portent une action précise, un cache périmé serait dangereux.
  */
-const SHELL = 'beauregard-v2-shell-5';
+const SHELL = 'beauregard-v2-shell-6';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const SHELL_FILES = [
   './js/queue.js',
   './js/transport.js',
   './js/screens-team.js',
+  './js/screens-shifts.js',
   './app.js',
   './manifest.json',
   './icon.svg'
