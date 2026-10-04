@@ -51,7 +51,7 @@
   <div id="appShell" class="app-shell hidden">
     <aside class="side-rail">
       <a class="brand-lockup" href="#" onclick="navigate('home');return false">
-        <span class="brand-mark">B</span><span><b>BEAUREGARD</b><small>ESPACE FESTIVAL</small></span>
+        <span class="brand-mark">B</span><span><b>BEAUREGARD</b><span><small>ESPACE FESTIVAL</small></span></span>
       </a>
       <div class="edition-label" id="editionLabel">ÉDITION</div>
       <div id="desktopNav" class="desktop-nav"></div>
@@ -78,6 +78,7 @@
   </div>
 
   <div id="modalRoot"></div>
+
   <script src="./config.js"></script>
   <script src="./js/boot.js"></script>
   <script src="./js/queue.js"></script>
@@ -86,6 +87,6 @@
   <script src="./js/screens-shifts.js"></script>
   <script src="./js/screens-shifts-save.js"></script>
   <script src="./app.js"></script>
-  <script>if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));</script>
 </body>
 </html>
