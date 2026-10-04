@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#174d43">
-  <meta name="description" content="Espace bénévoles et organisation du Festival Beauregard">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./base.css">
@@ -17,16 +16,8 @@
       <span class="brand-mark">B</span>
       <div class="spinner" role="status" aria-live="polite"></div>
       <p class="boot-title" id="bootTitle">Préparation de ton espace…</p>
-      <p class="boot-note" id="bootNote">Le premier chargement peut prendre quelques instants : les données utiles sont téléchargées pour fonctionner hors ligne.</p>
+      <p class="boot-note" id="bootNote">Le premier chargement peut prendre quelques instants.</p>
       <div class="boot-track"><i id="bootBar"></i></div>
-      <ol class="boot-steps" id="bootSteps">
-        <li>Édition</li>
-        <li>Planning</li>
-        <li>Équipe</li>
-        <li>Concerts</li>
-        <li>Notifications</li>
-        <li>Finalisation</li>
-      </ol>
     </div>
   </section>
 
@@ -44,7 +35,6 @@
         <button class="button primary wide" type="submit">Entrer dans mon espace</button>
       </form>
       <p id="loginError" class="form-error" role="alert"></p>
-      <p class="fine-print">Bénévoles, référents et équipe d’organisation</p>
     </div>
   </section>
 
@@ -80,6 +70,7 @@
   <div id="modalRoot"></div>
 
   <script src="./config.js"></script>
+  <script src="./js/alive.js"></script>
   <script src="./js/boot.js"></script>
   <script src="./js/queue.js"></script>
   <script src="./js/transport.js"></script>
@@ -87,6 +78,5 @@
   <script src="./js/screens-shifts.js"></script>
   <script src="./js/screens-shifts-save.js"></script>
   <script src="./app.js"></script>
-  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));</script>
 </body>
 </html>
