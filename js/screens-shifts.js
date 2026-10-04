@@ -6,10 +6,17 @@
  * le jour choisi qui fait foi, jamais l'horloge — aucun décalage à
  * appliquer. L'ordre de la semaine est celui du festival : mardi → lundi.
  *
+ * REGROUPEMENT : LA DATE EST LA SEULE CLÉ.
+ * Deux lignes de même date appartiennent toujours au même bloc. Le libellé
+ * de jour ne crée jamais un groupe à lui : il sert à retrouver la date
+ * quand elle manque, pas à ouvrir un second bloc « Mercredi » à côté de
+ * « Mercredi 30/06 ».
+ *
  * LE FORMULAIRE N'ENVOIE QUE CE QUI EST SAISI.
  * Le serveur (Code.gs) attend : id, day, date, start, end, target,
- * vehicles, active, brunch. `ordre`, `c3` et le libellé sont CALCULÉS
- * côté serveur : le formulaire ne les envoie pas et ne les affiche pas.
+ * vehicles, active, brunch. `ordre`, `c3`, le libellé et la DATE sont
+ * CALCULÉS côté serveur : le formulaire ne les envoie pas et ne les
+ * affiche pas.
  *
  * CRÉNEAUX : mardi → lundi. CONCERTS : mercredi → dimanche, la plage
  * que le serveur accepte.
@@ -149,12 +156,36 @@
     return dayTitle(dateToDay(iso)) + " " + p[2] + "/" + p[1];
   };
 
-  /* Clé de regroupement : la date si on l'a, sinon le libellé de jour. */
-  var dayKeyOf = function (row) {
+  /* ------------------------------------------------------------------
+   * CLÉ DE REGROUPEMENT D'UNE LIGNE
+   *
+   * LA DATE EST LA SEULE CLÉ. Deux lignes de même date appartiennent
+   * toujours au même bloc, même si l'une porte un `day` et l'autre non.
+   *
+   * Si la date manque — ligne ancienne, ou réponse du serveur pas encore
+   * reçue — on retrouve la date de ce jour dans les données déjà chargées,
+   * au lieu d'ouvrir un second groupe intitulé « Mercredi ».
+   * Le libellé de jour ne sert de clé qu'en tout dernier recours.
+   * ------------------------------------------------------------------ */
+  var dayKeyOf = function (row, ctx) {
     var iso = isoDate(row && row.date);
     if (iso) return iso;
+
     var d = dateToDay(row && row.day);
-    return d || "autre";
+    if (!d) return "autre";
+
+    var data = (ctx && ctx.data) || {};
+    var trouve = "";
+    var chercher = function (liste) {
+      (liste || []).forEach(function (x) {
+        if (dateToDay(x.day || x.jour) !== d) return;
+        var v = isoDate(x.date);
+        if (v && (!trouve || v < trouve)) trouve = v;
+      });
+    };
+    chercher(data.concerts);
+    chercher(data.shifts);
+    return trouve || d;
   };
 
   var isFallbackKey = function (k) { return DAY_NAMES.indexOf(k) >= 0; };
@@ -201,7 +232,7 @@
 
     var byDay = {};
     list.forEach(function (s) {
-      var d = dayKeyOf(s);
+      var d = dayKeyOf(s, ctx);
       if (!byDay[d]) byDay[d] = [];
       byDay[d].push(s);
     });
@@ -274,17 +305,15 @@
   }
 
   /* Lecture du formulaire : SEULEMENT ce qui est saisi.
-   * Le jour est choisi, la date s'en deduit. `ordre`, `c3` et le libelle
-   * se calculent cote serveur : ils ne sont ni affiches, ni envoyes. */
+   * Le jour est choisi, la date s'en deduit cote serveur.
+   * `ordre`, `c3` et le libelle se calculent aussi cote serveur. */
   function readShift(form, ctx) {
     var f = form.elements;
     var get = function (n) { return f[n] ? String(f[n].value).trim() : ""; };
     var on = function (n) { return !!(f[n] && f[n].checked); };
-    var jour = jourKey(get("day"));
     return {
       id: get("id"),
-      day: jour,
-      date: dateDuJour(ctx, jour),
+      day: jourKey(get("day")),
       start: get("start"),
       end: get("end"),
       target: Number(get("target")) || 0,
@@ -301,7 +330,7 @@
 
     var byDay = {};
     list.forEach(function (c) {
-      var d = dayKeyOf(c);
+      var d = dayKeyOf(c, ctx);
       if (!byDay[d]) byDay[d] = [];
       byDay[d].push(c);
     });
@@ -341,8 +370,6 @@
       ? { active: true, date: "" }
       : ((ctx.data.concerts || []).filter(function (x) { return x.id === id; })[0] || {});
 
-    var dateValue = isoDate(c.date);
-
     return '<div class="toolbar"><button class="button secondary" data-concerts="back">\u2039 Concerts</button>' +
       '<span class="badge">' + (isNew ? "Nouveau concert" : "Modifier le concert") + "</span></div>" +
       '<form id="concertForm" data-mode="' + (isNew ? "new" : "edit") + '" data-id="' + esc(c.id || "") + '" class="form-grid">' +
@@ -367,18 +394,16 @@
         "</div>");
   }
 
-  /* Même principe : le jour est choisi, la date s'en déduit.
+  /* Même principe : le jour est choisi, la date s'en deduit cote serveur.
    * Le serveur n'accepte que mercredi -> dimanche. */
-  function readConcert(form, ctx) {
+  function readConcert(form) {
     var f = form.elements;
     var get = function (n) { return f[n] ? String(f[n].value).trim() : ""; };
     var on = function (n) { return !!(f[n] && f[n].checked); };
-    var jour = jourKey(get("day"));
     return {
       artist: get("artist"),
-      day: jour,
-      jour: jour,
-      date: dateDuJour(ctx, jour),
+      day: jourKey(get("day")),
+      jour: jourKey(get("day")),
       scene: get("scene"),
       start: get("start"),
       end: get("end"),
