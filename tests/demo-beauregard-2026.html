@@ -2435,7 +2435,7 @@ window.Transport = async function (action, data = {}, session = {}, opId) {
     const normalize = x => String(x).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     return rows("people").filter(p => p.role !== "referent" && normalize(BG.label(p)).includes(normalize(filter)))
       .sort((a,b) => BG.label(a).localeCompare(BG.label(b), "fr"))
-      .map(p => `<div class="contact-row">${action(avatar(p) + `<span><strong>${esc(p.firstName)}</strong> ${esc(p.lastName)}</span>`, "contactDetail", {id:p.id}, "contact-person")}${p.phone ? `<a class="contact-call" aria-label="Appeler ${esc(BG.label(p))}" href="tel:${esc(p.phone.replace(/[^+\d]/g,""))}">📞</a>` : ""}</div>`).join("") || empty("Aucun bénévole trouvé.");
+      .map(p => `<div class="contact-row"><button class="contact-person" data-act="contactDetail" data-args="${esc(JSON.stringify({id:p.id}))}">${avatar(p)}<span><strong>${esc(p.firstName)}</strong> ${esc(p.lastName)}</span></button>${p.phone ? `<a class="contact-call" aria-label="Appeler ${esc(BG.label(p))}" href="tel:${esc(p.phone.replace(/[^+\d]/g,""))}">📞</a>` : ""}</div>`).join("") || empty("Aucun bénévole trouvé.");
   }
   function contacts() {
     const refs = rows("people").filter(p => p.role === "referent").sort((a,b) => {
