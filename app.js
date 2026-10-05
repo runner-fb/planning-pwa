@@ -1,4 +1,4 @@
-/* Beauregard V2 — app.js (socle, Équipe, Créneaux, Concerts)
+/* Beauregard V2 — app.js (socle, Équipe, Créneaux, Concerts, Préparation)
  * Transport = fetch GET JSON, repris de la V1.
  * Queue = file d'actions hors ligne (IndexedDB, point 62 du cahier des charges).
  *
@@ -12,6 +12,10 @@
  *
  * SUPPRESSION : une action "remove", jamais un active:false.
  * La ligne est retirée par son id, rien d'autre.
+ *
+ * PRÉPARATION : quatre blocs dépliables, chacun s'enregistrant seul.
+ * Voir renderSetup et saveSetupBloc pour la double nomenclature
+ * lecture (bundle) / écriture (feuille CONFIG_EDITION).
  */
 (function () {
   "use strict";
@@ -80,7 +84,7 @@
 
   var state = {
     user: null, role: "", data: null, page: "home", version: 0, pending: 0,
-    personId: "", shiftMode: "", shiftId: "", concertMode: "", concertId: ""
+    personId: "", shiftMode: "", shiftId: "", concertMode: "", concertId: "", open: ""
   };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
@@ -233,6 +237,7 @@
     var more = $("#navMore");
     if (more) more.setAttribute("aria-expanded", "false");
     state.page = key;
+    state.open = "";
     if (key !== "team") state.personId = "";
     if (key !== "creneaux") { state.shiftMode = ""; state.shiftId = ""; }
     if (key !== "concerts") { state.concertMode = ""; state.concertId = ""; }
@@ -619,38 +624,189 @@
     wirePageContent();
   }
 
-  /* ---------- Préparation ---------- */
+  /* ------------------------------------------------------------------
+   * PRÉPARATION — LES GRANDES LIGNES DE L'ÉDITION
+   *
+   * Quatre blocs dépliables. Chaque bloc s'enregistre SEUL : on n'envoie
+   * que ses champs, jamais la configuration entière. L'action serveur
+   * "config" accepte les modifications partielles.
+   *
+   * DEUX NOMENCLATURES, UNE SEULE RÈGLE :
+   *   en LECTURE  → les propriétés reçues dans le bundle :
+   *                 year, name, phase, date_debut, date_fin,
+   *                 vehiclesPlanned, reserveA, quotaMin, quotaMax,
+   *                 formOpen, appOpen
+   *   en ÉCRITURE → les clés de la feuille CONFIG_EDITION :
+   *                 annee, nom_edition, phase, date_debut, date_fin,
+   *                 vehicules_prevus, reserve_a, quota_min, quota_max,
+   *                 formulaire_ouvert, app_ouverte
+   * C'est asymétrique, et c'est voulu : le backend traduit à la lecture.
+   * ------------------------------------------------------------------ */
+  var PHASES = ["Préparation", "Test", "Active", "Archive"];
+
+  /* Une date ISO pour un champ type=date : les dix premiers caractères. */
+  function isoJour(v) {
+    var s = String(v || "").trim().slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+  }
+
+  /* Enregistrement d'UN bloc. On n'envoie que ses champs, sous les clés
+   * attendues par la feuille CONFIG_EDITION. */
+  function saveSetupBloc(id) {
+    var host = document.getElementById("pageContent");
+    if (!host) return;
+    var ouvert = host.querySelector(".acc-body");
+    if (!ouvert) { notice("Ouvre un bloc avant d'enregistrer.", "error"); return; }
+
+    var champs = ouvert.querySelectorAll("input, select");
+    var get = function (nom) {
+      for (var i = 0; i < champs.length; i++) if (champs[i].name === nom) return champs[i];
+      return null;
+    };
+    var val = function (nom) { var e = get(nom); return e ? String(e.value).trim() : ""; };
+    var on = function (nom) { var e = get(nom); return !!(e && e.checked); };
+
+    var charge = {};
+    if (id === "edition") {
+      var annee = val("annee");
+      var d1 = val("date_debut"), d2 = val("date_fin");
+      if (!/^\d{4}$/.test(annee)) { notice("L\u2019année doit comporter 4 chiffres.", "error"); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d1) || !/^\d{4}-\d{2}-\d{2}$/.test(d2)) {
+        notice("Les deux dates sont obligatoires.", "error"); return;
+      }
+      if (d1 >= d2) { notice("Le premier jour doit précéder le dernier.", "error"); return; }
+      charge = { annee: Number(annee), nom_edition: val("nom_edition"), phase: val("phase"), date_debut: d1, date_fin: d2 };
+    } else if (id === "planning") {
+      var vp = Number(val("vehicules_prevus")), qmin = Number(val("quota_min")), qmax = Number(val("quota_max"));
+      if (!isFinite(vp) || vp < 0) { notice("Nombre de véhicules invalide.", "error"); return; }
+      if (!isFinite(qmin) || !isFinite(qmax) || qmin < 0 || qmax > 100) { notice("Quotas hors limites (0 à 100).", "error"); return; }
+      if (qmin > qmax) { notice("Le quota minimal dépasse le maximal.", "error"); return; }
+      charge = { vehicules_prevus: vp, quota_min: qmin, quota_max: qmax, reserve_a: on("reserve_a") };
+    } else if (id === "ouvertures") {
+      charge = { formulaire_ouvert: on("formulaire_ouvert"), app_ouverte: on("app_ouverte") };
+    } else {
+      return;
+    }
+
+    notice("Enregistrement\u2026", "info");
+    Transport.mutate("config", charge)
+      .then(function (out) {
+        if (out && out.config) state.data.config = out.config;
+        else if (out && out.year !== undefined) state.data.config = out;
+        saveLocal();
+        notice("Enregistré.", "success");
+        syncNow();
+      })
+      .catch(function (e) { notice(String((e && e.message) || e), "error"); });
+  }
+
   function renderSetup(c, d) {
     var cfg = d.config || {};
     var n = function (k) { return (d[k] || []).filter(function (x) { return !x.deleted; }).length; };
     var withCode = (d.access || []).filter(function (a) { return a.hasCode; }).length;
-    var blocks = [
-      ["Équipe", n("people") + " fiche(s)"],
-      ["Créneaux", n("shifts") + " créneau(x)"],
-      ["Concerts", n("concerts") + " concert(s)"],
-      ["Missions", n("missions") + " mission(s)"],
-      ["Véhicules prévus", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner"],
-      ["Accès", withCode + " code(s) créé(s)"],
-      ["Formulaire", cfg.formOpen ? "ouvert" : "fermé"]
+    var ouvre = function (id) { return state.open === id; };
+
+    var phaseOptions = PHASES.map(function (p) {
+      return '<option value="' + esc(p) + '"' + (String(cfg.phase || "") === p ? " selected" : "") + ">" + esc(p) + "</option>";
+    }).join("");
+
+    var entete = function (id, titre, resume) {
+      return '<button type="button" class="acc-head" data-setup="' + id + '" aria-expanded="' + (ouvre(id) ? "true" : "false") + '">' +
+        '<span class="acc-title">' + esc(titre) + "</span>" +
+        '<span class="acc-sub">' + esc(resume) + "</span>" +
+        '<span class="acc-arrow">' + (ouvre(id) ? "\u25B4" : "\u25BE") + "</span>" +
+        "</button>";
+    };
+
+    var bloc = function (id, titre, resume, corps) {
+      return '<article class="card acc">' + entete(id, titre, resume) +
+        (ouvre(id) ? '<div class="acc-body">' + corps + "</div>" : "") + "</article>";
+    };
+
+    /* ---------- 1. ÉDITION ---------- */
+    var blocEdition =
+      '<div class="form-grid">' +
+      '<div><label>Année<input name="annee" type="number" min="2000" max="2100" step="1" inputmode="numeric" value="' + esc(cfg.year || "") + '"></label></div>' +
+      '<div><label>Nom de l\u2019édition<input name="nom_edition" value="' + esc(cfg.name || "") + '"></label></div>' +
+      '<div><label>Phase<select name="phase"><option value="">\u2014</option>' + phaseOptions + "</select></label></div>" +
+      '<div><label>Premier jour<input name="date_debut" type="date" value="' + esc(isoJour(cfg.date_debut)) + '"></label></div>' +
+      '<div><label>Dernier jour<input name="date_fin" type="date" value="' + esc(isoJour(cfg.date_fin)) + '"></label></div>' +
+      '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="edition">Enregistrer l\u2019édition</button></div>' +
+      "</div>";
+
+    /* ---------- 2. PARAMÈTRES PLANNING ---------- */
+    var blocPlanning =
+      '<div class="form-grid">' +
+      '<div><label>Véhicules prévus<input name="vehicules_prevus" type="number" min="0" step="1" inputmode="numeric" value="' + esc(cfg.vehiclesPlanned || 0) + '"></label></div>' +
+      '<div><label>Part Conducteur minimale (%)<input name="quota_min" type="number" min="0" max="100" step="1" inputmode="numeric" value="' + esc(cfg.quotaMin || 0) + '"></label></div>' +
+      '<div><label>Part Conducteur maximale (%)<input name="quota_max" type="number" min="0" max="100" step="1" inputmode="numeric" value="' + esc(cfg.quotaMax || 0) + '"></label></div>' +
+      '<div class="full contraintes">' +
+      '<label class="check"><input type="checkbox" name="reserve_a"' + (cfg.reserveA === false ? "" : " checked") + "><span>Véhicule A réservé aux référents</span></label>" +
+      "</div>" +
+      '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="planning">Enregistrer les paramètres</button></div>' +
+      "</div>";
+
+    /* ---------- 3. OUVERTURES ---------- */
+    var blocOuvertures =
+      '<div class="form-grid">' +
+      '<div class="full contraintes">' +
+      '<label class="check"><input type="checkbox" name="formulaire_ouvert"' + (cfg.formOpen ? " checked" : "") + "><span>Formulaire ouvert aux bénévoles</span></label>" +
+      '<label class="check"><input type="checkbox" name="app_ouverte"' + (cfg.appOpen ? " checked" : "") + "><span>Application terrain ouverte</span></label>" +
+      "</div>" +
+      '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="ouvertures">Enregistrer les ouvertures</button></div>' +
+      "</div>";
+
+    /* ---------- 4. ÉTAT DE LA PRÉPARATION ---------- */
+    var blocsEtat = [
+      ["Équipe", n("people") + " fiche(s)", n("people") ? "good" : "bad"],
+      ["Créneaux", n("shifts") + " créneau(x)", n("shifts") ? "good" : "bad"],
+      ["Concerts", n("concerts") + " concert(s)", n("concerts") ? "good" : "bad"],
+      ["Missions", n("missions") + " mission(s)", n("missions") ? "good" : ""],
+      ["Véhicules prévus", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner", cfg.vehiclesPlanned ? "good" : "bad"],
+      ["Accès", withCode + " code(s) créé(s)", withCode ? "good" : "bad"],
+      ["Formulaire", cfg.formOpen ? "ouvert" : "fermé", cfg.formOpen ? "good" : ""]
     ];
+    var corpsEtat = blocsEtat.map(function (b) { return listRow(b[0], b[1], "", b[2]); }).join("") +
+      '<div class="toolbar" style="margin-top:12px">' +
+      '<button type="button" class="button secondary" data-page="team">Équipe</button>' +
+      '<button type="button" class="button secondary" data-page="creneaux">Créneaux</button>' +
+      '<button type="button" class="button secondary" data-page="concerts">Concerts</button>' +
+      "</div>";
+
     c.innerHTML =
       '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
       esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
       '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
-      '<div class="toolbar">' +
-      '<button class="button secondary" data-page="team">Équipe</button>' +
-      '<button class="button secondary" data-page="creneaux">Créneaux</button>' +
-      '<button class="button secondary" data-page="concerts">Concerts</button>' +
-      "</div>" +
-      card("État de la préparation", blocks.map(function (b) { return listRow(b[0], b[1], "", ""); }).join("")) +
-      card("État de l'appareil",
+
+      bloc("edition", "Édition", cfg.year ? "Année " + cfg.year : "à renseigner", blocEdition) +
+      bloc("planning", "Paramètres planning", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner", blocPlanning) +
+      bloc("ouvertures", "Ouvertures", (cfg.formOpen ? "Formulaire ouvert" : "Formulaire fermé"), blocOuvertures) +
+      bloc("etat", "État de la préparation", "compteurs et accès", corpsEtat) +
+
+      card("État de l\u2019appareil",
         listRow("Version des données", "V" + state.version, "", "") +
         listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune", state.pending ? "bad" : "good") +
         listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", ""));
+
+    /* Les boutons sont recréés à chaque rendu : les écouteurs sont posés
+     * sur le conteneur, jamais sur les boutons eux-mêmes. */
+    var host = document.getElementById("pageContent");
+    if (host) {
+      Array.prototype.forEach.call(host.querySelectorAll("[data-setup]"), function (b) {
+        b.onclick = function () {
+          var id = String(b.dataset.setup || "");
+          state.open = state.open === id ? "" : id;
+          render();
+        };
+      });
+      Array.prototype.forEach.call(host.querySelectorAll("[data-setup-save]"), function (b) {
+        b.onclick = function () { saveSetupBloc(String(b.dataset.setupSave || "")); };
+      });
+    }
     wireNav();
   }
 
-  /* ---------- Autres écrans ---------- */
+  /* ---------- Préparation : suite des écrans ---------- */
   function renderHome(c, d) {
     var cfg = d.config || {};
     var uid = state.user && state.user.id;
@@ -885,6 +1041,7 @@
     try { Transport.logout().catch(function () {}); } catch (e) {}
     state.user = null; state.data = null; state.personId = "";
     state.shiftMode = ""; state.shiftId = ""; state.concertMode = ""; state.concertId = "";
+    state.open = "";
     try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
     if (window.Queue) Queue.clear().catch(function () {});
     var s = $("#appShell"); if (s) s.classList.add("hidden");
