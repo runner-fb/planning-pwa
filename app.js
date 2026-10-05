@@ -42,9 +42,9 @@
 
   var NAV = {
     benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]],
-    referent: [["Équipe", "team"], ["Créneaux", "creneaux"], ["Planning", "planning"], ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]],
+        referent: [["Équipe", "team"], ["Créneaux", "creneaux"], ["Planning", "planning"], ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]],
     admin: [
-      ["Préparation", "setup"], ["Bénévoles", "team"], ["Concerts", "concerts"],
+      [["Préparation", "setup"], ["Bénévoles", "team"], ["Concerts", "concerts"],
       ["Véhicules", "vehicles"], ["Messages", "messages"], ["Contacts", "contacts"]
     ],
     vehicles: [["Accueil", "home"], ["Véhicules", "vehicles"]]
@@ -279,3 +279,828 @@
     if (p === "setup") return renderSetup(c, d);
     c.innerHTML = empty("Module en préparation", "Cet écran sera branché à l'étape suivante.");
   }
+
+  /* ---------- Équipe ---------- */
+  function renderTeam(c, d) {
+    var T = window.ScreenTeam;
+    if (!T) { c.innerHTML = empty("Écran indisponible", "Le module Équipe n'est pas chargé."); return; }
+    c.innerHTML = state.personId ? T.sheet({ data: d }, state.personId) : T.list({ data: d });
+    wireTeam();
+  }
+
+  function wireTeam() {
+    var T = window.ScreenTeam;
+    if (!T) return;
+
+    var search = $("#teamSearch");
+    if (search) {
+      search.oninput = function () {
+        T.setFilter(search.value);
+        var c = $("#pageContent");
+        c.innerHTML = T.list({ data: state.data || {} });
+        wireTeam();
+        var again = $("#teamSearch");
+        if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+      };
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-person]"), function (b) {
+      b.onclick = function () {
+        state.personId = String(b.dataset.person || "");
+        render();
+      };
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-team]"), function (b) {
+      b.onclick = function () {
+        var act = b.dataset.team;
+        if (act === "back") { state.personId = ""; render(); return; }
+        if (act === "new") { openPersonForm(); return; }
+        if (act === "remove") { removePerson(); return; }
+        if (act === "access-one") { createAccessOne(b.dataset.id || state.personId); return; }
+        if (act === "access") { createAccessBatch(); return; }
+        if (act === "copy") { copyCodes(b.dataset.payload || ""); return; }
+      };
+    });
+
+    var form = $("#personForm");
+    if (form) {
+      form.onsubmit = function (e) { e.preventDefault(); savePerson(form); };
+    }
+  }
+
+  function openPersonForm() {
+    var c = $("#pageContent");
+    c.innerHTML = window.ScreenTeam.blank();
+    state.personId = "";
+    wireTeam();
+  }
+
+  function savePerson(form) {
+    var data = window.ScreenTeam.readForm(form);
+    if (!data.lastName || !data.firstName) { notice("Nom et prénom obligatoires.", "error"); return; }
+
+    var row = data, base = null, baseVersion = 0;
+    if (state.personId) {
+      var old = (state.data.people || []).filter(function (x) { return x.id === state.personId; })[0];
+      if (old) {
+        row = Object.assign({}, old, data);
+        row.id = old.id;
+        base = old;
+        baseVersion = old.version || 0;
+      }
+    } else {
+      row.id = "p-" + Transport.requestId().slice(0, 8);
+    }
+
+    sendSave("people", row, baseVersion, base)
+      .then(function () {
+        notice("Fiche enregistrée.", "success");
+        state.data.people = (state.data.people || []).filter(function (x) { return x.id !== row.id; }).concat([row]);
+        saveLocal();
+        state.personId = row.id;
+        render();
+      })
+      .catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function removePerson() {
+    var id = state.personId;
+    if (!id) return;
+    var p = (state.data.people || []).filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    if (!window.confirm("Supprimer la fiche de " + personLabel(id) + " ?\nLa personne sera retirée de la base active.")) return;
+    var row = Object.assign({}, p, { deleted: true });
+    sendSave("people", row, p.version || 0, p)
+      .then(function () {
+        state.data.people = (state.data.people || []).filter(function (x) { return x.id !== id; });
+        saveLocal();
+        state.personId = "";
+        notice("Fiche supprimée.", "success");
+        render();
+      })
+      .catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function accessRow(personId, code, alreadyShown) {
+    var p = (state.data.people || []).filter(function (x) { return x.id === personId; })[0];
+    if (!p) return { nom: personId, prenom: "(fiche locale inconnue)", code: code || "", alreadyShown: !!alreadyShown };
+    return { nom: p.lastName, prenom: p.firstName, code: code || "", alreadyShown: !!alreadyShown };
+  }
+
+  function createAccessOne(id) {
+    var target = String(id || state.personId || "");
+    if (!target) { notice("Aucune fiche sélectionnée.", "error"); return; }
+
+    Transport.mutate("access", { personId: target })
+      .then(function (out) {
+        var pid = (out && out.personId) || target;
+        var code = (out && out.code) || "";
+        var shown = !!(out && out.codeAlreadyShown);
+        var c = $("#pageContent");
+        c.innerHTML = window.ScreenTeam.accessResult([accessRow(pid, code, shown)]);
+        wireTeam();
+      })
+      .catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function createAccessBatch() {
+    var people = (state.data.people || []).filter(function (p) { return !p.deleted && p.status !== "Désisté"; });
+    if (!people.length) { notice("Aucune personne active.", "error"); return; }
+    if (!window.confirm("Créer les accès pour " + people.length + " personne(s) ?\nLes codes existants seront remplacés.")) return;
+
+    var rows = [];
+    var chain = Promise.resolve();
+    people.forEach(function (p) {
+      chain = chain.then(function () {
+        return Transport.mutate("access", { personId: p.id }).then(function (out) {
+          var pid = (out && out.personId) || p.id;
+          rows.push(accessRow(pid, (out && out.code) || "", !!(out && out.codeAlreadyShown)));
+        }).catch(function () {});
+      });
+    });
+    chain.then(function () {
+      var c = $("#pageContent");
+      c.innerHTML = window.ScreenTeam.accessResult(rows);
+      wireTeam();
+    });
+  }
+
+  function copyCodes(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(
+        function () { notice("Liste copiée.", "success"); },
+        function () { notice("Copie impossible sur cet appareil.", "error"); }
+      );
+    } else {
+      notice("Copie impossible sur cet appareil.", "error");
+    }
+  }
+
+  /* ---------- Créneaux ---------- */
+  function renderCreneaux(c, d) {
+    var S = window.ScreenShifts;
+    if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Créneaux n'est pas chargé."); return; }
+    if (!state.shiftMode) { c.innerHTML = S.shifts({ data: d }); return; }
+    c.innerHTML = S.shiftForm({ data: d }, state.shiftMode, state.shiftId);
+  }
+
+  /* ---------- Concerts ---------- */
+  function renderConcerts(c, d) {
+    var S = window.ScreenShifts;
+    if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Concerts n'est pas chargé."); return; }
+    if (!state.concertMode) { c.innerHTML = S.concerts({ data: d }); return; }
+    c.innerHTML = S.concertForm({ data: d }, state.concertMode, state.concertId);
+  }
+
+  /* ---------- Action déléguée des créneaux et concerts ---------- */
+  function scenesAction(b) {
+    if (b.dataset.creneaux !== undefined) { state.shiftMode = ""; state.shiftId = ""; render(); return; }
+    if (b.dataset.concerts !== undefined) { state.concertMode = ""; state.concertId = ""; render(); return; }
+    if (b.dataset.newShift !== undefined) { state.shiftMode = "new"; state.shiftId = ""; render(); return; }
+    if (b.dataset.newConcert !== undefined) { state.concertMode = "new"; state.concertId = ""; render(); return; }
+    if (b.dataset.shift) { state.shiftMode = "edit"; state.shiftId = String(b.dataset.shift); render(); return; }
+    if (b.dataset.concert) { state.concertMode = "edit"; state.concertId = String(b.dataset.concert); render(); return; }
+    if (b.dataset.shiftReset !== undefined || b.dataset.concertReset !== undefined) {
+      notice("Champs rechargés depuis les données enregistrées.", "info");
+      render();
+      return;
+    }
+    if (b.dataset.shiftRemove !== undefined) { removeShift(); return; }
+    if (b.dataset.concertRemove !== undefined) { removeConcert(); return; }
+  }
+
+  function removeShift() {
+    var s = (state.data.shifts || []).filter(function (x) { return x.id === state.shiftId; })[0];
+    if (!s) return;
+    if (!window.confirm("Supprimer le créneau " + (s.name || s.id) + " ?")) return;
+
+    /* Meme regle que pour les concerts : suppression reelle par id.
+     * On n'envoie jamais active:false pour simuler une suppression. */
+    sendRemove("shifts", s.id).then(function () {
+      state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== s.id; });
+      saveLocal();
+      state.shiftMode = "";
+      state.shiftId = "";
+      notice("Créneau supprimé.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function removeConcert() {
+    var k = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
+    if (!k) return;
+    if (!window.confirm("Supprimer le concert " + (k.artist || k.id) + " ?")) return;
+
+    /* Suppression reelle : le serveur retire la ligne par son id et
+     * renumeroie la programmation. On ne simule rien avec active:false. */
+    sendRemove("concerts", k.id).then(function () {
+      state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== k.id; });
+      saveLocal();
+      state.concertMode = "";
+      state.concertId = "";
+      notice("Concert supprimé.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function saveShift(row, old) {
+    var full = old ? Object.assign({}, old, row) : row;
+    full.version = old ? old.version || 0 : 0;
+    sendSave("shifts", full, old ? old.version || 0 : 0, old).then(function (out) {
+      /* Le serveur est la source de verite : il calcule `day`, `order`,
+       * `c3` et le libelle. Sa reponse remplace la copie locale, sinon
+       * un creneau cree sans date garde une date vide et se retrouve
+       * dans un groupe separe. */
+      var definitif = (out && out.row) ? out.row : full;
+      state.data.shifts = (state.data.shifts || []).filter(function (x) { return x.id !== definitif.id; }).concat([definitif]);
+      saveLocal();
+      state.shiftMode = "";
+      state.shiftId = "";
+      notice("Créneau " + full.id + " enregistré.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  function saveConcert(row, old) {
+    var full = old ? Object.assign({}, old, row) : row;
+    if (!full.id) full.id = "co-" + Transport.requestId().slice(0, 8);
+    full.version = old ? old.version || 0 : 0;
+    sendSave("concerts", full, old ? old.version || 0 : 0, old).then(function (out) {
+      /* Le serveur renvoie la ligne definitive, avec sa `date` deduite
+       * du jour choisi. C'est ELLE qu'on garde : sans ca, un concert
+       * cree arrive avec date vide et forme un second groupe « Mercredi »
+       * a cote du vrai groupe « Mercredi 30/06 ». */
+      var definitif = (out && out.row) ? out.row : full;
+      state.data.concerts = (state.data.concerts || []).filter(function (x) { return x.id !== definitif.id; }).concat([definitif]);
+      saveLocal();
+      state.concertMode = "";
+      state.concertId = "";
+      notice("Concert enregistré.", "success");
+      render();
+    }).catch(function (e) { notice(String(e.message || e), "error"); });
+  }
+
+  /* ------------------------------------------------------------------
+   * ÉCOUTEUR UNIQUE DES CRÉNEAUX ET CONCERTS
+   * Un seul écouteur, posé sur #pageContent qui existe en permanence.
+   * Il n'est jamais posé sur un bouton : les boutons sont recréés à
+   * chaque render(), un gestionnaire posé dessus ne survivrait pas.
+   * L'enregistrement ne dépend pas de l'événement submit.
+   * ------------------------------------------------------------------ */
+
+  var SELECTEUR_ACTIONS = [
+    "[data-creneaux]", "[data-concerts]",
+    "[data-new-shift]", "[data-new-concert]",
+    "[data-shift]", "[data-concert]",
+    "[data-shift-reset]", "[data-concert-reset]",
+    "[data-shift-remove]", "[data-concert-remove]",
+    "[data-save-shift]", "[data-save-concert]"
+  ].join(",");
+
+  function actionsListener(e) {
+    var b = e.target && e.target.closest ? e.target.closest(SELECTEUR_ACTIONS) : null;
+    if (!b) return;
+    var host = document.getElementById("pageContent");
+    if (host && !host.contains(b)) return;
+    e.preventDefault();
+
+    if (b.dataset.saveShift !== undefined) { handleShiftSave(); return; }
+    if (b.dataset.saveConcert !== undefined) { handleConcertSave(); return; }
+    scenesAction(b);
+  }
+
+  function wirePageContent() {
+    var host = document.getElementById("pageContent");
+    if (!host) return;
+    if (host.dataset.wired === "1") return;
+    host.dataset.wired = "1";
+    host.addEventListener("click", actionsListener);
+  }
+
+  /* Enregistrement d'un créneau : le mode est lu DANS le formulaire. */
+  function handleShiftSave() {
+    var f = document.getElementById("shiftForm");
+    var S = window.ScreenShifts;
+    if (!f || !S) { notice("Formulaire Créneaux indisponible.", "error"); return; }
+
+    var row = S.readShift(f, { data: state.data });
+    if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
+    if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
+    row.name = S.slotLabel(row.start, row.end, row.id);
+
+    var isNew = f.getAttribute("data-mode") === "new";
+    var current = f.getAttribute("data-id") || "";
+    var existant = (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
+    if (isNew && existant) { notice("Cet identifiant existe déjà.", "error"); return; }
+
+    var old = isNew ? null : (state.data.shifts || []).filter(function (x) { return x.id === current; })[0];
+    saveShift(row, old);
+  }
+
+  /* Enregistrement d'un concert : même principe. */
+  function handleConcertSave() {
+    var f = document.getElementById("concertForm");
+    var S = window.ScreenShifts;
+    if (!f || !S) { notice("Formulaire Concerts indisponible.", "error"); return; }
+
+    var con = S.readConcert(f);
+    if (!con.artist) { notice("Artiste obligatoire.", "error"); return; }
+    if (!con.start || !con.end) { notice("Horaires obligatoires.", "error"); return; }
+
+    var isNew = f.getAttribute("data-mode") === "new";
+    var current = f.getAttribute("data-id") || "";
+    var old = isNew ? null : (state.data.concerts || []).filter(function (x) { return x.id === current; })[0];
+    saveConcert(con, old);
+  }
+
+  /* Installation de l'écouteur, une seule fois, dès que #pageContent existe. */
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wirePageContent);
+  } else {
+    wirePageContent();
+  }
+
+  /* ------------------------------------------------------------------
+   * PRÉPARATION — LES GRANDES LIGNES DE L'ÉDITION
+   *
+   * Quatre blocs dépliables. Chaque bloc s'enregistre SEUL : on n'envoie
+   * que ses champs, jamais la configuration entière. L'action serveur
+   * "config" accepte les modifications partielles.
+   *
+   * DEUX NOMENCLATURES, UNE SEULE RÈGLE :
+   *   en LECTURE  → les propriétés reçues dans le bundle :
+   *                 year, name, phase, date_debut, date_fin,
+   *                 vehiclesPlanned, reserveA, quotaMin, quotaMax,
+   *                 formOpen, appOpen
+   *   en ÉCRITURE → les clés de la feuille CONFIG_EDITION :
+   *                 annee, nom_edition, phase, date_debut, date_fin,
+   *                 vehicules_prevus, reserve_a, quota_min, quota_max,
+   *                 formulaire_ouvert, app_ouverte
+   * C'est asymétrique, et c'est voulu : le backend traduit à la lecture.
+   * ------------------------------------------------------------------ */
+  var PHASES = ["Préparation", "Test", "Active", "Archive"];
+
+  /* Une date ISO pour un champ type=date : les dix premiers caractères. */
+  function isoJour(v) {
+    var s = String(v || "").trim().slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+  }
+
+  /* Enregistrement d'UN bloc. On n'envoie que ses champs, sous les clés
+   * attendues par la feuille CONFIG_EDITION. */
+  function saveSetupBloc(id) {
+    var host = document.getElementById("pageContent");
+    if (!host) return;
+    var ouvert = host.querySelector(".acc-body");
+    if (!ouvert) { notice("Ouvre un bloc avant d'enregistrer.", "error"); return; }
+
+    var champs = ouvert.querySelectorAll("input, select");
+    var get = function (nom) {
+      for (var i = 0; i < champs.length; i++) if (champs[i].name === nom) return champs[i];
+      return null;
+    };
+    var val = function (nom) { var e = get(nom); return e ? String(e.value).trim() : ""; };
+    var on = function (nom) { var e = get(nom); return !!(e && e.checked); };
+
+    var charge = {};
+    if (id === "edition") {
+      var annee = val("annee");
+      var d1 = val("date_debut"), d2 = val("date_fin");
+      if (!/^\d{4}$/.test(annee)) { notice("L\u2019année doit comporter 4 chiffres.", "error"); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d1) || !/^\d{4}-\d{2}-\d{2}$/.test(d2)) {
+        notice("Les deux dates sont obligatoires.", "error"); return;
+      }
+      if (d1 >= d2) { notice("Le premier jour doit précéder le dernier.", "error"); return; }
+      charge = { annee: Number(annee), nom_edition: val("nom_edition"), phase: val("phase"), date_debut: d1, date_fin: d2 };
+    } else if (id === "planning") {
+      var vp = Number(val("vehicules_prevus")), qmin = Number(val("quota_min")), qmax = Number(val("quota_max"));
+      if (!isFinite(vp) || vp < 0) { notice("Nombre de véhicules invalide.", "error"); return; }
+      if (!isFinite(qmin) || !isFinite(qmax) || qmin < 0 || qmax > 100) { notice("Quotas hors limites (0 à 100).", "error"); return; }
+      if (qmin > qmax) { notice("Le quota minimal dépasse le maximal.", "error"); return; }
+      charge = { vehicules_prevus: vp, quota_min: qmin, quota_max: qmax, reserve_a: on("reserve_a") };
+    } else if (id === "ouvertures") {
+      charge = { formulaire_ouvert: on("formulaire_ouvert"), app_ouverte: on("app_ouverte") };
+    } else {
+      return;
+    }
+
+    notice("Enregistrement\u2026", "info");
+    Transport.mutate("config", charge)
+      .then(function (out) {
+        if (out && out.config) state.data.config = out.config;
+        else if (out && out.year !== undefined) state.data.config = out;
+        saveLocal();
+        notice("Enregistré.", "success");
+        syncNow();
+      })
+      .catch(function (e) { notice(String((e && e.message) || e), "error"); });
+  }
+
+  function renderSetup(c, d) {
+    var cfg = d.config || {};
+    var n = function (k) { return (d[k] || []).filter(function (x) { return !x.deleted; }).length; };
+    var withCode = (d.access || []).filter(function (a) { return a.hasCode; }).length;
+    var ouvre = function (id) { return state.open === id; };
+
+    var phaseOptions = PHASES.map(function (p) {
+      return '<option value="' + esc(p) + '"' + (String(cfg.phase || "") === p ? " selected" : "") + ">" + esc(p) + "</option>";
+    }).join("");
+
+    var entete = function (id, titre, resume) {
+      return '<button type="button" class="acc-head" data-setup="' + id + '" aria-expanded="' + (ouvre(id) ? "true" : "false") + '">' +
+        '<span class="acc-title">' + esc(titre) + "</span>" +
+        '<span class="acc-sub">' + esc(resume) + "</span>" +
+        '<span class="acc-arrow">' + (ouvre(id) ? "\u25B4" : "\u25BE") + "</span>" +
+        "</button>";
+    };
+
+    var bloc = function (id, titre, resume, corps) {
+      return '<article class="card acc">' + entete(id, titre, resume) +
+        (ouvre(id) ? '<div class="acc-body">' + corps + "</div>" : "") + "</article>";
+    };
+
+    /* ---------- 1. ÉDITION ---------- */
+    var blocEdition =
+      '<div class="form-grid">' +
+      '<div><label>Année<input name="annee" type="number" min="2000" max="2100" step="1" inputmode="numeric" value="' + esc(cfg.year || "") + '"></label></div>' +
+      '<div><label>Nom de l\u2019édition<input name="nom_edition" value="' + esc(cfg.name || "") + '"></label></div>' +
+      '<div><label>Phase<select name="phase"><option value="">\u2014</option>' + phaseOptions + "</select></label></div>" +
+      '<div><label>Premier jour<input name="date_debut" type="date" value="' + esc(isoJour(cfg.date_debut)) + '"></label></div>' +
+      '<div><label>Dernier jour<input name="date_fin" type="date" value="' + esc(isoJour(cfg.date_fin)) + '"></label></div>' +
+      '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="edition">Enregistrer l\u2019édition</button></div>' +
+      "</div>";
+
+    /* ---------- 2. PARAMÈTRES PLANNING ---------- */
+    var blocPlanning =
+      '<div class="form-grid">' +
+      '<div><label>Véhicules prévus<input name="vehicules_prevus" type="number" min="0" step="1" inputmode="numeric" value="' + esc(cfg.vehiclesPlanned || 0) + '"></label></div>' +
+      '<div><label>Part Conducteur minimale (%)<input name="quota_min" type="number" min="0" max="100" step="1" inputmode="numeric" value="' + esc(cfg.quotaMin || 0) + '"></label></div>' +
+      '<div><label>Part Conducteur maximale (%)<input name="quota_max" type="number" min="0" max="100" step="1" inputmode="numeric" value="' + esc(cfg.quotaMax || 0) + '"></label></div>' +
+      '<div class="full contraintes">' +
+      '<label class="check"><input type="checkbox" name="reserve_a"' + (cfg.reserveA === false ? "" : " checked") + "><span>Véhicule A réservé aux référents</span></label>" +
+      "</div>" +
+      '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="planning">Enregistrer les paramètres</button></div>' +
+      "</div>";
+
+    /* ---------- 3. OUVERTURES ---------- */
+    var blocOuvertures =
+      '<div class="form-grid">' +
+      '<div class="full contraintes">' +
+      '<label class="check"><input type="checkbox" name="formulaire_ouvert"' + (cfg.formOpen ? " checked" : "") + "><span>Formulaire ouvert aux bénévoles</span></label>" +
+      '<label class="check"><input type="checkbox" name="app_ouverte"' + (cfg.appOpen ? " checked" : "") + "><span>Application terrain ouverte</span></label>" +
+      "</div>" +
+      '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="ouvertures">Enregistrer les ouvertures</button></div>' +
+      "</div>";
+
+    /* ---------- 4. ÉTAT DE LA PRÉPARATION ---------- */
+    var blocsEtat = [
+      ["Équipe", n("people") + " fiche(s)", n("people") ? "good" : "bad"],
+      ["Créneaux", n("shifts") + " créneau(x)", n("shifts") ? "good" : "bad"],
+      ["Concerts", n("concerts") + " concert(s)", n("concerts") ? "good" : "bad"],
+      ["Missions", n("missions") + " mission(s)", n("missions") ? "good" : ""],
+      ["Véhicules prévus", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner", cfg.vehiclesPlanned ? "good" : "bad"],
+      ["Accès", withCode + " code(s) créé(s)", withCode ? "good" : "bad"],
+      ["Formulaire", cfg.formOpen ? "ouvert" : "fermé", cfg.formOpen ? "good" : ""]
+    ];
+    var corpsEtat = blocsEtat.map(function (b) { return listRow(b[0], b[1], "", b[2]); }).join("") +
+      '<div class="toolbar" style="margin-top:12px">' +
+      '<button type="button" class="button secondary" data-page="team">Équipe</button>' +
+      '<button type="button" class="button secondary" data-page="creneaux">Créneaux</button>' +
+      '<button type="button" class="button secondary" data-page="concerts">Concerts</button>' +
+      "</div>";
+
+    c.innerHTML =
+      '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
+      esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
+      '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
+
+      bloc("edition", "Édition", cfg.year ? "Année " + cfg.year : "à renseigner", blocEdition) +
+      bloc("planning", "Paramètres planning", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner", blocPlanning) +
+      bloc("ouvertures", "Ouvertures", (cfg.formOpen ? "Formulaire ouvert" : "Formulaire fermé"), blocOuvertures) +
+      bloc("etat", "État de la préparation", "compteurs et accès", corpsEtat) +
+
+      card("État de l\u2019appareil",
+        listRow("Version des données", "V" + state.version, "", "") +
+        listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune", state.pending ? "bad" : "good") +
+        listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", ""));
+
+    /* Les boutons sont recréés à chaque rendu : les écouteurs sont posés
+     * sur le conteneur, jamais sur les boutons eux-mêmes. */
+    var host = document.getElementById("pageContent");
+    if (host) {
+      Array.prototype.forEach.call(host.querySelectorAll("[data-setup]"), function (b) {
+        b.onclick = function () {
+          var id = String(b.dataset.setup || "");
+          state.open = state.open === id ? "" : id;
+          render();
+        };
+      });
+      Array.prototype.forEach.call(host.querySelectorAll("[data-setup-save]"), function (b) {
+        b.onclick = function () { saveSetupBloc(String(b.dataset.setupSave || "")); };
+      });
+    }
+    wireNav();
+  }
+
+  /* ---------- Préparation : suite des écrans ---------- */
+  function renderHome(c, d) {
+    var cfg = d.config || {};
+    var uid = state.user && state.user.id;
+    var next = (d.assignments || [])
+      .filter(function (a) { return a.personId === uid; })
+      .map(function (a) { return shift(a.shiftId); })
+      .filter(Boolean)
+      .sort(function (a, b) { return String(a.date + a.start).localeCompare(String(b.date + b.start)); })[0];
+    var lab = $("#editionLabel");
+    if (lab) lab.textContent = (cfg.name || "Beauregard") + " " + (cfg.year || "");
+    var msgs = (d.messages || []).slice(0, 3);
+    c.innerHTML =
+      '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "BEAUREGARD") + "</p>" +
+      "<h2>" + esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
+      '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
+      '<div class="grid two" style="margin-top:16px">' +
+      card("Prochain rendez-vous", next
+        ? listRow(next.name, next.date + " · " + next.start + "–" + next.end, "Publié", "good")
+        : "<p>Ton planning apparaîtra dès sa publication.</p>") +
+      card("À lire", msgs.length
+        ? msgs.map(function (m) { return listRow(m.title, m.body, m.priority || "Info", m.priority === "Urgent" ? "bad" : ""); }).join("")
+        : "<p>Aucun message actif.</p>") +
+      "</div>";
+  }
+
+  function renderMyShifts(c, d) {
+    var uid = state.user && state.user.id;
+    var rots = (d.rotations || []).filter(function (r) { return r.personId === uid; });
+    var rows = (d.assignments || [])
+      .filter(function (a) { return a.personId === uid; })
+      .map(function (a) {
+        var s = shift(a.shiftId) || {};
+        var mine = rots.filter(function (r) { return r.shiftId === a.shiftId; });
+        var body = mine.length ? mine.map(function (r) { return r.start + "–" + r.end + " · " + r.role; }).join(" · ") : "Rôle à confirmer";
+        return '<article class="card"><h2>' + esc(s.name || "Créneau") + '</h2><p class="muted">' +
+          esc(s.date || "") + " · " + esc((s.start || "") + "–" + (s.end || "")) + "</p><p>" + esc(body) + "</p></article>";
+      }).join("");
+    c.innerHTML = rows || empty("Aucun créneau publié", "Ton planning personnel s'affichera ici.");
+  }
+
+  function renderPlanning(c, d) {
+    var rows = (d.assignments || []).map(function (a) {
+      var s = shift(a.shiftId) || {};
+      return listRow(personLabel(a.personId), (s.date || "") + " · " + (s.name || ""), s.start ? s.start + "–" + s.end : "");
+    });
+    c.innerHTML = rows.length
+      ? '<article class="card"><h2>Planning publié</h2>' + rows.join("") + "</article>"
+      : empty("Planning non publié", "Le planning collectif apparaîtra après publication.");
+  }
+
+  function renderContacts(c, d) {
+    var refs = [], others = [];
+    (d.people || []).forEach(function (p) {
+      if (p.deleted) return;
+      (p.role === "referent" ? refs : others).push(p);
+    });
+    var block = function (list) {
+      return list.map(function (p) {
+        var lbl = [p.firstName, p.lastName].filter(Boolean).join(" ");
+        return '<article class="card contact-card"><div class="contact-head">' +
+          (p.photo ? '<img class="avatar" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar">' + esc(lbl.slice(0, 1)) + "</span>") +
+          "<div><b>" + esc(lbl) + "</b><small>" + esc(p.role === "referent" ? "Référent" : "Bénévole") + "</small></div></div>" +
+          '<div class="contact-actions">' +
+          (p.phone ? '<a class="button secondary" href="tel:' + esc(p.phone) + '">Appeler</a>' : "") +
+          (p.email ? '<a class="button secondary" href="mailto:' + esc(p.email) + '">Écrire</a>' : "") +
+          "</div></article>";
+      }).join("");
+    };
+    var html = (refs.length ? '<div class="section-title">Référents</div>' + block(refs) : "") +
+      (others.length ? '<div class="section-title">Équipe</div>' + block(others) : "");
+    c.innerHTML = html || empty("Aucun contact", "Les fiches d'équipe apparaîtront ici.");
+  }
+
+  function renderMessages(c, d) {
+    var msgs = d.messages || [];
+    c.innerHTML = msgs.length
+      ? msgs.map(function (m) {
+          return '<article class="card"><h2>' + esc(m.title) + "</h2><p>" + esc(m.body) + "</p>" +
+            (m.priority === "Urgent" ? '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>' : "") + "</article>";
+        }).join("")
+      : empty("Aucun message", "Les consignes de l'équipe apparaîtront ici.");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-read]"), function (b) {
+      b.onclick = function () {
+        send("read", { messageId: b.dataset.read }, "Message marqué comme lu.").then(function () { render(); });
+      };
+    });
+  }
+
+  function renderVehicles(c, d) {
+    var v = d.vehicles || [];
+    c.innerHTML = v.length
+      ? v.map(function (x) {
+          return '<article class="card"><h2>' + esc(x.plate || "Véhicule") + "</h2><p>" + esc(x.make || "") + "</p>" +
+            '<span class="badge ' + (x.active === false ? "bad" : "good") + '">' + (x.active === false ? "HS" : "En service") + "</span></article>";
+        }).join("")
+      : empty("Aucun véhicule", "Les véhicules reçus apparaîtront ici.");
+  }
+
+  function start() {
+    hideBoot();
+    var l = $("#loginScreen"); if (l) l.classList.add("hidden");
+    var s = $("#appShell"); if (s) s.classList.remove("hidden");
+    var rl = $("#roleLabel"); if (rl) rl.textContent = ROLE[state.role] || "Bénévole";
+    var ul = $("#userLabel"); if (ul) ul.textContent = (state.user && state.user.name) || "Mon espace";
+    var ua = $("#userAvatar");
+    if (ua) ua.textContent = String((state.user && state.user.name) || "B").trim().slice(0, 1).toUpperCase();
+    if (state.role === "admin") state.page = "team";
+    nav();
+    setTitle();
+    render();
+    syncBadge();
+    wirePageContent();
+  }
+
+  /* ---------- Envoi ---------- */
+  function send(action, data, okMessage) {
+    if (!navigator.onLine && window.Queue) {
+      return Queue.enqueue({ action: action, payload: data }).then(function () {
+        notice("Action enregistrée hors ligne. Elle partira au retour du réseau.", "info");
+        return refreshPending();
+      });
+    }
+    return Transport.mutate(action, data).then(function (out) {
+      if (okMessage) notice(okMessage, "success");
+      return out;
+    }).catch(function (e) {
+      var msg = String((e && e.message) || e);
+      if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+        return Queue.enqueue({ action: action, payload: data }).then(function () {
+          notice("Réseau instable : action gardée et envoyée plus tard.", "info");
+          return refreshPending();
+        });
+      }
+      notice(msg, "error");
+      throw e;
+    });
+  }
+
+  /* ------------------------------------------------------------------
+   * SUPPRESSION RÉELLE
+   *
+   * Une suppression n'est PAS une sauvegarde avec active:false. Elle
+   * envoie l'action "remove" et la seule clé qui identifie la ligne :
+   * son id. Jamais la date, le jour, l'artiste ou un rang de tableau.
+   *
+   * Le serveur fait le reste : recherche par id, retrait, renumérotation
+   * de la journée, réécriture de la feuille.
+   * ------------------------------------------------------------------ */
+  function sendRemove(collection, id) {
+    var cible = String(id || "");
+    if (!cible) {
+      return Promise.reject(new Error("Suppression impossible : identifiant manquant."));
+    }
+
+    if (!navigator.onLine && window.Queue) {
+      return Queue.enqueue({ collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
+        .then(function () {
+          notice("Suppression enregistrée hors ligne. Envoi au retour du réseau.", "info");
+          return refreshPending();
+        });
+    }
+
+    return Transport.mutate("remove", { collection: collection, id: cible })
+      .then(function (out) { return out; })
+      .catch(function (e) {
+        var msg = String((e && e.message) || e);
+        if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+          return Queue.enqueue({ collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
+            .then(function () {
+              notice("Réseau instable : suppression gardée pour envoi.", "info");
+              return refreshPending();
+            });
+        }
+        throw e;
+      });
+  }
+
+  function sendSave(collection, row, baseVersion, baseRow) {
+    if (!navigator.onLine && window.Queue) {
+      return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
+        .then(function () { notice("Enregistré hors ligne. Envoi au retour du réseau.", "info"); return refreshPending(); });
+    }
+    return Transport.save(collection, row, baseVersion, baseRow).then(function (out) {
+      if (out && out.conflict) {
+        notice("Conflit détecté : une autre personne a modifié cette fiche.", "error");
+        if (window.Queue) return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow });
+      }
+      return out;
+    }).catch(function (e) {
+      var msg = String((e && e.message) || e);
+      if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+        return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
+          .then(function () { notice("Réseau instable : fiche gardée pour envoi.", "info"); return refreshPending(); });
+      }
+      throw e;
+    });
+  }
+
+  var loginForm = $("#loginForm");
+  if (loginForm) {
+    loginForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var err = $("#loginError");
+      err.textContent = "Connexion…";
+      if (BOOT && BOOT.start) BOOT.start();
+      Transport.login($("#accessCode").value, ($("#operatorName") || {}).value || "")
+        .then(function (out) {
+          if (!out || !out.user) throw new Error("Réponse de connexion incomplète.");
+          state.user = out.user;
+          state.role = out.user.role || "benevole";
+          err.textContent = "";
+          return Transport.sync(0, state.role);
+        })
+        .then(function (bundle) {
+          state.data = mergeBundle(bundle);
+          state.version = (bundle && bundle.version) || 0;
+          saveLocal();
+          bootDone();
+          start();
+          return refreshPending();
+        })
+        .then(function () { return flushQueue(); })
+        .catch(function (x) {
+          var msg = (x && x.message) || "Connexion impossible";
+          err.textContent = msg;
+          bootFail(msg);
+        });
+    });
+  }
+
+  window.logout = function () {
+    try { Transport.logout().catch(function () {}); } catch (e) {}
+    state.user = null; state.data = null; state.personId = "";
+    state.shiftMode = ""; state.shiftId = ""; state.concertMode = ""; state.concertId = "";
+    state.open = "";
+    try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+    if (window.Queue) Queue.clear().catch(function () {});
+    var s = $("#appShell"); if (s) s.classList.add("hidden");
+    showLogin();
+    var ac = $("#accessCode"); if (ac) ac.value = "";
+  };
+
+  window.navigate = go;
+
+  function flushQueue() {
+    if (!window.Queue) return Promise.resolve();
+    return Queue.flush().then(function (r) {
+      state.pending = (r && r.remaining) || 0;
+      syncBadge();
+      if (r && r.sent) notice(r.sent + " modification(s) envoyée(s).", "success");
+      return Queue.list();
+    }).then(function (rows) {
+      var conflicts = (rows || []).filter(function (x) { return x.state === "conflict"; });
+      if (conflicts.length) notice(conflicts.length + " modification(s) en conflit à arbitrer.", "error");
+    }).catch(function () {});
+  }
+
+  function syncNow() {
+    if (!navigator.onLine) { syncBadge(); return; }
+    Transport.sync(state.version, state.role).then(function (bundle) {
+      state.data = mergeBundle(bundle);
+      state.version = (bundle && bundle.version) || state.version;
+      saveLocal();
+      render();
+      return flushQueue();
+    }).then(function () { return refreshPending(); })
+      .catch(function (e) {
+        if (e && e.message === "SESSION_EXPIRED") { Transport.setToken(""); window.logout(); return; }
+        syncBadge();
+      });
+  }
+
+  var sn = $("#syncNow");
+  if (sn) sn.onclick = function () { syncNow(); };
+  window.addEventListener("online", function () { syncNow(); });
+  window.addEventListener("offline", function () { syncBadge(); });
+
+  try {
+    if (window.Transport && Transport.token()) {
+      var local = readLocal();
+      if (local) {
+        state.data = local.data;
+        state.role = local.role;
+        state.version = local.version;
+        state.user = { id: (local.data.user || {}).id, name: (local.data.user || {}).name, role: local.role };
+        bootSkip();
+        start();
+        refreshPending().then(function () { if (navigator.onLine) syncNow(); });
+      } else {
+        bootSkip();
+        showLogin();
+      }
+    } else {
+      bootSkip();
+      showLogin();
+    }
+  } catch (e) {
+    bootFail(String(e.message || e));
+  }
+})();
