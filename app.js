@@ -700,6 +700,7 @@
       charge = { vehicules_prevus: vp, quota_min: qmin, quota_max: qmax, reserve_a: on("reserve_a") };
     } else if (id === "ouvertures") {
       var close = val("date_cloture");
+      if (close && !isFinite(new Date(close).getTime())) { notice("Date de clôture invalide.", "error"); return; }
       charge = { formulaire_ouvert: on("formulaire_ouvert"), app_ouverte: on("app_ouverte"), date_cloture: close ? new Date(close).toISOString() : "", equipe_verifiee: on("equipe_verifiee"), creneaux_verifies: on("creneaux_verifies"), concerts_verifies: on("concerts_verifies") };
     } else {
       return;
@@ -764,9 +765,12 @@
       "</div>";
 
     /* ---------- 3. OUVERTURES ---------- */
-    var localClose = cfg.closeAt ? new Date(Date.parse(cfg.closeAt) - new Date(cfg.closeAt).getTimezoneOffset() * 60000).toISOString().slice(0,16) : "";
+    var closeDate = cfg.closeAt ? new Date(cfg.closeAt) : null;
+    var validClose = closeDate && isFinite(closeDate.getTime());
+    var localClose = validClose ? new Date(closeDate.getTime() - closeDate.getTimezoneOffset() * 60000).toISOString().slice(0,16) : "";
     var blocOuvertures =
       '<div class="form-grid">' +
+      (cfg.closeAt && !validClose ? '<p class="full" role="alert">La date de clôture enregistrée est invalide. Renseigne une nouvelle date avant d’ouvrir le formulaire.</p>' : '') +
       '<div class="full"><label>Clôture du formulaire<input type="datetime-local" name="date_cloture" value="' + esc(localClose) + '"></label></div>' +
       '<div class="full contraintes">' +
       [ ["equipe_verifiee", "teamChecked", "Équipe vérifiée"], ["creneaux_verifies", "shiftsChecked", "Créneaux vérifiés"], ["concerts_verifies", "concertsChecked", "Concerts vérifiés"] ].map(function (x) { return '<label class="check"><input type="checkbox" name="' + x[0] + '"' + (cfg[x[1]] ? " checked" : "") + '><span>' + x[2] + '</span></label>'; }).join("") +
@@ -811,8 +815,11 @@
     if (window.Queue) Queue.list().then(function (rows) {
       var target = $("#queueDetails"); if (!target) return;
       target.innerHTML = rows.filter(function (r) { return r.authorId === (state.user && state.user.id); }).map(function (r) { return listRow(r.action + " · " + (r.collection || ""), r.error || "En attente", r.state); }).join("");
+    }).catch(function () {
+      var target = $("#queueDetails");
+      if (target) target.textContent = "Stockage hors ligne indisponible sur cet appareil. Les actions en attente ne peuvent pas être vérifiées.";
     });
-    var retry = $("#retryQueue"); if (retry) retry.onclick = function () { Queue.retryBlocked().then(function () { syncNow(); }); };
+    var retry = $("#retryQueue"); if (retry) retry.onclick = function () { Queue.retryBlocked().then(function () { syncNow(); }).catch(function (e) { notice("Impossible de relancer les actions : " + String(e.message || e), "error"); }); };
 
     /* Les boutons sont recréés à chaque rendu : les écouteurs sont posés
      * sur le conteneur, jamais sur les boutons eux-mêmes. */
