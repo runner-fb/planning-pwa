@@ -1,10 +1,14 @@
 /* Beauregard V2 — service worker.
  * Rôle : servir la coquille (CSS/JS) hors réseau. L'API Apps Script n'est
- * jamais mise en cache. Le HTML n'est jamais mis en cache : une page périmée
- * ferait tourner un ancien code indéfiniment.
+ * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
+ * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-9';
+const SHELL = 'beauregard-v2-shell-10';
 const SHELL_FILES = [
+  './',
+  './index.html',
+  './reception.html',
+  './style.css',
   './base.css',
   './theme.css',
   './themes/2027/theme.css',
@@ -14,7 +18,6 @@ const SHELL_FILES = [
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './js/screens-shifts-save.js',
   './app.js',
   './manifest.json',
   './icon.svg'
@@ -60,7 +63,10 @@ self.addEventListener('fetch', (e) => {
    * et s'il n'y en a pas, on laisse le navigateur gérer son erreur. */
   if (req.mode === 'navigate' || req.destination === 'document') {
     e.respondWith(
-      fetch(req).catch(() =>
+      fetch(req).then((response) => {
+        if (response.ok) { const copy = response.clone(); caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}); }
+        return response;
+      }).catch(() =>
         caches.match('./index.html').then((hit) => hit || caches.match('./'))
       )
     );

@@ -81,10 +81,11 @@
 
   var state = {
     user: null, role: "", data: null, page: "home", version: 0, pending: 0,
-    personId: "", shiftMode: "", shiftId: "", concertMode: "", concertId: "", open: ""
+    syncError: "", personId: "", shiftMode: "", shiftId: "", concertMode: "", concertId: "", open: ""
   };
   var CACHE_KEY = "planning_v2_bundle";
   var BOOT = window.Boot || null;
+  var writeBusy = false;
 
   function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
   function bootFail(m) { if (BOOT && BOOT.fail) BOOT.fail(m); else { hideBoot(); showLogin(); } }
@@ -155,6 +156,8 @@
     if (!navigator.onLine) {
       text = state.pending ? "Hors ligne · " + state.pending + " modification(s) en attente" : "Hors ligne · données disponibles";
       kind = "offline";
+    } else if (state.syncError) {
+      text = "Synchronisation échouée · " + state.syncError; kind = "bad";
     } else if (state.pending) {
       text = state.pending + " modification(s) en attente";
       kind = "busy";
@@ -233,6 +236,7 @@
     if (drawer) drawer.remove();
     var more = $("#navMore");
     if (more) more.setAttribute("aria-expanded", "false");
+    if (state.role === "benevole" && ["setup", "team", "creneaux", "concerts"].indexOf(key) >= 0) { notice("Accès réservé à l’organisation.", "error"); return; }
     state.page = key;
     state.open = "";
     if (key !== "team") state.personId = "";
@@ -300,7 +304,7 @@
         c.innerHTML = T.list({ data: state.data || {} });
         wireTeam();
         var again = $("#teamSearch");
-        if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+        if (again) { again.focus(); }
       };
     }
 
@@ -314,6 +318,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-team]"), function (b) {
       b.onclick = function () {
         var act = b.dataset.team;
+        if (act === "access" || act === "access-one") { if (b.disabled) return; b.disabled = true; }
         if (act === "back") { state.personId = ""; render(); return; }
         if (act === "new") { openPersonForm(); return; }
         if (act === "remove") { removePerson(); return; }
@@ -325,7 +330,7 @@
 
     var form = $("#personForm");
     if (form) {
-      form.onsubmit = function (e) { e.preventDefault(); savePerson(form); };
+      form.onsubmit = function (e) { e.preventDefault(); if (writeBusy) return; savePerson(form); };
     }
   }
 
@@ -353,15 +358,18 @@
       row.id = "p-" + Transport.requestId().slice(0, 8);
     }
 
+    writeBusy = true;
     sendSave("people", row, baseVersion, base)
-      .then(function () {
-        notice("Fiche enregistrée.", "success");
+      .then(function (out) {
+        row = out && out.row ? out.row : row;
+        notice(out && out.queued ? "Fiche gardée hors ligne." : "Fiche enregistrée.", "success");
         state.data.people = (state.data.people || []).filter(function (x) { return x.id !== row.id; }).concat([row]);
         saveLocal();
         state.personId = row.id;
         render();
       })
-      .catch(function (e) { notice(String(e.message || e), "error"); });
+      .catch(function (e) { notice(String(e.message || e), "error"); })
+      .then(function () { writeBusy = false; });
   }
 
   function removePerson() {
@@ -379,7 +387,7 @@
         notice("Fiche supprimée.", "success");
         render();
       })
-      .catch(function (e) { notice(String(e.message || e), "error"); });
+      .catch(function (e) { notice(String(e.message || e), "error"); wireTeam(); });
   }
 
   function accessRow(personId, code, alreadyShown) {
@@ -395,13 +403,14 @@
     Transport.mutate("access", { personId: target })
       .then(function (out) {
         var pid = (out && out.personId) || target;
+        rememberAccess(pid);
         var code = (out && out.code) || "";
         var shown = !!(out && out.codeAlreadyShown);
         var c = $("#pageContent");
         c.innerHTML = window.ScreenTeam.accessResult([accessRow(pid, code, shown)]);
         wireTeam();
       })
-      .catch(function (e) { notice(String(e.message || e), "error"); });
+      .catch(function (e) { notice(String(e.message || e), "error"); render(); });
   }
 
   function createAccessBatch() {
@@ -409,21 +418,27 @@
     if (!people.length) { notice("Aucune personne active.", "error"); return; }
     if (!window.confirm("Créer les accès pour " + people.length + " personne(s) ?\nLes codes existants seront remplacés.")) return;
 
-    var rows = [];
+    var rows = [], failures = [];
     var chain = Promise.resolve();
     people.forEach(function (p) {
       chain = chain.then(function () {
         return Transport.mutate("access", { personId: p.id }).then(function (out) {
           var pid = (out && out.personId) || p.id;
+          rememberAccess(pid);
           rows.push(accessRow(pid, (out && out.code) || "", !!(out && out.codeAlreadyShown)));
-        }).catch(function () {});
+        }).catch(function (e) { failures.push(personLabel(p.id) + " : " + String(e.message || e)); });
       });
     });
     chain.then(function () {
       var c = $("#pageContent");
       c.innerHTML = window.ScreenTeam.accessResult(rows);
       wireTeam();
+      if (failures.length) notice("Accès non créés : " + failures.join(" ; "), "error");
     });
+  }
+
+  function rememberAccess(id) {
+    state.data.access = (state.data.access || []).filter(function (a) { return a.personId !== id; }).concat([{ personId: id, hasCode: true, active: true }]); saveLocal();
   }
 
   function copyCodes(text) {
@@ -455,8 +470,8 @@
 
   /* ---------- Action déléguée des créneaux et concerts ---------- */
   function scenesAction(b) {
-    if (b.dataset.creneaux !== undefined) { state.shiftMode = ""; state.shiftId = ""; render(); return; }
-    if (b.dataset.concerts !== undefined) { state.concertMode = ""; state.concertId = ""; render(); return; }
+    if (b.dataset.creneaux !== undefined) { if (!state.shiftMode) { go(state.role === "admin" ? "setup" : "team"); return; } state.shiftMode = ""; state.shiftId = ""; render(); return; }
+    if (b.dataset.concerts !== undefined) { if (!state.concertMode) { go("setup"); return; } state.concertMode = ""; state.concertId = ""; render(); return; }
     if (b.dataset.newShift !== undefined) { state.shiftMode = "new"; state.shiftId = ""; render(); return; }
     if (b.dataset.newConcert !== undefined) { state.concertMode = "new"; state.concertId = ""; render(); return; }
     if (b.dataset.shift) { state.shiftMode = "edit"; state.shiftId = String(b.dataset.shift); render(); return; }
@@ -519,7 +534,7 @@
       state.shiftId = "";
       notice("Créneau " + full.id + " enregistré.", "success");
       render();
-    }).catch(function (e) { notice(String(e.message || e), "error"); });
+    }).catch(function (e) { notice(String(e.message || e), "error"); }).then(function () { writeBusy = false; });
   }
 
   function saveConcert(row, old) {
@@ -538,7 +553,7 @@
       state.concertId = "";
       notice("Concert enregistré.", "success");
       render();
-    }).catch(function (e) { notice(String(e.message || e), "error"); });
+    }).catch(function (e) { notice(String(e.message || e), "error"); }).then(function () { writeBusy = false; });
   }
 
   /* ------------------------------------------------------------------
@@ -565,8 +580,8 @@
     if (host && !host.contains(b)) return;
     e.preventDefault();
 
-    if (b.dataset.saveShift !== undefined) { handleShiftSave(); return; }
-    if (b.dataset.saveConcert !== undefined) { handleConcertSave(); return; }
+    if (b.dataset.saveShift !== undefined) { if (!writeBusy) handleShiftSave(); return; }
+    if (b.dataset.saveConcert !== undefined) { if (!writeBusy) handleConcertSave(); return; }
     scenesAction(b);
   }
 
@@ -584,6 +599,7 @@
     var S = window.ScreenShifts;
     if (!f || !S) { notice("Formulaire Créneaux indisponible.", "error"); return; }
 
+    if (!f.reportValidity()) return;
     var row = S.readShift(f, { data: state.data });
     if (!row.id) { notice("Identifiant obligatoire (ex. Ma1).", "error"); return; }
     if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
@@ -595,6 +611,7 @@
     if (isNew && existant) { notice("Cet identifiant existe déjà.", "error"); return; }
 
     var old = isNew ? null : (state.data.shifts || []).filter(function (x) { return x.id === current; })[0];
+    writeBusy = true;
     saveShift(row, old);
   }
 
@@ -604,6 +621,7 @@
     var S = window.ScreenShifts;
     if (!f || !S) { notice("Formulaire Concerts indisponible.", "error"); return; }
 
+    if (!f.reportValidity()) return;
     var con = S.readConcert(f);
     if (!con.artist) { notice("Artiste obligatoire.", "error"); return; }
     if (!con.start || !con.end) { notice("Horaires obligatoires.", "error"); return; }
@@ -611,6 +629,7 @@
     var isNew = f.getAttribute("data-mode") === "new";
     var current = f.getAttribute("data-id") || "";
     var old = isNew ? null : (state.data.concerts || []).filter(function (x) { return x.id === current; })[0];
+    writeBusy = true;
     saveConcert(con, old);
   }
 
@@ -639,7 +658,7 @@
    *                 formulaire_ouvert, app_ouverte
    * C'est asymétrique, et c'est voulu : le backend traduit à la lecture.
    * ------------------------------------------------------------------ */
-  var PHASES = ["Préparation", "Test", "Active", "Archive"];
+  var PHASES = ["Préparation", "Migration à contrôler", "Test", "Active", "Formulaire ouvert", "Validé", "Réouvert", "Publié", "Archive"];
 
   /* Une date ISO pour un champ type=date : les dix premiers caractères. */
   function isoJour(v) {
@@ -680,7 +699,8 @@
       if (qmin > qmax) { notice("Le quota minimal dépasse le maximal.", "error"); return; }
       charge = { vehicules_prevus: vp, quota_min: qmin, quota_max: qmax, reserve_a: on("reserve_a") };
     } else if (id === "ouvertures") {
-      charge = { formulaire_ouvert: on("formulaire_ouvert"), app_ouverte: on("app_ouverte") };
+      var close = val("date_cloture");
+      charge = { formulaire_ouvert: on("formulaire_ouvert"), app_ouverte: on("app_ouverte"), date_cloture: close ? new Date(close).toISOString() : "", equipe_verifiee: on("equipe_verifiee"), creneaux_verifies: on("creneaux_verifies"), concerts_verifies: on("concerts_verifies") };
     } else {
       return;
     }
@@ -688,7 +708,7 @@
     notice("Enregistrement\u2026", "info");
     Transport.mutate("config", charge)
       .then(function (out) {
-        if (out && out.config) state.data.config = out.config;
+        if (out && out.config) state.data.config = Object.assign({}, state.data.config, out.config);
         else if (out && out.year !== undefined) state.data.config = out;
         saveLocal();
         notice("Enregistré.", "success");
@@ -744,9 +764,12 @@
       "</div>";
 
     /* ---------- 3. OUVERTURES ---------- */
+    var localClose = cfg.closeAt ? new Date(Date.parse(cfg.closeAt) - new Date(cfg.closeAt).getTimezoneOffset() * 60000).toISOString().slice(0,16) : "";
     var blocOuvertures =
       '<div class="form-grid">' +
+      '<div class="full"><label>Clôture du formulaire<input type="datetime-local" name="date_cloture" value="' + esc(localClose) + '"></label></div>' +
       '<div class="full contraintes">' +
+      [ ["equipe_verifiee", "teamChecked", "Équipe vérifiée"], ["creneaux_verifies", "shiftsChecked", "Créneaux vérifiés"], ["concerts_verifies", "concertsChecked", "Concerts vérifiés"] ].map(function (x) { return '<label class="check"><input type="checkbox" name="' + x[0] + '"' + (cfg[x[1]] ? " checked" : "") + '><span>' + x[2] + '</span></label>'; }).join("") +
       '<label class="check"><input type="checkbox" name="formulaire_ouvert"' + (cfg.formOpen ? " checked" : "") + "><span>Formulaire ouvert aux bénévoles</span></label>" +
       '<label class="check"><input type="checkbox" name="app_ouverte"' + (cfg.appOpen ? " checked" : "") + "><span>Application terrain ouverte</span></label>" +
       "</div>" +
@@ -783,7 +806,13 @@
       card("État de l\u2019appareil",
         listRow("Version des données", "V" + state.version, "", "") +
         listRow("Modifications en attente", String(state.pending), state.pending ? "À envoyer" : "Aucune", state.pending ? "bad" : "good") +
-        listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", ""));
+        listRow("Réseau", navigator.onLine ? "En ligne" : "Hors ligne", "", "") +
+        '<button class="button secondary" id="retryQueue">Réessayer les actions bloquées</button>' + '<div id="queueDetails"></div>');
+    if (window.Queue) Queue.list().then(function (rows) {
+      var target = $("#queueDetails"); if (!target) return;
+      target.innerHTML = rows.filter(function (r) { return r.authorId === (state.user && state.user.id); }).map(function (r) { return listRow(r.action + " · " + (r.collection || ""), r.error || "En attente", r.state); }).join("");
+    });
+    var retry = $("#retryQueue"); if (retry) retry.onclick = function () { Queue.retryBlocked().then(function () { syncNow(); }); };
 
     /* Les boutons sont recréés à chaque rendu : les écouteurs sont posés
      * sur le conteneur, jamais sur les boutons eux-mêmes. */
@@ -811,6 +840,7 @@
       .filter(function (a) { return a.personId === uid; })
       .map(function (a) { return shift(a.shiftId); })
       .filter(Boolean)
+      .filter(function (s) { var end = new Date(s.date + "T" + s.end); if (s.end <= s.start) end.setDate(end.getDate()+1); return end.getTime() >= Date.now(); })
       .sort(function (a, b) { return String(a.date + a.start).localeCompare(String(b.date + b.start)); })[0];
     var lab = $("#editionLabel");
     if (lab) lab.textContent = (cfg.name || "Beauregard") + " " + (cfg.year || "");
@@ -882,24 +912,24 @@
     c.innerHTML = msgs.length
       ? msgs.map(function (m) {
           return '<article class="card"><h2>' + esc(m.title) + "</h2><p>" + esc(m.body) + "</p>" +
-            (m.priority === "Urgent" ? '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>' : "") + "</article>";
+            ((m.priority === "Urgent" || m.urgent) ? ((d.reads || []).some(function (r) { return r.messageId === m.id && r.personId === (state.user && state.user.id); }) ? '<span class="badge good">Lu</span>' : '<button class="button primary" data-read="' + esc(m.id) + '">J\'ai lu</button>') : "") + "</article>";
         }).join("")
       : empty("Aucun message", "Les consignes de l'équipe apparaîtront ici.");
     Array.prototype.forEach.call(document.querySelectorAll("[data-read]"), function (b) {
       b.onclick = function () {
-        send("read", { messageId: b.dataset.read }, "Message marqué comme lu.").then(function () { render(); });
+        send("read", { messageId: b.dataset.read }, "Message marqué comme lu.").then(function (out) { if (out && out.row) { state.data.reads = (state.data.reads || []).filter(function (r) { return r.id !== out.row.id; }).concat([out.row]); saveLocal(); } render(); });
       };
     });
   }
 
   function renderVehicles(c, d) {
-    var v = d.vehicles || [];
-    c.innerHTML = v.length
+    var v = (d.vehicles || []).filter(function (x) { return !x.deleted; });
+    c.innerHTML = (state.role === "admin" || state.role === "vehicles" ? '<div class="toolbar"><a class="button primary" href="./reception.html">Réception / retour véhicule</a></div>' : "") + (v.length
       ? v.map(function (x) {
           return '<article class="card"><h2>' + esc(x.plate || "Véhicule") + "</h2><p>" + esc(x.make || "") + "</p>" +
             '<span class="badge ' + (x.active === false ? "bad" : "good") + '">' + (x.active === false ? "HS" : "En service") + "</span></article>";
         }).join("")
-      : empty("Aucun véhicule", "Les véhicules reçus apparaîtront ici.");
+      : empty("Aucun véhicule", "Les véhicules reçus apparaîtront ici."));
   }
 
   function start() {
@@ -920,19 +950,20 @@
 
   /* ---------- Envoi ---------- */
   function send(action, data, okMessage) {
+    var opId = Transport.requestId();
     if (!navigator.onLine && window.Queue) {
-      return Queue.enqueue({ action: action, payload: data }).then(function () {
+      return Queue.enqueue({ action: action, payload: data, opId: opId }).then(function () {
         notice("Action enregistrée hors ligne. Elle partira au retour du réseau.", "info");
         return refreshPending();
       });
     }
-    return Transport.mutate(action, data).then(function (out) {
+    return Transport.mutate(action, data, opId).then(function (out) {
       if (okMessage) notice(okMessage, "success");
       return out;
     }).catch(function (e) {
       var msg = String((e && e.message) || e);
-      if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
-        return Queue.enqueue({ action: action, payload: data }).then(function () {
+      if (window.Queue && ((e && e.name === "TypeError") || msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+        return Queue.enqueue({ action: action, payload: data, opId: opId }).then(function () {
           notice("Réseau instable : action gardée et envoyée plus tard.", "info");
           return refreshPending();
         });
@@ -953,25 +984,26 @@
    * de la journée, réécriture de la feuille.
    * ------------------------------------------------------------------ */
   function sendRemove(collection, id) {
+    var opId = Transport.requestId();
     var cible = String(id || "");
     if (!cible) {
       return Promise.reject(new Error("Suppression impossible : identifiant manquant."));
     }
 
     if (!navigator.onLine && window.Queue) {
-      return Queue.enqueue({ collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
+      return Queue.enqueue({ opId: opId, collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
         .then(function () {
           notice("Suppression enregistrée hors ligne. Envoi au retour du réseau.", "info");
           return refreshPending();
         });
     }
 
-    return Transport.mutate("remove", { collection: collection, id: cible })
+    return Transport.mutate("remove", { collection: collection, id: cible }, opId)
       .then(function (out) { return out; })
       .catch(function (e) {
         var msg = String((e && e.message) || e);
-        if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
-          return Queue.enqueue({ collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
+        if (window.Queue && ((e && e.name === "TypeError") || msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+          return Queue.enqueue({ opId: opId, collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
             .then(function () {
               notice("Réseau instable : suppression gardée pour envoi.", "info");
               return refreshPending();
@@ -982,21 +1014,22 @@
   }
 
   function sendSave(collection, row, baseVersion, baseRow) {
+    var opId = Transport.requestId();
     if (!navigator.onLine && window.Queue) {
-      return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
-        .then(function () { notice("Enregistré hors ligne. Envoi au retour du réseau.", "info"); return refreshPending(); });
+      return Queue.enqueue({ opId: opId, collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
+        .then(function () { notice("Enregistré hors ligne. Envoi au retour du réseau.", "info"); return refreshPending().then(function () { return { queued: true, row: row }; }); });
     }
-    return Transport.save(collection, row, baseVersion, baseRow).then(function (out) {
+    return Transport.save(collection, row, baseVersion, baseRow, opId).then(function (out) {
       if (out && out.conflict) {
         notice("Conflit détecté : une autre personne a modifié cette fiche.", "error");
-        if (window.Queue) return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow });
+        throw new Error("Conflit détecté. La fiche n’a pas été enregistrée : synchronise avant de reprendre.");
       }
       return out;
     }).catch(function (e) {
       var msg = String((e && e.message) || e);
-      if (window.Queue && (msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
-        return Queue.enqueue({ collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
-          .then(function () { notice("Réseau instable : fiche gardée pour envoi.", "info"); return refreshPending(); });
+      if (window.Queue && ((e && e.name === "TypeError") || msg === "Failed to fetch" || msg.indexOf("ne répond pas") >= 0)) {
+        return Queue.enqueue({ opId: opId, collection: collection, action: "save", value: row, baseVersion: baseVersion, baseRow: baseRow })
+          .then(function () { notice("Réseau instable : fiche gardée pour envoi.", "info"); return refreshPending().then(function () { return { queued: true, row: row }; }); });
       }
       throw e;
     });
@@ -1040,7 +1073,8 @@
     state.shiftMode = ""; state.shiftId = ""; state.concertMode = ""; state.concertId = "";
     state.open = "";
     try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
-    if (window.Queue) Queue.clear().catch(function () {});
+    Transport.setToken("");
+    state.syncError = "";
     var s = $("#appShell"); if (s) s.classList.add("hidden");
     showLogin();
     var ac = $("#accessCode"); if (ac) ac.value = "";
@@ -1056,23 +1090,34 @@
       if (r && r.sent) notice(r.sent + " modification(s) envoyée(s).", "success");
       return Queue.list();
     }).then(function (rows) {
-      var conflicts = (rows || []).filter(function (x) { return x.state === "conflict"; });
+      var conflicts = (rows || []).filter(function (x) { return x.state === "conflict" && x.authorId === (state.user && state.user.id); });
       if (conflicts.length) notice(conflicts.length + " modification(s) en conflit à arbitrer.", "error");
     }).catch(function () {});
   }
 
   function syncNow() {
+    if (!state.user || !state.role) return Promise.resolve();
     if (!navigator.onLine) { syncBadge(); return; }
     Transport.sync(state.version, state.role).then(function (bundle) {
       state.data = mergeBundle(bundle);
+      state.syncError = "";
       state.version = (bundle && bundle.version) || state.version;
-      saveLocal();
-      render();
-      return flushQueue();
+      return flushQueue().then(function () { return Transport.sync(state.version, state.role); }).then(function (next) {
+        state.data = mergeBundle(next); state.version = next.version || state.version;
+        return Queue.list();
+      }).then(function (rows) {
+        rows.filter(function (r) { return r.authorId === (state.user && state.user.id) && (r.state === "pending" || r.state === "blocked"); }).forEach(function (r) {
+          if (!r.collection) return;
+          if (r.action === "remove") state.data[r.collection] = (state.data[r.collection] || []).filter(function (x) { return x.id !== r.entityId; });
+          else state.data[r.collection] = (state.data[r.collection] || []).filter(function (x) { return x.id !== (r.value || {}).id; }).concat([r.value]);
+        });
+        saveLocal(); if (!document.querySelector("#personForm, #shiftForm, #concertForm, .acc-body .form-grid")) render();
+      });
     }).then(function () { return refreshPending(); })
       .catch(function (e) {
         if (e && e.message === "SESSION_EXPIRED") { Transport.setToken(""); window.logout(); return; }
-        syncBadge();
+        state.syncError = String((e && e.message) || e);
+        syncBadge(); notice(state.syncError, "error");
       });
   }
 
@@ -1080,6 +1125,8 @@
   if (sn) sn.onclick = function () { syncNow(); };
   window.addEventListener("online", function () { syncNow(); });
   window.addEventListener("offline", function () { syncBadge(); });
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function () {});
 
   try {
     if (window.Transport && Transport.token()) {
