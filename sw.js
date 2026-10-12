@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-10';
+const SHELL = 'beauregard-v2-shell-11';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -64,7 +64,10 @@ self.addEventListener('fetch', (e) => {
   if (req.mode === 'navigate' || req.destination === 'document') {
     e.respondWith(
       fetch(req).then((response) => {
-        if (response.ok) { const copy = response.clone(); caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}); }
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {});
+        }
         return response;
       }).catch(() =>
         caches.match('./index.html').then((hit) => hit || caches.match('./'))
