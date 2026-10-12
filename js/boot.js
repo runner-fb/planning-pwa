@@ -38,20 +38,20 @@
   root.Boot = {
     /* Appelé quand la synchronisation démarre réellement. */
     start: function () {
+      var screen = el("bootScreen");
+      if (screen) screen.classList.remove("hidden");
       var i = 0;
       setStep(0);
       clearInterval(timer);
-      timer = setInterval(function () {
-        i = Math.min(i + 1, STEPS.length - 1);
-        setStep(i);
-      }, 1400);
+      var note = el("bootNote");
+      if (note) note.textContent = "Connexion puis chargement des données. Patiente…";
     },
     /* Appelé quand l'application peut s'ouvrir. */
     done: function () {
       clearInterval(timer);
       var title = el("bootTitle");
       var note = el("bootNote");
-      if (title) title.textContent = "Données disponibles hors ligne";
+      if (title) title.textContent = "Données chargées";
       if (note) note.textContent = "Ouverture de l'application…";
       var bar = el("bootBar");
       if (bar) bar.style.width = "100%";

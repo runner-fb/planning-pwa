@@ -356,6 +356,7 @@
     return {
       id: get("id"),
       day: jourKey(get("day")),
+      date: dateDuJour(ctx, get("day")),
       start: get("start"),
       end: get("end"),
       target: Number(get("target")) || 0,
