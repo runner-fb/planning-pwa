@@ -1,20 +1,150 @@
-/* Thème annuel. Modifier ces variables pour changer l’identité visuelle d’une édition. */
-:root{
-  --forest:#174d43;
-  --forest-deep:#103c35;
-  --ink:#283a35;
-  --muted:#71807a;
-  --canvas:#f6f2e9;
-  --canvas-deep:#eee7d9;
-  --paper:#fffdf8;
-  --soft:#e8efe8;
-  --line:#ded8ca;
-  --line-dark:#cfc5b2;
-  --accent:#b56b32;
-  --gold:#f2d7a3;
-  --wash:rgba(181,107,50,.13);
-  --focus:rgba(23,77,67,.14);
-  --notice-bg:#edf4eb;
-  --notice-line:#c8d8c7;
-  --shadow:0 20px 65px rgba(31,53,44,.12);
+/* Beauregard 2027 — identité inspirée de l’affiche fournie.
+ * Charger après base.css et theme.css. Aucun changement de fonctionnement.
+ * Palette interprétée visuellement : turquoise, vert vif, corail, jaune et noir.
+ */
+:root {
+  color-scheme: light;
+  --aqua: #a5f5f1;
+  --green: #24f49a;
+  --coral: #fa7885;
+  --yellow: #fff6a3;
+  --primary: #111716;
+  --secondary: #111716;
+  --accent: #fa7885;
+  --background: #effcfa;
+  --surface: #ffffff;
+  --text: #111716;
+  --muted: #4b6360;
+  --danger: #a3233b;
+  --warning: #765500;
+  --success: #12633e;
+  --border: #c5ded9;
+  --forest: #111716;
+  --forest-deep: #111716;
+  --ink: #111716;
+  --canvas: #effcfa;
+  --canvas-deep: #d9f6f1;
+  --paper: #ffffff;
+  --soft: #e4faf3;
+  --line: #c5ded9;
+  --line-dark: #789c95;
+  --gold: #fff6a3;
+  --wash: #ffe5e9;
+  --focus: rgba(17, 23, 22, .18);
+  --notice-bg: #e4faf3;
+  --notice-line: #86bca7;
+  --shadow: 0 12px 32px rgba(17, 23, 22, .08);
+  --radius: 16px;
+  --radius-lg: 22px;
+  --edition: "2027";
+  --splash: #a5f5f1;
+}
+
+body { background: var(--background); color: var(--text); }
+button, input, select, textarea { font-family: inherit; }
+h1, h2, .acc-title { font-weight: 900; letter-spacing: -.035em; }
+.page-heading h1 { text-transform: uppercase; line-height: 1.05; }
+.eyebrow { color: var(--text); letter-spacing: .14em; }
+
+/* Connexion : grand aplat turquoise et ruban corail. */
+.login-screen {
+  background: radial-gradient(ellipse at top right, #ffffff 0, transparent 48%), var(--aqua);
+  border-top: 10px solid var(--coral);
+  justify-items: center;
+  padding: 32px 20px;
+}
+.login-brand, .login-card { width: 100%; max-width: 460px; }
+.login-brand { color: var(--text); font-size: 22px; letter-spacing: -.04em; }
+.brand-mark, .boot-card .brand-mark {
+  background: var(--green); color: var(--text);
+  border: 2px solid var(--text); border-radius: 10px 10px 10px 0;
+}
+.login-card { border: 1px solid var(--text); box-shadow: 7px 7px 0 var(--coral); }
+.login-card h1 { font-size: clamp(27px, 7vw, 36px); line-height: 1.1; }
+.login-card .button { margin-top: 18px; }
+.boot-screen { background: var(--aqua); color: var(--text); }
+.spinner { border-color: #ffffff; border-top-color: var(--text); }
+.boot-track { background: #ffffff; }
+.boot-track i { background: var(--text); }
+.boot-steps li[data-done="true"] { color: var(--success); }
+
+/* Navigation : noir, sélection vert vif et détails corail. */
+.side-rail { background: var(--text); color: #ffffff; border-right: 5px solid var(--coral); }
+.side-rail .brand-lockup { color: #ffffff; }
+.side-rail .nav-link { color: #ffffff; }
+.side-rail .nav-link.active { background: var(--green); color: var(--text); }
+.side-rail .quiet-button { color: var(--aqua); }
+.side-rail .edition-label, .side-rail .nav-group-label { opacity: 1; color: var(--aqua); }
+.side-rail .connection-pill i { background: var(--green); }
+.mobile-nav { background: #ffffff; border-top: 2px solid var(--text); box-shadow: 0 -4px 20px #1117160a; }
+.mobile-nav .nav-link, .mobile-nav .nav-more { color: var(--muted); min-height: 48px; }
+.mobile-nav .nav-link.active { background: var(--green); color: var(--text); border-radius: 10px; }
+.nav-drawer { border: 2px solid var(--text); }
+.topbar { color: var(--muted); }
+.topbar-user { min-width: 0; }
+.avatar { background: var(--text); color: var(--aqua); }
+.page-heading { border-bottom: 5px solid var(--coral); padding-bottom: 16px; margin-bottom: 2px; }
+.page-heading .muted { line-height: 1.5; }
+
+/* Surfaces de travail sobres pour les listes et formulaires. */
+.card, .form-grid { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 16px #11171605; }
+.hero-card { background: var(--aqua); color: var(--text); border: 1px solid var(--text); border-bottom: 6px solid var(--coral); }
+.hero-card p { opacity: 1; }
+.hero-date { color: var(--text); }
+.section-title { color: var(--muted); }
+.list-row, .person-row, table.codes td { border-top-color: var(--border); }
+.person-row:active { background: var(--soft); }
+.shift-time, .concert-thumb { background: var(--soft); }
+.person-flags { color: var(--text); }
+.badge { background: var(--aqua); color: var(--text); }
+.badge.good { background: #d5f9e5; color: var(--success); }
+.badge.bad { background: #ffe5e9; color: var(--danger); }
+.notice { background: #ffffff; border-left-width: 5px; }
+.notice[data-type="success"] { background: #e4faf3; }
+.notice[data-type="error"] { background: #fff0f3; }
+
+.button { border-radius: 12px; min-height: 44px; }
+.button.primary { background: var(--text); color: #ffffff; border: 1px solid var(--text); }
+.button.secondary { background: var(--aqua); color: var(--text); border-color: #8cbeb8; }
+.button.danger { background: #fff0f3; color: var(--danger); border-color: #d9a1ac; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--text); outline-offset: 3px;
+}
+.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus {
+  outline: 2px solid var(--text); outline-offset: 2px;
+  border-color: var(--text); box-shadow: none;
+}
+.login-card input, .form-grid input, .form-grid select, .form-grid textarea, .search {
+  border-color: var(--line-dark); border-radius: 12px; background: #ffffff; color: var(--text);
+}
+input::placeholder, textarea::placeholder { color: #5c716d; opacity: 1; }
+.form-grid input[readonly], .form-grid .contraintes { background: var(--soft); }
+.check { background: #ffffff; }
+.check input { accent-color: var(--text); }
+.modal-backdrop { background: #11171699; }
+.modal { border-top: 5px solid var(--coral); }
+
+/* Préparation : rubriques contrastées, état ouvert immédiatement visible. */
+.acc-head:active { background: var(--soft); }
+.acc-head[aria-expanded="true"] { background: var(--aqua); }
+.acc-arrow { background: var(--soft); color: var(--text); }
+.acc-head[aria-expanded="true"] .acc-arrow { background: var(--green); }
+.acc-head:focus-visible { outline-color: var(--text); }
+.acc-body { border-top-color: var(--border); }
+
+@media (hover: hover) {
+  .button.primary:not(:disabled):hover { background: #29433d; }
+  .button.secondary:not(:disabled):hover { background: var(--green); }
+  .person-row:hover, .nav-drawer-link:hover { background: var(--soft); }
+  .acc-head:hover { background: var(--aqua); }
+}
+@media (max-width: 380px) {
+  .login-screen { padding: 24px 16px; }
+  .login-card { padding: 20px; box-shadow: 4px 4px 0 var(--coral); }
+  .topbar { flex-wrap: wrap; }
+  .hero-card { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
