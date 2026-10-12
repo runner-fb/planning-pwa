@@ -61,7 +61,7 @@
   function enqueue(action) {
     var a = author();
     var row = {
-      id: uuid(),
+      id: action.opId || uuid(),
       collection: String(action.collection || ""),
       entityId: String(action.entityId || ""),
       action: String(action.action || "save"),
@@ -73,7 +73,7 @@
       authorName: a.name,
       authorRole: a.role,
       at: new Date().toISOString(),
-      state: "pending",
+      state: action.state || "pending",
       tries: 0,
       error: ""
     };
@@ -94,7 +94,8 @@
 
   function count() {
     return list().then(function (rows) {
-      return rows.filter(function (r) { return r.state === "pending"; }).length;
+      var me = author();
+      return rows.filter(function (r) { return r.authorId === me.id && (r.state === "pending" || r.state === "blocked" || r.state === "conflict"); }).length;
     });
   }
 
@@ -118,8 +119,9 @@
 
     flush.running = list()
       .then(function (rows) {
-        var pending = rows.filter(function (r) { return r.state === "pending"; });
-        if (!pending.length) return { sent: 0, remaining: 0 };
+        var me = author();
+        var pending = rows.filter(function (r) { return r.state === "pending" && r.authorId === me.id; });
+        if (!pending.length) return count().then(function (n) { return { sent: 0, remaining: n }; });
 
         var sent = 0;
         var chain = Promise.resolve();
@@ -127,15 +129,18 @@
         pending.forEach(function (row) {
           chain = chain.then(function () {
             var call;
-            if (row.collection) {
+            if (row.action === "remove") {
+              call = Transport.mutate("remove", row.payload || { collection: row.collection, id: row.entityId }, row.id);
+            } else if (row.collection) {
               call = Transport.save(
                 row.collection,
                 row.value || {},
                 row.baseVersion,
-                row.baseRow
+                row.baseRow,
+                row.id
               );
             } else {
-              call = Transport.mutate(row.action, row.payload || {});
+              call = Transport.mutate(row.action, row.payload || {}, row.id);
             }
 
             return call
@@ -177,6 +182,12 @@
     count: count,
     remove: remove,
     clear: clear,
+    retryBlocked: function () {
+      var me = author();
+      return list().then(function (rows) {
+        return Promise.all(rows.filter(function (r) { return r.authorId === me.id && r.state === "blocked"; }).map(function (r) { r.state = "pending"; r.tries = 0; return update(r); }));
+      });
+    },
     flush: flush
   };
 })(window);

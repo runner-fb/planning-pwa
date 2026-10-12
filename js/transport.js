@@ -268,8 +268,7 @@
         "login",
         {
           code: String(code || "")
-            .trim()
-            .toUpperCase(),
+            .trim(),
 
           operator:
             operator || "",
@@ -287,14 +286,14 @@
     },
 
     logout: function () {
-      return call_(
+      var operation = uuid_();
+      var result = call_(
         "logout",
         {},
-        {}
-      ).then(function (out) {
-        setToken_("");
-        return out;
-      });
+        { opId: operation }
+      );
+      setToken_("");
+      return result;
     },
 
     sync: function (since, role) {
@@ -312,7 +311,8 @@
       collection,
       row,
       baseVersion,
-      baseRow
+      baseRow,
+      opId
     ) {
       return call_(
         "save",
@@ -325,17 +325,17 @@
             new Date().toISOString(),
         },
         {
-          opId: uuid_(),
+          opId: opId || uuid_(),
         }
       );
     },
 
-    mutate: function (action, data) {
+    mutate: function (action, data, opId) {
       return call_(
         action,
         data,
         {
-          opId: uuid_(),
+          opId: opId || uuid_(),
         }
       );
     },

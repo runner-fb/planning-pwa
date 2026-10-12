@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18443d">
-<link rel="manifest" href="./manifest.json"><link rel="stylesheet" href="./style.css?v=1"><script src="./config.js"></script>
+<link rel="manifest" href="./manifest.json"><link rel="stylesheet" href="./style.css?v=1"><script src="./config.js"></script><script src="./js/transport.js"></script>
 <title>Réception véhicule — Beauregard</title>
 </head>
 <body class="reception-page">
@@ -15,7 +15,7 @@
 <h1>1. Identifier le véhicule</h1>
 <label>Sens du constat<select name="sens"><option value="départ">Prise en charge</option><option value="retour">Retour du véhicule</option></select></label>
 <label>Immatriculation *<input name="immatriculation" required></label>
-<label>Marque et modèle<input name="marqueModele"></label><label>Couleur<input name="couleur"></label>
+<label>Marque *<input name="marque" required></label><label>Modèle *<input name="modele" required></label><label>Couleur<input name="couleur"></label>
 <label>Type<select name="type"><option>Voiture</option><option>9 places</option><option>Utilitaire</option></select></label>
 <label>Conducteur *<input name="conducteur" required></label>
 </section>
@@ -23,7 +23,7 @@
 <h1>2. Compteur et carburant</h1>
 <label>Compteur kilométrique *<input name="compteur" type="number" min="0" required></label>
 <label>Photo du compteur *<input name="photoCompteur" type="file" accept="image/*" capture="environment" required></label><div id="previewCompteur" class="photo-preview"></div>
-<label>Niveau de carburant *<select name="carburant" required><option value="">Choisir…</option><option>Réserve</option><option>1/4</option><option>1/2</option><option>3/4</option><option>Plein</option></select></label>
+<label>Niveau de carburant *<select name="carburant" required><option value="">Choisir…</option><option>Vide</option><option>1/4</option><option>1/2</option><option>3/4</option><option>Plein</option></select></label>
 <label>Photo de la jauge *<input name="photoCarburant" type="file" accept="image/*" capture="environment" required></label><div id="previewCarburant" class="photo-preview"></div>
 </section>
 <section class="reception-step">
@@ -73,22 +73,32 @@
 <script>
 (function(){
 const form=document.getElementById('receptionForm'), steps=[...document.querySelectorAll('.reception-step')], pads={};
-let current=0, sent=false;
+let current=0, sent=false, sending=false;
+const draftId='reception-'+Transport.requestId(), pendingPosts=new Map();
+let savedRow=null, signatureStep=0;
+function postMutation(action,data,opId){
+  return new Promise((resolve,reject)=>{
+    const requestId=Transport.requestId();
+    const timer=setTimeout(()=>{pendingPosts.delete(requestId); reject(new Error('Confirmation non reçue. Le même dossier sera repris au prochain essai.'));},65000);
+    pendingPosts.set(requestId,{resolve,reject,timer});
+    document.getElementById('postForm').action=window.BEAUREGARD_CONFIG.API_URL;
+    document.getElementById('postPayload').value=JSON.stringify({action,token:Transport.token(),opId,requestId,data});
+    document.getElementById('postForm').submit();
+  });
+}
 const field=n=>form.elements.namedItem(n), val=n=>String(field(n).value||'').trim();
 let previousLoadedFor='';
 async function loadPreviousReception(){
-const plate=val('immatriculation').replace(/\s+/g,'').toUpperCase();
+const plate=val('immatriculation').replace(/[^A-Z0-9]/gi,'').toUpperCase();
 if(val('sens')!=='retour'||plate.length<4||previousLoadedFor===plate)return;
-previousLoadedFor=plate;
 try{
-const endpoint=String(window.APP_CONFIG&&window.APP_CONFIG.WEBAPP_BASE_URL||'').trim();if(!endpoint)return;
-const url=new URL(endpoint);url.searchParams.set('api','previousVehicleReception');url.searchParams.set('token',localStorage.getItem('planning_session_token')||'');url.searchParams.set('immatriculation',plate);
-const response=await fetch(url.toString(),{cache:'no-store'}),result=await response.json();if(!result.ok||!result.data)return;
-const p=result.data,summary=[p.dommagesAnterieurs,p.dommagesNouveaux].filter(Boolean).join('\n');
+const data=await Transport.sync(0,'');
+const p=(data.receptions||[]).filter(x=>x.signature2&&x.direction==='Prise en charge'&&String(x.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase()===plate).at(-1);
+previousLoadedFor=plate;if(!p)return;
+const summary=(p.damages||[]).map(x=>x.zone+' : '+x.type+' '+(x.description||'')).join('\n');
 if(summary&&!val('dommagesAnterieurs'))field('dommagesAnterieurs').value=summary;
-const box=document.getElementById('previousDamage');box.classList.remove('hidden');box.textContent='Dernier constat du '+(p.date||'date inconnue')+' — '+(p.sens||'')+'. Compteur : '+(p.compteur||'non renseigné')+' km. Dommages : '+(p.typeDommages||'non précisé')+'; '+(p.zonesDommages||'emplacement non indiqué')+'. Compare le véhicule à ces éléments.';
-if(p.photoDommages){const link=document.createElement('a');link.href=p.photoDommages;link.target='_blank';link.rel='noopener';link.textContent=' Ouvrir la photo précédente';box.append(link);}
-}catch(error){console.warn('Constat précédent non chargé',error);}
+const box=document.getElementById('previousDamage');box.classList.remove('hidden');box.textContent='Constat de départ : '+p.mileage+' km — '+p.fuel+'. '+summary;
+}catch(error){showStatus('Constat de départ non chargé : '+error.message,'reception-error');}
 }
 function drawStep(){
 steps.forEach((s,i)=>s.classList.toggle('active',i===current));
@@ -98,6 +108,7 @@ document.getElementById('back').style.visibility=current===0?'hidden':'visible';
 document.getElementById('next').classList.toggle('hidden',current===steps.length-1);
 document.getElementById('send').classList.toggle('hidden',current!==steps.length-1);
 if(current===5)renderSummary();
+if(current===6)Object.values(pads).forEach(p=>p.resize());
 window.scrollTo(0,0);
 }
 function validStep(){
@@ -107,7 +118,8 @@ return true;
 }
 function makePad(id){
 const c=document.getElementById(id),ctx=c.getContext('2d'),p={ink:false};
-function resize(){const r=c.getBoundingClientRect(),d=Math.max(1,devicePixelRatio||1);c.width=r.width*d;c.height=150*d;ctx.setTransform(d,0,0,d,0,0);ctx.strokeStyle='#18443d';ctx.lineWidth=2.5;ctx.lineCap='round';}
+function resize(){const r=c.getBoundingClientRect();if(r.width<1)return;const d=Math.max(1,devicePixelRatio||1);if(c.width===Math.round(r.width*d)&&c.height===150*d)return;const backup=p.ink?c.toDataURL():null;c.width=Math.round(r.width*d);c.height=150*d;ctx.setTransform(d,0,0,d,0,0);ctx.strokeStyle='#18443d';ctx.lineWidth=2.5;ctx.lineCap='round';if(backup){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,r.width,150);img.src=backup;}}
+p.resize=resize;
 resize();window.addEventListener('resize',resize);
 function xy(e){const r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
 c.addEventListener('pointerdown',e=>{p.ink=true;c.setPointerCapture(e.pointerId);const q=xy(e);ctx.beginPath();ctx.moveTo(q.x,q.y);});
@@ -134,31 +146,41 @@ c.width=Math.round(image.width*scale);c.height=Math.round(image.height*scale);c.
 const box=document.getElementById(pair[1]);box.textContent='';if(e.target.files[0]){const img=document.createElement('img');img.src=URL.createObjectURL(e.target.files[0]);img.alt='Aperçu';box.append(img);}
 }));
 function renderSummary(){
-const names=[['Sens','sens'],['Immatriculation','immatriculation'],['Marque / modèle','marqueModele'],['Couleur','couleur'],['Type','type'],['Conducteur','conducteur'],['Compteur','compteur'],['Carburant','carburant'],['État extérieur','etatExterieur'],['État intérieur','etatInterieur'],['Détails véhicule','etatDetails'],['Comparaison des dommages','etatDommages'],['Zones concernées','zonesDommages'],['Type de dommage','typeDommages'],['Dommages précédents','dommagesAnterieurs'],['Dommages constatés','dommagesNouveaux'],['Remarques','remarques']];
+const names=[['Sens','sens'],['Immatriculation','immatriculation'],['Marque','marque'],['Modèle','modele'],['Couleur','couleur'],['Type','type'],['Conducteur','conducteur'],['Compteur','compteur'],['Carburant','carburant'],['État extérieur','etatExterieur'],['État intérieur','etatInterieur'],['Détails véhicule','etatDetails'],['Comparaison des dommages','etatDommages'],['Zones concernées','zonesDommages'],['Type de dommage','typeDommages'],['Dommages précédents','dommagesAnterieurs'],['Dommages constatés','dommagesNouveaux'],['Remarques','remarques']];
 const root=document.getElementById('summary');root.textContent='';
 names.forEach(([label,name])=>{const row=document.createElement('div'),b=document.createElement('b'),span=document.createElement('span');b.textContent=label;span.textContent=val(name)||'—';row.append(b,span);root.append(row);});
 }
 function showStatus(text,kind){const s=document.getElementById('status');s.textContent=text;s.className=kind||'';}
 window.addEventListener('message',e=>{
-if(e.source!==document.getElementById('receptionResponse').contentWindow||!e.data||e.data.type!=='beauregard:reception')return;
-sent=!!e.data.ok;const b=document.getElementById('send');
-if(sent){showStatus('Constat enregistré. Référence : '+e.data.result,'reception-success');b.disabled=true;}
-else{showStatus('Échec de l’enregistrement : '+e.data.result,'reception-error');b.disabled=false;b.textContent='Réessayer';}
+let origin;try{origin=new URL(e.origin).hostname;}catch{return;}
+if(!(origin==='script.google.com'||origin==='script.googleusercontent.com'||origin.endsWith('-script.googleusercontent.com')||origin.endsWith('.script.googleusercontent.com'))||!e.data)return;
+const item=pendingPosts.get(e.data.requestId);if(!item)return;
+clearTimeout(item.timer);pendingPosts.delete(e.data.requestId);
+if(e.data.ok)item.resolve(e.data.data);else item.reject(new Error(e.data.error||'Enregistrement refusé'));
 });
 document.getElementById('send').onclick=async()=>{
-const b=document.getElementById('send');if(sent||!validStep())return;
+const b=document.getElementById('send');if(sent||sending||!validStep())return;
 if(!navigator.onLine){showStatus('Une connexion internet est nécessaire pour transmettre le constat.','reception-error');return;}
-b.disabled=true;b.textContent='Préparation…';
+if(!Transport.token()){showStatus('Reconnecte-toi à l’application avant de transmettre le constat.','reception-error');return;}
+sending=true;b.disabled=true;b.textContent='Envoi en cours…';
 try{
-const url=String(window.APP_CONFIG&&window.APP_CONFIG.WEBAPP_BASE_URL||'').trim();
-if(!url.startsWith('https://script.google.com/macros/s/'))throw new Error('URL Apps Script absente ou invalide dans config.js.');
-const token=localStorage.getItem('planning_session_token')||'';if(!token)throw new Error('Session référent absente. Reconnecte-toi.');
-const ping=new URL(url);ping.searchParams.set('api','receptionReady');ping.searchParams.set('token',token);const ready=await fetch(ping.toString(),{cache:'no-store'}).then(x=>x.json());if(!ready.reception)throw new Error('Le script Apps Script du tableur doit être mis à jour avec WepApp.gs avant d’utiliser la réception véhicules.');
-const r={sens:val('sens'),immatriculation:val('immatriculation'),marqueModele:val('marqueModele'),couleur:val('couleur'),type:val('type'),conducteur:val('conducteur'),compteur:val('compteur'),photoCompteur:await photo('photoCompteur'),carburant:val('carburant'),photoCarburant:await photo('photoCarburant'),etatExterieur:val('etatExterieur'),etatInterieur:val('etatInterieur'),etatDetails:val('etatDetails'),photoDommages:await photo('photoDommages'),etatDommages:val('etatDommages'),zonesDommages:val('zonesDommages'),typeDommages:val('typeDommages'),dommagesAnterieurs:val('dommagesAnterieurs'),dommagesNouveaux:val('dommagesNouveaux'),remarques:val('remarques'),nomLoueur:val('nomLoueur'),signatureLoueur:pads.signatureLoueur.data(),nomLocataire:val('nomLocataire'),signatureLocataire:pads.signatureLocataire.data()};
-document.getElementById('postForm').action=url;document.getElementById('postPayload').value=JSON.stringify({api:'saveVehicleReception',token:token,reception:r});b.textContent='Envoi en cours…';document.getElementById('postForm').submit();showStatus('Envoi en cours. Ne ferme pas la page.','');
-setTimeout(()=>{if(!sent){showStatus('Aucune confirmation reçue. Vérifie la feuille RECEPTIONS_VEHICULES avant un nouvel envoi.','reception-error');b.disabled=false;b.textContent='Renvoyer après vérification';}},45000);
-}catch(err){showStatus(err.message||String(err),'reception-error');b.disabled=false;b.textContent='Réessayer';}
+if(!savedRow){
+const photoDamage=await photo('photoDommages');
+const zoneMap={'Côté gauche':'Gauche','Côté droit':'Droite','Capot et toit':'Avant'};
+const zones=val('zonesDommages').split(',').map(x=>x.trim()).filter(Boolean);
+const damageType=val('typeDommages');
+const damages=damageType&&damageType!=='Aucun nouveau dommage'?(zones.length?zones:['Avant']).map(zone=>({zone:zoneMap[zone]||zone,type:damageType,status:val('etatDommages'),description:val('dommagesNouveaux'),photo:photoDamage})):[];
+const row={id:draftId,direction:val('sens')==='retour'?'Retour':'Prise en charge',plate:val('immatriculation'),make:val('marque'),model:val('modele'),color:val('couleur'),type:val('type'),driverName:val('conducteur'),mileage:Number(val('compteur')),fuel:val('carburant'),odometerPhoto:await photo('photoCompteur'),fuelPhoto:await photo('photoCarburant'),damages,notes:[val('etatExterieur'),val('etatInterieur'),val('etatDetails'),val('dommagesAnterieurs'),val('remarques')].filter(Boolean).join('\n')};
+savedRow=(await postMutation('reception',{row,baseVersion:0},draftId+'-save')).row;
+}
+if(signatureStep<1){await postMutation('sign',{id:draftId,name:val('nomLoueur'),image:pads.signatureLoueur.data()},draftId+'-sign1');signatureStep=1;}
+if(signatureStep<2){await postMutation('sign',{id:draftId,name:val('nomLocataire'),image:pads.signatureLocataire.data()},draftId+'-sign2');signatureStep=2;}
+sent=true;showStatus('Constat enregistré et signé. Référence : '+draftId,'reception-success');b.textContent='Constat enregistré';
+document.getElementById('back').disabled=true;
+}catch(err){showStatus(err.message||String(err),'reception-error');b.disabled=false;b.textContent='Reprendre l’envoi';}
+finally{sending=false;}
 };
+window.addEventListener('beforeunload',e=>{if(sending||(!sent&&savedRow)){e.preventDefault();e.returnValue='';}});
 drawStep();
 })();
 </script>
