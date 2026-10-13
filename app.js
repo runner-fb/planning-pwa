@@ -981,7 +981,12 @@
     var catalogue=(sim&&sim.snapshot&&Array.isArray(sim.snapshot.concerts))?sim.snapshot.concerts:(d.concerts||[]);
     wished.forEach(function(id){
       var concert=catalogue.find(function(x){return String(x.id)===String(id);});
-      if(!concert){issues.push('Concert souhaité introuvable : '+id);concerts.push(String(id)+' (introuvable)');return;}
+      if(!concert){return;} // Sans date vérifiable, ne pas attribuer un conflit à une journée arbitraire.
+      // Les souhaits de concerts ne concernent que leur journée de festival.
+      // Comparer les dates métier, sans reporter un concert du vendredi sur le jeudi.
+      var jourConcert=String(concert.date||'').slice(0,10);
+      var jourShift=String(sh.date||'').slice(0,10);
+      if(!jourConcert||jourConcert!==jourShift)return;
       var label=concert.artist||concert.name||concert.id;
       var a=period(sh), b=period(concert);
       if(!isFinite(a[0])||!isFinite(a[1])||!isFinite(b[0])||!isFinite(b[1])){
@@ -992,7 +997,7 @@
         concerts.push(label+' (conflit)');
       }else concerts.push(label+' (compatible)');
     });
-    info.push('Concerts : '+(concerts.length?concerts.join(', '):'aucun souhait renseigné'));
+    if(concerts.length)info.push('Concerts : '+concerts.join(', '));
     if(!issues.length) color=sh.id===first?'green':sh.id===second?'orange':'red';
     var palette={green:{bg:'#d8f5df',border:'#27834a',fg:'#124f2c'},orange:{bg:'#ffe5bf',border:'#c67812',fg:'#754300'},red:{bg:'#ffe0df',border:'#bf3939',fg:'#781b1b'}};
     return {color:color,style:palette[color],lines:info,reasons:issues};
