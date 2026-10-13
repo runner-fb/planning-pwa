@@ -959,8 +959,11 @@
     var match=id.match(/(\d+)$/);
     return match?Number(match[1]):999;
   }
-  function simChoiceInfo(d,personId,date) {
-    var f=(d.forms||[]).filter(function(x){return x.personId===personId&&!x.deleted;}).sort(function(a,b){return String(b.updatedAt||b.envoi_formulaire||'').localeCompare(String(a.updatedAt||a.envoi_formulaire||''));})[0];
+  function simChoiceInfo(d,personId,date,sim) {
+    /* La simulation conserve les réponses importées dans son instantané.
+       d.forms ne contient pas forcément les réponses du Sheet de test. */
+    var sourceForms=(sim&&sim.snapshot&&Array.isArray(sim.snapshot.forms))?sim.snapshot.forms:(d.forms||[]);
+    var f=sourceForms.filter(function(x){return x.personId===personId&&!x.deleted;}).sort(function(a,b){return String(b.updatedAt||b.envoi_formulaire||'').localeCompare(String(a.updatedAt||a.envoi_formulaire||''));})[0];
     if(!f)return '<small style="display:block;opacity:.7">Choix non renseignés</small>';
     var ch=(f.choices||[]).find(function(x){return String(x.date||'').slice(0,10)===date;});
     if(!ch)return '<small style="display:block;opacity:.7">Choix non renseignés</small>';
@@ -993,7 +996,7 @@
             '<p class="muted">'+esc((sh.start||'')+' – '+(sh.end||''))+'</p>'+
             '<button type="button" class="button secondary" data-sim-target="'+esc(sim.id)+'" data-sim-shift="'+esc(sh.id)+'" data-sim-date="'+esc(date)+'" style="width:100%;margin-bottom:8px">Déplacer ici</button>'+
             members.map(function(a){
-              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0">'+esc(personLabel(a.personId))+simChoiceInfo(d,a.personId,date)+'</button>';
+              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0">'+esc(personLabel(a.personId))+simChoiceInfo(d,a.personId,date,sim)+'</button>';
             }).join('')+'</section>';
         }).join('');
         return '<details class="sim-day" '+(state.simOpenDay===sim.id+'|'+date?'open':'')+'><summary>'+esc(label)+' — '+total+' affectation(s), '+cols.length+' shifts</summary>'+
