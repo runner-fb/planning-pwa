@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#174d43">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" href="../assets/beauregard-2027.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="../base.css">
+  <link rel="stylesheet" href="../theme.css">
+  <link rel="stylesheet" href="../themes/2027/theme.css">
+  <title>Beauregard — Démonstration UX (données fictives)</title>
+</head>
+<body><p style="margin:0;padding:12px;background:#fff6a3;text-align:center;font-weight:bold">DÉMONSTRATION — DONNÉES FICTIVES — AUCUN ENVOI RÉEL</p>
+  <section id="bootScreen" class="boot-screen">
+    <div class="boot-card">
+      <span class="brand-mark" role="img" aria-label="Beauregard 2027"></span>
+      <div class="spinner" role="status" aria-live="polite"></div>
+      <p class="boot-title" id="bootTitle">Préparation de ton espace…</p>
+      <p class="boot-note" id="bootNote">Le premier chargement peut prendre quelques instants.</p>
+      <div class="boot-track"><i id="bootBar"></i></div>
+    </div>
+  </section>
+
+  <section id="loginScreen" class="login-screen hidden">
+    <div class="login-brand"><span class="brand-mark" role="img" aria-label="Beauregard 2027"></span><span>BEAUREGARD</span></div>
+    <div class="login-card">
+      <p class="eyebrow">ESPACE FESTIVAL</p>
+      <h1>Bonjour, bienvenue.</h1>
+      <p class="muted">Connecte-toi pour retrouver ton espace.</p>
+      <form id="loginForm">
+        <label for="accessCode">Code d’accès</label>
+        <input id="accessCode" name="accessCode" type="password" autocomplete="current-password" required>
+        <label for="operatorName">Nom (espace véhicules uniquement)</label>
+        <input id="operatorName" name="operatorName" type="text" autocomplete="name">
+        <button class="button primary wide" type="submit">Entrer dans mon espace</button>
+      </form>
+      <p id="loginError" class="form-error" role="alert"></p>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside class="side-rail">
+      <a class="brand-lockup" href="#" onclick="navigate('home');return false">
+        <span class="brand-mark" role="img" aria-label="Beauregard 2027"></span><span><b>BEAUREGARD</b><span><small>ESPACE FESTIVAL</small></span></span>
+      </a>
+      <div class="edition-label" id="editionLabel">ÉDITION</div>
+      <div id="desktopNav" class="desktop-nav"></div>
+      <div class="side-bottom">
+        <div class="connection-pill" data-kind=""><i></i><span id="connectionText">En ligne</span></div>
+        <button class="quiet-button" id="syncNow" type="button">Synchroniser maintenant</button>
+        <button class="quiet-button" onclick="logout()">Se déconnecter</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="topbar-context"><span id="roleLabel">Bénévole</span><span class="separator">/</span><span id="pageCrumb">Accueil</span></div>
+        <div class="topbar-user"><span id="userAvatar" class="avatar">B</span><span id="userLabel">Mon espace</span><button class="icon-button" aria-label="Déconnexion" onclick="logout()">↗</button></div>
+      </header>
+      <section class="page-heading">
+        <div><p class="eyebrow" id="pageEyebrow">MON FESTIVAL</p><h1 id="pageTitle">Accueil</h1><p id="pageSubtitle" class="muted">Toutes les informations utiles au même endroit.</p></div>
+        <div id="headingActions" class="heading-actions"></div>
+      </section>
+      <div id="mobileSyncStatus" class="sync-status" role="status"><span id="mobileConnectionText">État du réseau…</span><button id="syncMobile" class="quiet-button">Actualiser</button></div>
+      <div id="unsavedStatus" class="unsaved-status" role="status" hidden>Modifications non enregistrées</div>
+      <div id="appNotice" class="notice hidden" role="status"><span id="noticeText"></span><button id="dismissNotice" aria-label="Fermer le message">✕</button></div>
+      <section id="pageContent" class="page-content" aria-live="polite"></section>
+    </main>
+    <nav id="mobileNav" class="mobile-nav" aria-label="Navigation principale"></nav>
+  </div>
+
+  <div id="modalRoot"></div>
+
+  <script src="./admin-ux-fixture.js"></script>
+  
+  
+  
+  <script src="../js/screens-team.js"></script>
+  <script src="../js/screens-shifts.js"></script>
+  <script src="../js/admin-ux.js"></script>
+  <script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path');
+const {JSDOM}=require(process.env.JSDOM_PATH||'jsdom');
+const UX=require('../js/admin-ux.js');
+const root=path.resolve(__dirname,'..');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/<script[\s\S]*?<\/script>/g,'');
+const dom=new JSDOM(html,{url:'https://example.test/',runScripts:'outside-only',pretendToBeVisual:true});
+const w=dom.window;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
+for(const f of ['tests/admin-ux-fixture.js','js/screens-team.js','js/screens-shifts.js','js/admin-ux.js','app.js'])w.eval(fs.readFileSync(path.join(root,f),'utf8'));
+const tick=()=>new Promise(r=>setTimeout(r,30));
+const q=s=>w.document.querySelector(s),qa=s=>[...w.document.querySelectorAll(s)];
+(async()=>{
+ await tick();assert.match(q('#pageContent').textContent,/Prochaine action/);
+ w.navigate('planning');assert.deepEqual(qa('.planning-column h3').map(x=>x.textContent),['Je0','Je1','Je2','Je3']);
+ q('[data-plan="checks"]').click();await tick();assert(q('[data-plan="validate"]'));
+ q('[data-plan="validate"]').click();await tick();assert(q('[data-plan="publish"]'));
+ q('[data-plan="publish"]').click();assert.match(q('#modalRoot').textContent,/Destinataires/);assert.equal(w.fixtureCalls.filter(x=>x.action==='publish').length,0);q('#uxCancel').click();
+ w.navigate('forms');assert(q('#questionsPreview'));assert.match(q('#formMailPreview').textContent,/15\/05\/2027 20:00/);assert(!q('#toggleTerrain'));
+ q('#formTrackingSearch').value='Johan';q('#formTrackingSearch').dispatchEvent(new w.Event('input',{bubbles:true}));q('#selectUnanswered').click();assert.deepEqual(qa('[name="formRecipient"]:checked').map(x=>x.value),['p2']);
+ q('#sendForms').click();assert.match(q('#modalRoot').textContent,/Johan Exemple/);assert.equal(w.fixtureCalls.filter(x=>x.action==='sendForms').length,0);q('#uxCancel').click();
+ w.navigate('simulations');var dest=q('[data-sim-person="p1"]').parentElement.querySelector('select');dest.value='Je3';dest.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(q('[data-sim-person="p1"]').dataset.simSource,'Je3');qa('button').find(b=>b.textContent==='Annuler le dernier déplacement').click();assert.equal(q('[data-sim-person="p1"]').dataset.simSource,'Je1');
+ w.navigate('setup');q('[data-setup="edition"]').click();var name=q('[name="nom_edition"]');name.value='Saisie à protéger';name.dispatchEvent(new w.Event('input',{bubbles:true}));w.confirm=()=>false;w.navigate('planning');assert(q('[name="nom_edition"]'));q('[data-setup="etat"]').click();assert.equal(q('[name="nom_edition"]').value,'Saisie à protéger');w.confirm=()=>true;
+ w.navigate('team');q('#manageGroups').click();assert(q('#uxGroupName'));q('#uxCancel').click();q('#importTeam').click();assert(q('#teamCSV'));q('#uxCancel').click();
+ assert.equal(UX.parseCSV('Nom;Prénom;Email\n"Du;pond";Alice;alice@example.test')[0].lastName,'Du;pond');assert.throws(()=>UX.parseCSV('Nom;Prénom\n"mal fermé;Alice'));
+ var d=JSON.parse(JSON.stringify(w.fixtureData));d.publications=[{number:1,mode:'draft',snapshot:d}];assert.equal(UX.steps(d,false).at(-1).done,false);
+ console.log('PASS: admin routing, ordered columns, checks/validation, publication review, form/email preview, filtered recipients, move/undo, dirty guards, import/groups, CSV parsing.');dom.window.close();
+})().catch(e=>{console.error(e);dom.window.close();process.exitCode=1;});
