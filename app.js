@@ -958,7 +958,7 @@
     wireManagement();wireSimulationMoves();
     var button=$('#useLatestSimulation');if(button)button.onclick=function(){
       if(!window.confirm('Appliquer cette simulation au planning de travail ?'))return;
-      submitTask(button,function(){return onlineAction('useSimulation',{id:sim.id,assignments:simulationDraft(sim)}).then(function(){notice('Simulation appliquée. Contrôle maintenant le planning.','success');go('planning');});});
+      submitTask(button,function(){return onlineAction('useSimulation',{id:sim.id,moves:simulationDraft(sim).filter(function(a){return !(sim.assignments||[]).some(function(o){return String(o.personId)===String(a.personId)&&String(o.shiftId)===String(a.shiftId);});}).map(function(a){return {personId:a.personId,shiftId:a.shiftId};})}).then(function(){notice('Simulation appliquée. Contrôle maintenant le planning.','success');go('planning');});});
     };
   }
   /* Tableau de bord : indicateurs calculés à partir du bundle, sans modifier les données. */
