@@ -4,9 +4,14 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6f2e9",
-  "theme_color": "#174d43",
+  "background_color": "#effcfa",
+  "theme_color": "#111716",
   "icons": [
-    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "./assets/beauregard-2027.jpg",
+      "sizes": "1536x1536",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
   ]
 }
