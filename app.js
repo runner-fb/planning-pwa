@@ -954,6 +954,21 @@
     }
     return state.simDrafts[sim.id];
   }
+  function simShiftOrder(sh) {
+    var id=String(sh.id||'');
+    var match=id.match(/(\d+)$/);
+    return match?Number(match[1]):999;
+  }
+  function simChoiceInfo(d,personId,date) {
+    var f=(d.forms||[]).filter(function(x){return x.personId===personId&&!x.deleted;}).sort(function(a,b){return String(b.updatedAt||b.envoi_formulaire||'').localeCompare(String(a.updatedAt||a.envoi_formulaire||''));})[0];
+    if(!f)return '<small style="display:block;opacity:.7">Choix non renseignés</small>';
+    var ch=(f.choices||[]).find(function(x){return String(x.date||'').slice(0,10)===date;});
+    if(!ch)return '<small style="display:block;opacity:.7">Choix non renseignés</small>';
+    var first=ch.first||ch.choix_1||'—', second=ch.second||ch.choix_2||'—';
+    var constrained=ch.work===true||ch.work==='oui'||ch.contrainte_pro==='oui';
+    return '<small style="display:block;font-weight:400;margin-top:4px">C1 : '+esc(first)+' · C2 : '+esc(second)+'</small>'+
+      (constrained?'<small style="display:block;color:#9a5200;font-weight:600">⚠ Contrainte professionnelle</small>':'');
+  }
   function renderSimulations(d) {
     var sims=activeRows(d,'simulations').slice().reverse();
     var html='<p class="muted">Vue par journée : sélectionne un bénévole, puis clique sur « Déplacer ici » dans le shift de destination. Aucun changement du planning officiel.</p>'+
@@ -965,9 +980,10 @@
       shifts.forEach(function(sh){if(sh.date)dates[sh.date]=true;});
       assignments.forEach(function(a){var sh=shift(a.shiftId);if(sh&&sh.date)dates[sh.date]=true;});
       var days=Object.keys(dates).sort().map(function(date){
-        var cols=shifts.filter(function(sh){return sh.date===date;}).sort(function(a,b){return String(a.start||'').localeCompare(String(b.start||''));});
+        var cols=shifts.filter(function(sh){return sh.date===date;}).sort(function(a,b){return simShiftOrder(a)-simShiftOrder(b)||String(a.start||'').localeCompare(String(b.start||''));});
         var ids=cols.map(function(sh){return sh.id;});
         assignments.forEach(function(a){var sh=shift(a.shiftId);if(sh&&sh.date===date&&ids.indexOf(a.shiftId)<0){cols.push(sh);ids.push(sh.id);}});
+        cols.sort(function(a,b){return simShiftOrder(a)-simShiftOrder(b)||String(a.start||'').localeCompare(String(b.start||''));});
         var total=assignments.filter(function(a){var sh=shift(a.shiftId);return sh&&sh.date===date;}).length;
         var label=new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
         var columns=cols.map(function(sh){
@@ -977,7 +993,7 @@
             '<p class="muted">'+esc((sh.start||'')+' – '+(sh.end||''))+'</p>'+
             '<button type="button" class="button secondary" data-sim-target="'+esc(sim.id)+'" data-sim-shift="'+esc(sh.id)+'" data-sim-date="'+esc(date)+'" style="width:100%;margin-bottom:8px">Déplacer ici</button>'+
             members.map(function(a){
-              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0">'+esc(personLabel(a.personId))+'</button>';
+              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0">'+esc(personLabel(a.personId))+simChoiceInfo(d,a.personId,date)+'</button>';
             }).join('')+'</section>';
         }).join('');
         return '<details class="sim-day" '+(state.simOpenDay===sim.id+'|'+date?'open':'')+'><summary>'+esc(label)+' — '+total+' affectation(s), '+cols.length+' shifts</summary>'+
