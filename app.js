@@ -1004,7 +1004,7 @@
   }
   function renderSimulations(d) {
     var sims=activeRows(d,'simulations').slice().reverse();
-    var html='<p class="muted">Vue par journée : sélectionne un bénévole, puis clique sur « Déplacer ici » ou dépose sa fiche n’importe où dans la colonne de destination. Aucun changement du planning officiel.</p>'+
+    var html='<p class="muted">Vue par journée : sur mobile, utilise les flèches gauche/droite sous chaque fiche ; sur ordinateur, glisse la fiche ou utilise « Déplacer ici ». Aucun changement du planning officiel.</p>'+
       '<button type="button" class="button primary" id="runSimulation">Lancer une simulation</button>';
     if(!sims.length)return card('Simulations',html+'<p>Aucune simulation enregistrée.</p>');
     html+=sims.map(function(sim,idx){
@@ -1027,10 +1027,17 @@
             '<button type="button" class="button secondary" data-sim-target="'+esc(sim.id)+'" data-sim-shift="'+esc(sh.id)+'" data-sim-date="'+esc(date)+'" style="width:100%;margin-bottom:8px">Déplacer ici</button>'+
             members.map(function(a){
               var check=simChoiceInfo(d,a.personId,sh,sim);
-              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0;background:'+check.style.bg+';border:2px solid '+check.style.border+';color:'+check.style.fg+'">'+
+              var index=cols.findIndex(function(x){return x.id===sh.id;});
+              var arrow=function(delta, label, symbol){
+                var dest=cols[index+delta];
+                return '<button type="button" class="button secondary" data-sim-arrow="'+delta+'" data-sim-person-id="'+esc(a.personId)+'" data-sim-source-id="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-day="'+esc(date)+'" data-sim-destination="'+esc(dest?dest.id:'')+'" '+(!dest?'disabled ':'')+'aria-label="'+esc(label+(dest?' vers '+dest.id:''))+'" style="flex:1;min-height:40px;padding:7px">'+symbol+'</button>';
+              };
+              return '<div style="margin:4px 0;background:'+check.style.bg+';border:2px solid '+check.style.border+';border-radius:8px;padding:4px;color:'+check.style.fg+'">'+
+                '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;background:transparent;color:inherit;border:0">'+
                 '<b>'+esc(personLabel(a.personId))+'</b>'+
                 check.lines.map(function(line){return '<small style="display:block;margin-top:4px;font-weight:400">'+esc(line)+'</small>';}).join('')+
-                (check.reasons.length?'<small style="display:block;margin-top:5px;font-weight:700">⚠ '+esc(check.reasons.join(' ; '))+'</small>':'')+'</button>';
+                (check.reasons.length?'<small style="display:block;margin-top:5px;font-weight:700">⚠ '+esc(check.reasons.join(' ; '))+'</small>':'')+'</button>'+
+                '<div style="display:flex;gap:6px;margin-top:5px">'+arrow(-1,'Déplacer à gauche','←')+arrow(1,'Déplacer à droite','→')+'</div></div>';
             }).join('')+'</section>';
         }).join('');
         return '<details class="sim-day" '+(state.simOpenDay===sim.id+'|'+date?'open':'')+'><summary>'+esc(label)+' — '+total+' affectation(s), '+cols.length+' shifts</summary>'+
@@ -1079,6 +1086,7 @@
         render();
         notice('Bénévole déplacé dans le brouillon. Planning officiel inchangé.','success');
       }
+      b.moveSim=move;
       var button=b.querySelector('button[data-sim-target]');
       if(button)button.onclick=move;
       b.addEventListener('dragover',function(e){
@@ -1094,6 +1102,19 @@
       b.addEventListener('drop',function(e){
         e.preventDefault();e.stopPropagation();b.style.outline='';move();
       });
+    });
+    Array.prototype.forEach.call(host.querySelectorAll('[data-sim-arrow]'),function(button){
+      button.onclick=function(e){
+        e.preventDefault();e.stopPropagation();
+        var dest=button.dataset.simDestination;
+        if(!dest)return;
+        state.simPick={id:button.dataset.simId,personId:button.dataset.simPersonId,source:button.dataset.simSourceId,date:button.dataset.simDay};
+        var target=Array.prototype.find.call(host.querySelectorAll('.sim-shift-column'),function(col){
+          return col.dataset.simTarget===state.simPick.id&&col.dataset.simDate===state.simPick.date&&col.dataset.simShift===dest;
+        });
+        if(target&&target.moveSim)target.moveSim();
+        else notice('Créneau de destination introuvable.','error');
+      };
     });
     Array.prototype.forEach.call(host.querySelectorAll('[data-sim-reset]'),function(b){
       b.onclick=function(){
