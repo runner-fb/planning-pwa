@@ -43,26 +43,21 @@
   /* Navigation par parcours : les entrées pointent uniquement vers des écrans existants. */
   var NAV_GROUPS = {
     admin: [
-      { title: "Pilotage", items: [["Tableau de bord", "dashboard"]] },
-      { title: "Préparer", items: [["Édition et formulaires", "setup"], ["Bénévoles", "team"], ["Shifts et missions", "creneaux"], ["Concerts", "concerts"]] },
-      { title: "Organiser", items: [["Planning et simulations", "planning"], ["Véhicules", "vehicles"]] },
-      { title: "Communiquer", items: [["Messages", "messages"], ["Contacts", "contacts"]] }
+      {title:"Pilotage",items:[["Tableau de bord","dashboard"]]},
+      {title:"Préparer",items:[["Édition","setup"],["Véhicules","vehicles"],["Bénévoles","team"],["Shifts et missions","creneaux"],["Concerts","concerts"],["Formulaire","forms"]]},
+      {title:"Organiser",items:[["Simulation","simulations"],["Planning final","planning"]]},
+      {title:"Communiquer",items:[["Messages","messages"],["Contacts","contacts"]]}
     ],
-    referent: [
-      { title: "Mon festival", items: [["Accueil", "home"], ["Planning", "planning"]] },
-      { title: "Mon équipe", items: [["Équipe", "team"], ["Véhicules", "vehicles"], ["Contacts", "contacts"]] }
-    ],
-    benevole: [
-      { title: "Mon festival", items: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]] }
-    ],
-    vehicles: [{ title: "Logistique", items: [["Accueil", "home"], ["Véhicules", "vehicles"]] }]
+    referent:[{title:"Mon festival",items:[["Accueil","home"],["Planning","planning"]]},{title:"Mon équipe",items:[["Équipe","team"],["Véhicules","vehicles"],["Contacts","contacts"]]}],
+    benevole:[{title:"Mon festival",items:[["Accueil","home"],["Mes créneaux","myshifts"],["Planning","planning"],["Contacts","contacts"]]}],
+    vehicles:[{title:"Logistique",items:[["Accueil","home"],["Véhicules","vehicles"]]}]
   };
   var NAV = Object.keys(NAV_GROUPS).reduce(function(out,role){
     out[role] = NAV_GROUPS[role].reduce(function(rows,g){return rows.concat(g.items);},[]);
     return out;
   },{});
   var NAV_MOBILE = {
-    admin: [["Accueil", "dashboard"], ["Préparer", "setup"], ["Planning", "planning"]],
+    admin: [["Accueil", "dashboard"], ["Préparer", "setup"], ["Organiser", "simulations"]],
     referent: [["Accueil", "home"], ["Planning", "planning"], ["Équipe", "team"]],
     benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"]],
     vehicles: [["Accueil", "home"], ["Véhicules", "vehicles"]]
@@ -72,17 +67,17 @@
     dashboard: ["PILOTAGE DE L’ÉDITION", "Tableau de bord", "Avancement réel, indicateurs et prochaines actions."],
     home: ["MON FESTIVAL", "Accueil", "L'essentiel de ton engagement, disponible hors ligne."],
     myshifts: ["MON ENGAGEMENT", "Mes créneaux", "Tes missions, tes rôles et tes horaires."],
-    planning: ["ORGANISATION", "Planning général", "Les affectations publiées, sans donnée privée."],
+    planning: ["ORGANISER", "Planning final", "Publication, modifications et prise de connaissance."],
     contacts: ["CARNET D'ÉQUIPE", "Contacts", "Les personnes utiles pendant le festival."],
     team: ["ÉQUIPE", "Bénévoles", "Fiches, contraintes et accès de l'édition."],
     vehicles: ["LOGISTIQUE", "Véhicules", "Parc, états des lieux et incidents."],
     messages: ["INFORMATIONS", "Messages", "Consignes et actualités de l'équipe."],
     tools: ["ESPACE RÉFÉRENT", "Outils", "Accès aux modules de suivi."],
-    setup: ["CYCLE DE L'ÉDITION", "Préparation", "Paramètres et progression de l'édition."],
+    setup: ["PRÉPARER", "Édition", "Paramètres, état et remise à zéro."],
     creneaux: ["CYCLE DE L'ÉDITION", "Créneaux & missions", "Horaires, effectifs et journées de l'édition."],
     concerts: ["PROGRAMMATION", "Concerts", "Artistes, scènes et horaires de passage."],
-    forms: ["INSCRIPTIONS", "Formulaires", "Ouverture et suivi des disponibilités."],
-    simulations: ["AFFECTATIONS", "Simulations", "Construire puis comparer les propositions."],
+    forms: ["PRÉPARER", "Formulaire", "Ouverture, envois et réponses depuis Sheets."],
+    simulations: ["ORGANISER", "Simulation", "Une seule simulation en cours, à contrôler avant publication."],
     arbitrations: ["DÉCISIONS", "Arbitrages", "Traiter les points à décider."],
     rotations: ["ÉQUILIBRE", "Rotations", "Répartition Conducteur / Chargeur."],
     checks: ["QUALITÉ", "Contrôles", "Repérer et résoudre les anomalies."],
@@ -323,12 +318,14 @@
     var d = state.data || {};
     var p = state.page;
     if (p === "dashboard") return renderAdminDashboard(c, d);
-    if (p === "home") return renderHome(c, d);
+    if (p === "home") {renderHome(c, d);return showPublicationPopup(d);}
     if (p === "team") return renderTeam(c, d);
     if (p === "creneaux") return renderCreneaux(c, d);
     if (p === "concerts") return renderConcerts(c, d);
-    if (p === "myshifts") return renderMyShifts(c, d);
+    if (p === "myshifts") {renderMyShifts(c, d);return showPublicationPopup(d);}
     if (p === "planning") return renderPlanning(c, d);
+    if (p === "simulations") return renderSimulationPage(c,d);
+    if (p === "forms") return renderFormsPage(c,d);
     if (p === "contacts") return renderContacts(c, d);
     if (p === "terrain") return renderTerrain(c, d);
     if (p === "form") return renderVolunteerForm(c, d);
@@ -338,6 +335,19 @@
     c.innerHTML = empty("Module en préparation", "Cet écran sera branché à l'étape suivante.");
   }
 
+  function showPublicationPopup(d){
+    if(state.role==='admin'||state.role==='vehicles')return;
+    var pubs=activeRows(d,'publications');
+    var pending=pubs.filter(function(p){return p.mode!=='draft'&&(!p.affectedIds||p.affectedIds.indexOf((state.user||{}).id)>=0);}).filter(function(p){return !(d.reads||[]).some(function(r){return r.messageId==='publication-'+p.id&&r.personId===(state.user||{}).id;});});
+    var pub=pending.sort(function(a,b){return Number(a.number||0)-Number(b.number||0);})[0];
+    if(!pub){var draft=pubs.filter(function(p){return p.mode==='draft';}).sort(function(a,b){return Number(b.number||0)-Number(a.number||0);})[0];if(draft){try{if(sessionStorage.getItem('bg-draft-seen-'+draft.id)!=='1')pub=draft;}catch(e){pub=draft;}}}
+    var root=$('#modalRoot');if(!pub||!root||root.querySelector('#pubAckModal'))return;
+    var isDraft=pub.mode==='draft',change=pub.changeType==='targeted'||pub.changeType==='general';
+    root.innerHTML='<div class="pub-ack-backdrop"><section class="pub-ack-panel" role="dialog" aria-modal="true" aria-labelledby="pubAckTitle"><h2 id="pubAckTitle">'+(isDraft?'Planning provisoire':change?'Ton planning a changé':'Ton planning est disponible !')+'</h2><p>'+(isDraft?'Voici une première version de ton planning. Elle peut encore changer.':change?'Une nouvelle version de ton planning a été publiée. Consulte les modifications.':'Le planning définitif de Beauregard vient d’être publié. Tu peux consulter tes jours, horaires et missions.')+'</p><label class="check"><input type="checkbox" id="pubAckCheck">J’ai pris connaissance '+(isDraft?'du caractère provisoire de mon planning.':change?'de la modification de mon planning.':'de la publication de mon planning.')+'</label><button type="button" class="button primary" id="pubAckConfirm" disabled>J’ai compris</button><p class="muted">Cette confirmation ne vaut pas acceptation de tes affectations.</p></section></div>';
+    var checkbox=$('#pubAckCheck'),btn=$('#pubAckConfirm');checkbox.onchange=function(){btn.disabled=!checkbox.checked;};
+    btn.onclick=function(){if(isDraft){try{sessionStorage.setItem('bg-draft-seen-'+pub.id,'1');}catch(e){}root.innerHTML='';return;}submitTask(btn,function(){return onlineAction('read',{messageId:'publication-'+pub.id}).then(function(){root.innerHTML='';});});};
+  }
+  (function(){var style=document.createElement('style');style.textContent='.pub-ack-backdrop{position:fixed;inset:0;z-index:1000;background:#0009;display:grid;place-items:center;padding:18px}.pub-ack-panel{width:min(100%,470px);max-height:90vh;overflow:auto;border-radius:20px;background:var(--surface);color:var(--text);padding:24px;box-shadow:0 20px 70px #0005}.pub-ack-panel .button{width:100%;margin-top:18px}.pub-ack-panel .check{margin-top:18px}';document.head.appendChild(style);})();
   /* ---------- Équipe ---------- */
   function renderTeam(c, d) {
     var T = window.ScreenTeam;
@@ -861,8 +871,6 @@
       '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
 
       bloc("edition", "Édition", cfg.year ? "Année " + cfg.year : "à renseigner", blocEdition) +
-      bloc("planning", "Paramètres véhicules", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner", blocPlanning) +
-      bloc("shifts", "Paramètres shifts", n("shifts") + " créneau(x) · normaux, brunch et journées annexes", '<button class="button primary" data-page="creneaux">Gérer tous les shifts</button>') +
       bloc("ouvertures", "Formulaire", (cfg.formOpen ? "Formulaire ouvert" : "Formulaire fermé"), blocOuvertures + formTracking(d)) +
       bloc("etat", "État de la préparation", "compteurs et accès", corpsEtat) +
 
@@ -879,6 +887,7 @@
       var target = $("#queueDetails");
       if (target) target.textContent = "Stockage hors ligne indisponible sur cet appareil. Les actions en attente ne peuvent pas être vérifiées.";
     });
+    if(state.page==="setup"){var fb=c.querySelector('[data-setup="ouvertures"]');if(fb)fb.closest('.card').remove();}
     wireManagement();
     var retry = $("#retryQueue"); if (retry) retry.onclick = function () { Queue.retryBlocked().then(function () { syncNow(); }).catch(function (e) { notice("Impossible de relancer les actions : " + String(e.message || e), "error"); }); };
 
@@ -900,6 +909,28 @@
     wireNav();
   }
 
+  function renderFormsPage(c,d){
+    state.open=state.open||'ouvertures';
+    renderSetup(c,d);
+    var cards=Array.prototype.slice.call(c.querySelectorAll('.acc'));
+    cards.forEach(function(card){if(!card.querySelector('[data-setup="ouvertures"]'))card.remove();});
+    var hero=c.querySelector('.hero-card');if(hero)hero.remove();
+    var reset=c.querySelector('#resetEdition');if(reset){var panel=reset.closest('.card');if(panel)panel.remove();}
+    var queue=c.querySelector('#retryQueue');if(queue){var panel=queue.closest('.card');if(panel)panel.remove();}
+    if(!c.querySelector('[data-setup="ouvertures"]')){
+      c.innerHTML='<article class="card"><h2>Formulaire</h2><p>Ouverture et suivi des réponses, synchronisés avec Sheets.</p></article>';
+    }
+  }
+  function renderSimulationPage(c,d){
+    if(state.role!=='admin'){go('home');return;}
+    var sim=activeRows(d,'simulations').slice().sort(function(a,b){return String(b.at||'').localeCompare(String(a.at||''));})[0];
+    c.innerHTML=renderSimulations(d)+(sim?card('Valider la simulation','<p>Cette action applique la dernière simulation et les déplacements enregistrés à ton planning de travail. Elle ne publie rien.</p><button type="button" class="button primary" id="useLatestSimulation">Valider la simulation</button>'):'');
+    wireManagement();wireSimulationMoves();
+    var button=$('#useLatestSimulation');if(button)button.onclick=function(){
+      if(!window.confirm('Appliquer cette simulation au planning de travail ?'))return;
+      submitTask(button,function(){return onlineAction('useSimulation',{id:sim.id,assignments:simulationDraft(sim)}).then(function(){notice('Simulation appliquée. Contrôle maintenant le planning.','success');go('planning');});});
+    };
+  }
   /* Tableau de bord : indicateurs calculés à partir du bundle, sans modifier les données. */
   function renderAdminDashboard(c,d) {
     if(state.role!=='admin'){go('home');return;}
@@ -914,9 +945,9 @@
     var answerLabel=answered===null?'Non synchronisé':answered+' / '+people.length;
     var steps=[
       {title:'Préparation',detail:people.length+' bénévoles · '+shifts.length+' shifts · '+concerts.length+' concerts',done:people.length>0&&shifts.length>0&&concerts.length>0,page:'setup'},
-      {title:'Formulaires',detail:answerLabel+' réponses reçues · '+formSent+' envois signalés',done:answered!==null&&people.length>0&&answered===people.length,page:'setup',section:'ouvertures'},
-      {title:'Simulation',detail:hasSim?sims.length+' simulation(s) enregistrée(s)':'Aucune simulation enregistrée',done:hasSim,page:'planning'},
-      {title:'Contrôles',detail:'À vérifier dans le planning (pas de validation automatique)',done:false,page:'planning'},
+      {title:'Formulaires',detail:answerLabel+' réponses reçues · '+formSent+' envois signalés',done:answered!==null&&people.length>0&&answered===people.length,page:'forms'},
+      {title:'Simulation',detail:hasSim?sims.length+' simulation(s) enregistrée(s)':'Aucune simulation enregistrée',done:hasSim,page:'simulations'},
+      {title:'Contrôles',detail:'Vérifier les affectations avant validation',done:false,page:'planning'},
       {title:'Publication',detail:hasPublished?pubs.length+' publication(s) enregistrée(s)':'Aucune publication enregistrée',done:hasPublished,page:'planning'}
     ];
     var done=steps.filter(function(x){return x.done;}).length;
@@ -1113,7 +1144,7 @@
     return {color:color,style:palette[color],lines:info,reasons:issues};
   }
   function renderSimulations(d) {
-    var sims=activeRows(d,'simulations').slice().reverse();
+    var sims=activeRows(d,'simulations').slice().sort(function(a,b){return String(b.at||'').localeCompare(String(a.at||''));}).slice(0,1);
     var html='<p class="muted">Vue par journée : sur mobile, utilise les flèches gauche/droite sous chaque fiche ; sur ordinateur, glisse la fiche ou utilise « Déplacer ici ». Aucun changement du planning officiel.</p>'+
       '<button type="button" class="button primary" id="runSimulation">Lancer une simulation</button>';
     if(!sims.length)return card('Simulations',html+'<p>Aucune simulation enregistrée.</p>');
@@ -1238,13 +1269,28 @@
       };
     });
   }
-  function renderPlanning(c,d) {
-    var admin=state.role==='admin', rows=activeRows(d,'assignments');
-    c.innerHTML=(admin?renderSimulations(d):'')+(admin?card('Créer / modifier une affectation','<form id="assignmentForm" class="form-grid"><input type="hidden" name="id"><label>Bénévole<select name="personId">'+options(activeRows(d,'people'),' ',function(p){return [p.firstName,p.lastName].join(' ');})+'</select></label><label>Shift<select name="shiftId">'+options(activeRows(d,'shifts'),' ',function(s){return s.date+' · '+s.name;})+'</select></label><button class="button primary">Enregistrer l’affectation</button></form>')+'<p class="notice">Brouillon admin. Les autres rôles consultent uniquement la dernière version publiée.</p><div class="toolbar"><button class="button secondary" data-plan="rotations">Calculer les rotations</button><button class="button secondary" data-plan="checks">Contrôler le planning</button><button class="button secondary" data-plan="validate">Valider le planning</button><button class="button primary" data-plan="publish">Publier le planning</button><button class="button secondary" data-plan="reopen">Réouvrir les modifications</button></div>':'')+
-      card(admin?'Affectations de travail':'Planning publié',rows.map(function(a){var s=shift(a.shiftId)||{};return listRow(personLabel(a.personId),(s.date||'')+' · '+(s.name||''),'')+(admin?'<div class="toolbar"><button class="button secondary" data-assignment-edit="'+esc(a.id)+'">Modifier</button><button class="button danger" data-assignment-remove="'+esc(a.id)+'">Retirer</button></div>':'');}).join('')||'<p>Aucune affectation.</p>');
-    if(admin && state.planningChecks) c.innerHTML += card('Contrôles',state.planningChecks.map(function(x){return listRow(x.message || x.title || x.type || 'Contrôle',x.detail || x.description || '',x.level)+(x.level==='orange'?'<button class="button secondary" data-accept-check="'+esc(x.id)+'">Accepter cette alerte</button>':'');}).join('') || '<p>Aucune anomalie détectée.</p>');
-    wireManagement();
-    if(admin)wireSimulationMoves();
+  function renderPlanning(c,d){
+    var admin=state.role==='admin',rows=activeRows(d,'assignments'),pubs=activeRows(d,'publications');
+    var latest=pubs.slice().sort(function(a,b){return Number(b.number||0)-Number(a.number||0);})[0];
+    var current=latest&&latest.mode!=='draft';
+    var grouped={};
+    rows.forEach(function(a){var sh=shift(a.shiftId)||{},date=sh.date||'Sans date',key=String(a.shiftId||'');
+      if(!grouped[date])grouped[date]={};if(!grouped[date][key])grouped[date][key]={shift:sh,rows:[]};grouped[date][key].rows.push(a);
+    });
+    var list=Object.keys(grouped).sort().map(function(date){return '<details class="card" open><summary><b>'+esc(date)+'</b></summary>'+Object.keys(grouped[date]).sort().map(function(id){var group=grouped[date][id],sh=group.shift;return '<details class="card"><summary>'+esc((sh.name||id)+' · '+(sh.start||'')+' – '+(sh.end||''))+' ('+group.rows.length+')</summary>'+group.rows.map(function(a){return listRow(personLabel(a.personId),'', '')+(admin?'<button type="button" class="button secondary" data-assignment-edit="'+esc(a.id)+'">Modifier</button><button type="button" class="button danger" data-assignment-remove="'+esc(a.id)+'">Retirer</button>':'');}).join('')+'</details>';}).join('')+'</details>';}).join('');
+    var actions=admin?card('Cycle du planning',
+      '<p>État : <b>'+esc(d.config&&d.config.phase||'Préparation')+'</b>. Une simulation doit d’abord être appliquée, puis le planning contrôlé et validé.</p>'+ 
+      '<div class="toolbar"><button class="button secondary" data-page="simulations">Retour à la simulation</button><button class="button secondary" data-plan="checks">Contrôler</button><button class="button primary" data-plan="validate">Valider le planning</button><button class="button secondary" data-plan="reopen">Rouvrir les modifications</button></div>'+ 
+      '<div class="toolbar"><button class="button secondary" data-plan="draft">Publier un brouillon</button><button class="button primary" data-plan="publish">Publier la version finale</button><button class="button secondary" data-plan="targeted">Publier une correction ciblée</button></div>'+ 
+      '<p class="muted">La prise de connaissance n’est pas une acceptation du planning.</p>')+card('Modifier le planning de travail','<form id="assignmentForm" class="form-grid"><input type="hidden" name="id"><label>Bénévole<select name="personId">'+options(activeRows(d,'people'),' ',function(p){return [p.firstName,p.lastName].join(' ');})+'</select></label><label>Shift<select name="shiftId">'+options(activeRows(d,'shifts'),' ',function(x){return x.date+' · '+x.name;})+'</select></label><button class="button primary">Enregistrer</button></form>'):'';
+    var status='';
+    if(admin&&current){var msg=(d.messages||[]).find(function(m){return m.id==='publication-'+latest.id;});
+      var audience=latest.affectedIds||activeRows(d,'people').map(function(p){return p.id;});
+      status=card('Prise de connaissance — version '+esc(latest.number),'<p>La confirmation indique uniquement que le bénévole a été informé.</p>'+audience.map(function(id){var ok=msg&&(d.reads||[]).some(function(r){return r.messageId===msg.id&&r.personId===id;});return listRow(personLabel(id),ok?'A pris connaissance':'En attente',ok?'✓':'…',ok?'good':'');}).join(''));
+    }
+    c.innerHTML=(latest&&latest.mode==='draft'?'<p class="notice" role="status"><b>Planning provisoire — brouillon.</b> Les affectations peuvent encore changer.</p>':'')+actions+status+card(admin?'Planning de travail par jour et créneau':'Planning publié par jour et créneau',list||'<p>Aucune affectation.</p>');
+    if(admin&&state.planningChecks)c.innerHTML+=card('Résultats des contrôles',state.planningChecks.map(function(x){return listRow(x.message||x.title||x.type||'Contrôle',x.detail||x.description||'',x.level)+(x.level==='orange'?'<button class="button secondary" data-accept-check="'+esc(x.id)+'">Accepter cette alerte</button>':'');}).join('')||'<p>Aucune anomalie détectée.</p>');
+    wireManagement();wireNav();
   }
   function renderMessages(c,d) {
     var can=state.role==='admin'||state.role==='referent', msgs=activeRows(d,'messages');
@@ -1266,14 +1312,26 @@
       (r.damages||[]).map(function(x){return listRow(x.zone||'Dommage',(x.type||'')+' · '+(x.description||''),x.status||'')+media(x.photo,'Photo du dommage');}).join('')+
       [r.signature1,r.signature2].filter(Boolean).map(function(x){return listRow('Signé par',x.name||'',x.at||'');}).join('');
   }
+  function vehicleSettings(d){
+    var cfg=d.config||{};
+    return card('Paramètres véhicules','<div class="form-grid"><label>Nombre de véhicules prévus<input id="vehiclePlanned" type="number" min="0" value="'+esc(cfg.vehiclesPlanned||0)+'"></label><label>Conduite minimale : <output id="vehicleMinLabel">'+esc(cfg.quotaMin==null?40:cfg.quotaMin)+'</output> %<input id="vehicleMin" type="range" min="0" max="100" value="'+esc(cfg.quotaMin==null?40:cfg.quotaMin)+'"></label><label>Conduite maximale : <output id="vehicleMaxLabel">'+esc(cfg.quotaMax==null?60:cfg.quotaMax)+'</output> %<input id="vehicleMax" type="range" min="0" max="100" value="'+esc(cfg.quotaMax==null?60:cfg.quotaMax)+'"></label><label class="check"><input id="vehicleReserve" type="checkbox" '+(cfg.reserveA===false?'':'checked')+'>Réserver le véhicule A aux référents</label><button type="button" class="button primary" id="saveVehicleSettings">Enregistrer les paramètres</button></div>');
+  }
+  function wireVehicleSettings(){
+    ['Min','Max'].forEach(function(k){var el=$('#vehicle'+k),out=$('#vehicle'+k+'Label');if(el&&out)el.oninput=function(){out.textContent=el.value;};});
+    var btn=$('#saveVehicleSettings');if(btn)btn.onclick=function(){
+      var n=Number($('#vehiclePlanned').value),min=Number($('#vehicleMin').value),max=Number($('#vehicleMax').value);
+      if(!Number.isInteger(n)||n<0||min>max){notice('Vérifie le nombre de véhicules et les limites min/max.','error');return;}
+      submitTask(btn,function(){return Transport.mutate('config',{vehicules_prevus:n,quota_min:min,quota_max:max,reserve_a:$('#vehicleReserve').checked}).then(function(){notice('Paramètres enregistrés.','success');syncNow();});});
+    };
+  }
   function renderVehicles(c,d) {
     var rows=activeRows(d,'vehicles'), v=(d.vehicles||[]).find(function(x){return x.id===state.vehicleId&&!x.deleted;});
-    if(!v) {c.innerHTML=(state.role==='vehicles'?'<a class="button primary" href="./reception.html">Réception / retour véhicule</a>':'')+(d.vehicles||[]).filter(function(x){return !x.deleted;}).map(function(x){return '<button class="card person-row" data-vehicle="'+esc(x.id)+'"><span class="person-main"><b>'+esc(x.plate||'Véhicule')+'</b><small>'+esc([x.make,x.model].filter(Boolean).join(' '))+'</small></span><span class="badge">'+(x.active===false?'HS':'En service')+'</span></button>';}).join('');if(!c.innerHTML)c.innerHTML=empty('Aucun véhicule','Les véhicules reçus apparaîtront ici.');wireManagement();return;}
+    if(!v) {c.innerHTML=(state.role==='admin'?vehicleSettings(d):'')+(state.role==='vehicles'?'<a class="button primary" href="./reception.html">Réception / retour véhicule</a>':'')+(d.vehicles||[]).filter(function(x){return !x.deleted;}).map(function(x){return '<button class="card person-row" data-vehicle="'+esc(x.id)+'"><span class="person-main"><b>'+esc(x.plate||'Véhicule')+'</b><small>'+esc([x.make,x.model].filter(Boolean).join(' '))+'</small></span><span class="badge">'+(x.active===false?'HS':'En service')+'</span></button>';}).join('');if(!c.innerHTML)c.innerHTML=empty('Aucun véhicule','Les véhicules reçus apparaîtront ici.');wireManagement();wireVehicleSettings();return;}
     var manager=state.role==='admin'||state.role==='referent';
-    c.innerHTML='<button class="button secondary" id="vehiclesBack">‹ Tous les véhicules</button>'+card(v.plate,[['Marque',v.make],['Modèle',v.model],['Type',v.type],['Couleur',v.color],['État',v.active===false?'Hors service':'En service'],['Essence',v.fuelAlert?'Plein à faire':'Aucune alerte']].map(function(x){return listRow(x[0],x[1]||'Non renseigné','');}).join(''))+
+    c.innerHTML=(state.role==='admin'?vehicleSettings(d):'')+'<button class="button secondary" id="vehiclesBack">‹ Tous les véhicules</button>'+card(v.plate,[['Marque',v.make],['Modèle',v.model],['Type',v.type],['Couleur',v.color],['État',v.active===false?'Hors service':'En service'],['Essence',v.fuelAlert?'Plein à faire':'Aucune alerte']].map(function(x){return listRow(x[0],x[1]||'Non renseigné','');}).join(''))+
       card('Pannes et essence',(d.incidents||[]).filter(function(i){return i.vehicleId===v.id&&!i.deleted;}).map(function(i){return listRow(i.type,i.description||'',i.status)+(manager&&i.status!=='Clos'?'<button class="button secondary" data-incident-close="'+esc(i.id)+'">'+(i.type==='Plein à faire'?'Plein effectué':'Clore l’incident')+'</button>':'');}).join('')||'<p>Aucun signalement.</p>')+
       (manager?'<form id="incidentForm" class="form-grid"><input type="hidden" name="vehicleId" value="'+esc(v.id)+'"><label>Signalement<select name="type"><option>Panne</option><option>Plein à faire</option><option>Autre</option></select></label><label>Description<textarea name="description"></textarea></label><button class="button primary">Enregistrer le signalement</button></form>':'')+
-      card('Réceptions et retours — consultation',(d.receptions||[]).filter(function(r){return r.vehicleId===v.id||String(r.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase()===String(v.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase();}).map(function(r){return '<details><summary>'+esc((r.direction||'Réception')+' · '+(r.status||'')+' · '+(r.createdAt||r.at||''))+'</summary>'+receptionDetails(r)+(r.pdfUrl&&/^https:\/\//.test(r.pdfUrl)?'<a class="button secondary" target="_blank" rel="noopener" href="'+esc(r.pdfUrl)+'">Voir le constat PDF</a>':'')+'</details>';}).join('')||'<p>Aucun constat disponible.</p>');wireManagement();
+      card('Réceptions et retours — consultation',(d.receptions||[]).filter(function(r){return r.vehicleId===v.id||String(r.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase()===String(v.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase();}).map(function(r){return '<details><summary>'+esc((r.direction||'Réception')+' · '+(r.status||'')+' · '+(r.createdAt||r.at||''))+'</summary>'+receptionDetails(r)+(r.pdfUrl&&/^https:\/\//.test(r.pdfUrl)?'<a class="button secondary" target="_blank" rel="noopener" href="'+esc(r.pdfUrl)+'">Voir le constat PDF</a>':'')+'</details>';}).join('')||'<p>Aucun constat disponible.</p>');wireManagement();wireVehicleSettings();
   }
   function renderVolunteerForm(c,d) {
     var p=(d.people||[]).find(function(p){return p.id===(state.user||{}).id;});
@@ -1321,7 +1379,14 @@
           .then(function () { notice('Simulation calculée. Consulte les résultats ci-dessus.', 'success'); });
       });
     };
-    clicks('[data-plan]',function(b){var action=b.dataset.plan,payload={};if(action==='checks'){submitTask(b,function(){return Transport.mutate('planningChecks',{},Transport.requestId()).then(function(out){state.planningChecks=out.checks;render();});});return;}if(action==='publish'&&!window.confirm('Publier ce planning et lancer les e-mails de publication ?'))return;if(action==='reopen'){payload.reason=window.prompt('Motif de réouverture :');if(!payload.reason)return;}submitTask(b,function(){return onlineAction(action,payload);});});
+    clicks('[data-plan]',function(b){var action=b.dataset.plan,payload={};if(action==='checks'){submitTask(b,function(){return Transport.mutate('planningChecks',{},Transport.requestId()).then(function(out){state.planningChecks=out.checks;render();});});return;}if(action==='draft'||action==='publish'||action==='targeted'){
+      if(action==='targeted'){payload.reason=window.prompt('Motif de la correction ciblée (absence, remplacement…) :');if(!payload.reason)return;payload.mode='final';payload.changeType='targeted';}
+      else payload.mode=action==='draft'?'draft':'final';
+      if(!window.confirm(action==='draft'?'Publier ce planning provisoire ?':'Publier ce planning et notifier les bénévoles concernés ?'))return;
+      action='publish';
+    }
+    if(action==='reopen'){payload.reason=window.prompt('Motif de réouverture :');if(!payload.reason)return;}
+    submitTask(b,function(){return onlineAction(action,payload);});});
     clicks('[data-accept-check]',function(b){submitTask(b,function(){return onlineAction('acceptCheck',{id:b.dataset.acceptCheck});});});
     var terrain=$('#terrainForm');if(terrain)terrain.onsubmit=function(e){e.preventDefault();submitTask(terrain.querySelector('button'),function(){return putRow('terrain',{id:Transport.requestId(),personId:field(terrain,'personId'),shiftId:field(terrain,'shiftId'),role:field(terrain,'role'),note:field(terrain,'note'),status:'Modification'});});};
     var ts=$('#terrainShift');if(ts)ts.onchange=function(){state.terrainShift=ts.value;render();};
