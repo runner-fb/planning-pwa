@@ -40,13 +40,31 @@
     Rotations: "\u21BB", Contrôles: "\u2713", Validation: "\u25C9", Publication: "\u2197", Terrain: "\u2316"
   };
 
-  var NAV = {
-    benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]],
-    referent: [["Accueil", "home"], ["Planning", "planning"], ["Équipe", "team"], ["Véhicules", "vehicles"]],
+  /* Navigation par parcours : les entrées pointent uniquement vers des écrans existants. */
+  var NAV_GROUPS = {
     admin: [
-      ["Tableau de bord", "dashboard"], ["Préparation", "setup"], ["Bénévoles", "team"], ["Concerts", "concerts"],
-      ["Véhicules", "vehicles"], ["Planning", "planning"], ["Messages", "messages"], ["Contacts", "contacts"]
+      { title: "Pilotage", items: [["Tableau de bord", "dashboard"]] },
+      { title: "Préparer", items: [["Édition et formulaires", "setup"], ["Bénévoles", "team"], ["Shifts et missions", "creneaux"], ["Concerts", "concerts"]] },
+      { title: "Organiser", items: [["Planning et simulations", "planning"], ["Véhicules", "vehicles"]] },
+      { title: "Communiquer", items: [["Messages", "messages"], ["Contacts", "contacts"]] }
     ],
+    referent: [
+      { title: "Mon festival", items: [["Accueil", "home"], ["Planning", "planning"]] },
+      { title: "Mon équipe", items: [["Équipe", "team"], ["Véhicules", "vehicles"], ["Contacts", "contacts"]] }
+    ],
+    benevole: [
+      { title: "Mon festival", items: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]] }
+    ],
+    vehicles: [{ title: "Logistique", items: [["Accueil", "home"], ["Véhicules", "vehicles"]] }]
+  };
+  var NAV = Object.keys(NAV_GROUPS).reduce(function(out,role){
+    out[role] = NAV_GROUPS[role].reduce(function(rows,g){return rows.concat(g.items);},[]);
+    return out;
+  },{});
+  var NAV_MOBILE = {
+    admin: [["Accueil", "dashboard"], ["Préparer", "setup"], ["Planning", "planning"]],
+    referent: [["Accueil", "home"], ["Planning", "planning"], ["Équipe", "team"]],
+    benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"]],
     vehicles: [["Accueil", "home"], ["Véhicules", "vehicles"]]
   };
 
@@ -187,58 +205,85 @@
   }
 
   function nav() {
-    var items = NAV[state.role] || NAV.benevole;
-    var make = function (it) {
-      return '<button class="nav-link ' + (state.page === it[1] ? "active" : "") +
-        '" data-page="' + it[1] + '"><span class="nav-icon">' + (ICON[it[0]] || "•") +
-        "</span><span>" + esc(it[0]) + "</span></button>";
+    var groups = NAV_GROUPS[state.role] || NAV_GROUPS.benevole;
+    var current = state.page;
+    var make = function(it, cls) {
+      var active = current === it[1];
+      return '<button type="button" class="'+(cls||'nav-link')+(active?' active':'')+'" data-page="'+it[1]+'"'+
+        (active?' aria-current="page"':'')+'><span class="nav-icon" aria-hidden="true">'+
+        (ICON[it[0]] || (it[1]==='dashboard'?'⌂':it[1]==='setup'?'◷':it[1]==='creneaux'?'◴':'•'))+
+        '</span><span>'+esc(it[0])+'</span></button>';
     };
-    var primary = items.slice(0, 4);
-    var extra = items.slice(4);
     var dn = $("#desktopNav");
-    if (dn) dn.innerHTML = items.map(make).join("");
+    if (dn) dn.innerHTML = groups.map(function(g){
+      return '<div class="nav-group-label">'+esc(g.title)+'</div>'+g.items.map(function(it){return make(it);}).join('');
+    }).join('');
     var mn = $("#mobileNav");
     if (mn) {
-      mn.innerHTML = primary.map(make).join("") +
-        (extra.length ? '<button class="nav-more" id="navMore" aria-expanded="false" aria-label="Plus de fonctions">' +
-          '<span class="nav-icon">\u203A</span><span>Plus</span></button>' : "");
+      var primary = NAV_MOBILE[state.role] || NAV_MOBILE.benevole;
+      mn.innerHTML = primary.map(function(it){return make(it);}).join('')+
+        '<button type="button" class="nav-more" id="navMore" aria-expanded="false" aria-controls="navDrawer" aria-label="Ouvrir toutes les rubriques"><span class="nav-icon" aria-hidden="true">☰</span><span>Menu</span></button>';
       var more = $("#navMore");
       if (more) more.onclick = toggleMore;
     }
     wireNav();
   }
 
+  function closeNavDrawer() {
+    var drawer = $("#navDrawer");
+    if (drawer) drawer.remove();
+    var more = $("#navMore");
+    if (more) more.setAttribute('aria-expanded','false');
+  }
+
   function toggleMore() {
-    var items = (NAV[state.role] || NAV.benevole).slice(4);
     var more = $("#navMore");
     if (!more) return;
-    var open = more.getAttribute("aria-expanded") === "true";
-    var existing = $("#navDrawer");
-    if (existing) existing.remove();
-    if (open) { more.setAttribute("aria-expanded", "false"); return; }
-    var drawer = document.createElement("div");
-    drawer.id = "navDrawer";
-    drawer.className = "nav-drawer";
-    drawer.innerHTML = items.map(function (it) {
-      return '<button class="nav-drawer-link" data-page="' + it[1] + '"><span class="nav-icon">' +
-        (ICON[it[0]] || "•") + "</span><span>" + esc(it[0]) + "</span></button>";
-    }).join("");
+    if (more.getAttribute('aria-expanded') === 'true') {closeNavDrawer();more.focus();return;}
+    closeNavDrawer();
+    var groups = NAV_GROUPS[state.role] || NAV_GROUPS.benevole;
+    var drawer = document.createElement('div');
+    drawer.id = 'navDrawer';
+    drawer.className = 'nav-drawer nav-drawer-v2';
+    drawer.setAttribute('role','dialog');
+    drawer.setAttribute('aria-label','Toutes les rubriques');
+    drawer.innerHTML = '<div class="nav-drawer-head"><b>Navigation</b><button type="button" id="closeNavDrawer" aria-label="Fermer le menu">✕</button></div>'+
+      groups.map(function(g){return '<div class="nav-drawer-section"><div class="nav-drawer-heading">'+esc(g.title)+'</div>'+g.items.map(function(it){
+        return '<button type="button" class="nav-drawer-link'+(state.page===it[1]?' active':'')+'" data-page="'+it[1]+'"'+(state.page===it[1]?' aria-current="page"':'')+'><span class="nav-icon" aria-hidden="true">'+(ICON[it[0]]||'•')+'</span><span>'+esc(it[0])+'</span></button>';
+      }).join('')+'</div>';}).join('');
     $("#appShell").appendChild(drawer);
-    more.setAttribute("aria-expanded", "true");
+    more.setAttribute('aria-expanded','true');
+    $("#closeNavDrawer").onclick = function(){closeNavDrawer();more.focus();};
     wireNav();
+    $("#closeNavDrawer").focus();
   }
+
+  function installNavigationStyles() {
+    if (document.getElementById('bg-nav-v2-style')) return;
+    var style=document.createElement('style');
+    style.id='bg-nav-v2-style';
+    style.textContent = '.desktop-nav .nav-group-label{padding:8px 12px 3px;margin-top:12px;font-size:11px;letter-spacing:.11em;text-transform:uppercase;opacity:.65;font-weight:800}'+
+      '.desktop-nav .nav-link{min-height:42px;width:100%}.desktop-nav .nav-link:focus-visible,.nav-drawer-v2 button:focus-visible,.mobile-nav button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}'+
+      '.nav-drawer-v2{position:fixed;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px));max-height:min(72vh,650px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 12px 38px #0005;padding:14px;z-index:90}'+
+      '.nav-drawer-v2 .nav-drawer-head{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 10px;position:sticky;top:-14px;background:var(--surface);z-index:1}'+
+      '.nav-drawer-v2 .nav-drawer-head button{border:0;border-radius:10px;padding:9px 14px;background:var(--background);color:var(--text);font:inherit}'+
+      '.nav-drawer-v2 .nav-drawer-heading{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--muted);padding:14px 10px 5px}'+
+      '.nav-drawer-v2 .nav-drawer-link.active{background:var(--background);color:var(--primary)}'+
+      '.mobile-nav .nav-link,.mobile-nav .nav-more{min-width:0}'+
+      '@media(min-width:900px){.nav-drawer-v2{display:none}.desktop-nav{overflow-y:auto;min-height:0}.side-rail{position:sticky;top:0;height:100vh;overflow:hidden}.side-bottom{flex-shrink:0}}';
+    document.head.appendChild(style);
+  }
+  installNavigationStyles();
+  document.addEventListener('keydown',function(e){if(e.key==='Escape' && $("#navDrawer")){closeNavDrawer();var b=$("#navMore");if(b)b.focus();}});
 
   function wireNav() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-page]"), function (b) {
-      b.onclick = function () { go(b.dataset.page); };
+      b.onclick = function () { var section=b.dataset.openSetup; go(b.dataset.page); if(section && state.page === "setup") {state.open=section;render();var el=document.querySelector("[data-setup=\""+section+"\"]");if(el)el.scrollIntoView({block:"start",behavior:"smooth"});} };
     });
   }
 
   function go(key) {
-    var drawer = $("#navDrawer");
-    if (drawer) drawer.remove();
-    var more = $("#navMore");
-    if (more) more.setAttribute("aria-expanded", "false");
+    closeNavDrawer();
     if ((state.role !== "admin" && ["setup", "creneaux"].indexOf(key) >= 0) || (state.role === "benevole" && ["team", "vehicles", "terrain"].indexOf(key) >= 0)) { notice("Accès réservé à l’organisation.", "error"); return; }
     state.page = key;
     if (key === "form" && navigator.onLine && !(state.data.forms || []).some(function(f){return f.personId === state.user.id;})) {
@@ -869,7 +914,7 @@
     var answerLabel=answered===null?'Non synchronisé':answered+' / '+people.length;
     var steps=[
       {title:'Préparation',detail:people.length+' bénévoles · '+shifts.length+' shifts · '+concerts.length+' concerts',done:people.length>0&&shifts.length>0&&concerts.length>0,page:'setup'},
-      {title:'Formulaires',detail:answerLabel+' réponses reçues · '+formSent+' envois signalés',done:answered!==null&&people.length>0&&answered===people.length,page:'setup'},
+      {title:'Formulaires',detail:answerLabel+' réponses reçues · '+formSent+' envois signalés',done:answered!==null&&people.length>0&&answered===people.length,page:'setup',section:'ouvertures'},
       {title:'Simulation',detail:hasSim?sims.length+' simulation(s) enregistrée(s)':'Aucune simulation enregistrée',done:hasSim,page:'planning'},
       {title:'Contrôles',detail:'À vérifier dans le planning (pas de validation automatique)',done:false,page:'planning'},
       {title:'Publication',detail:hasPublished?pubs.length+' publication(s) enregistrée(s)':'Aucune publication enregistrée',done:hasPublished,page:'planning'}
@@ -882,8 +927,8 @@
       '<p class="muted">Indicateur de suivi, non une validation officielle. Les contrôles restent à effectuer dans le planning.</p></section>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:14px 0">'+
       tile(people.length,'Bénévoles actifs')+tile(answerLabel,'Réponses reçues (Sheets)')+tile(shifts.length,'Shifts créés')+tile(sims.length,'Simulations')+tile(assignments.length,'Affectations officielles')+tile(concerts.length,'Concerts')+'</div>'+
-      '<section class="card"><h2>Étapes de préparation</h2>'+steps.map(function(x,i){return '<button type="button" class="person-row" data-page="'+x.page+'" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:14px 8px"><span aria-hidden="true" style="font-size:22px;color:'+(x.done?'#23814e':'#8a94a3')+'">'+(x.done?'✓':'○')+'</span><span class="person-main" style="flex:1"><b>'+(i+1)+'. '+esc(x.title)+'</b><small>'+esc(x.detail)+'</small></span><span aria-hidden="true">›</span></button>';}).join('')+'</section>'+
-      (next?'<section class="card"><h2>Prochaine action</h2><p>'+esc(next.title)+' : '+esc(next.detail)+'</p><button class="button primary" data-page="'+next.page+'">Accéder à cette étape →</button></section>':'')+
+      '<section class="card"><h2>Étapes de préparation</h2>'+steps.map(function(x,i){return '<button type="button" class="person-row" data-page="'+x.page+'" '+(x.section?'data-open-setup="'+x.section+'"':'')+' style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:14px 8px"><span aria-hidden="true" style="font-size:22px;color:'+(x.done?'#23814e':'#8a94a3')+'">'+(x.done?'✓':'○')+'</span><span class="person-main" style="flex:1"><b>'+(i+1)+'. '+esc(x.title)+'</b><small>'+esc(x.detail)+'</small></span><span aria-hidden="true">›</span></button>';}).join('')+'</section>'+
+      (next?'<section class="card"><h2>Prochaine action</h2><p>'+esc(next.title)+' : '+esc(next.detail)+'</p><button class="button primary" data-page="'+next.page+'" '+(next.section?'data-open-setup="'+next.section+'"':'')+'>Accéder à cette étape →</button></section>':'')+
       '<section class="card"><h2>Accès rapide</h2><div class="toolbar"><button class="button secondary" data-page="team">Bénévoles</button><button class="button secondary" data-page="creneaux">Shifts</button><button class="button secondary" data-page="concerts">Concerts</button><button class="button secondary" data-page="vehicles">Véhicules</button><button class="button secondary" data-page="planning">Planning</button></div></section>';
     wireNav();
   }
@@ -971,11 +1016,40 @@
       (ref?'<button class="button secondary" data-page="contacts">Contacts</button><button class="button secondary" data-page="concerts">Tous les concerts</button>':'');
     wireManagement(); wireNav();
   }
+  /* Suivi unifié : seule REPONSES_FORMULAIRE décide si un bénévole a répondu.
+     L'historique des envois (deliveries) reste totalement indépendant. */
   function formTracking(d) {
-    return '<section class="form-tracking"><h3>Envoi et réponses</h3><p>« Envoyé » signifie accepté par le service mail, sans confirmation de réception.</p><div class="toolbar"><button class="button secondary" id="selectUnanswered">Sélectionner les non-répondants</button><button class="button primary" id="sendForms">Envoyer aux personnes cochées</button></div>'+activeRows(d,'people').map(function(p){
-      var f=(d.forms||[]).find(function(x){return x.personId===p.id;}), reports=(d.deliveries||[]).filter(function(x){return x.personId===p.id&&x.kind==='form';}).sort(function(a,b){return String(b.at).localeCompare(String(a.at));}), last=reports[0];
-      return '<label class="check"><input type="checkbox" name="formRecipient" value="'+esc(p.id)+'" data-answered="'+(f&&f.status==='Reçu'?'yes':'no')+'"><span><b>'+esc([p.firstName,p.lastName].join(' '))+'</b><br>'+esc(last?last.status+(last.error?' · '+last.error:''):'Non envoyé')+' · '+esc(f&&f.status==='Reçu'?'Répondu':f?'Commencé':'Sans réponse')+'</span></label>';
-    }).join('')+'</section>';
+    var people=activeRows(d,'people').filter(function(p){return p.status!=='Désisté';});
+    var stats=d.responseStats||null;
+    var ids=stats&&Array.isArray(stats.receivedIds)?stats.receivedIds:null;
+    var answered=ids?new Set(ids.map(String)):null;
+    var sent=0;
+    var items=people.map(function(p){
+      var reports=(d.deliveries||[]).filter(function(x){return String(x.personId)===String(p.id)&&x.kind==='form';}).sort(function(a,b){return String(b.at||'').localeCompare(String(a.at||''));});
+      var last=reports[0];
+      var ok=answered?answered.has(String(p.id)):null;
+      var sentOk=reports.some(function(x){return x.status!=='Échec';});
+      if(sentOk)sent++;
+      return {p:p,last:last,ok:ok,sentOk:sentOk};
+    });
+    var count=answered?items.filter(function(x){return x.ok;}).length:null;
+    var status=count===null?'Réponses non synchronisées':count+' / '+people.length+' réponses reçues (Sheets)';
+    return '<section class="form-tracking" id="formTracking"><h3>Envoi et réponses</h3>'+
+      '<p class="muted">Les réponses proviennent uniquement de Google Sheets. L’état d’envoi est suivi séparément.</p>'+
+      '<p role="status"><b>'+esc(status)+'</b> · '+sent+' envoi(s) signalé(s)</p>'+
+      (answered?'':'<p role="alert">Suivi individuel indisponible : actualise les données et vérifie que Code.gs transmet les identifiants des répondants. Aucune sélection automatique ne sera proposée.</p>')+
+      '<div class="toolbar"><label for="formTrackingSearch">Rechercher un bénévole</label><input id="formTrackingSearch" type="search" placeholder="Nom ou prénom" autocomplete="off" style="min-width:180px;flex:1">'+
+      '<label for="formTrackingFilter">Afficher</label><select id="formTrackingFilter"><option value="all">Tous</option><option value="unanswered">Sans réponse</option><option value="answered">Réponse reçue</option><option value="unsent">Non envoyés</option></select></div>'+
+      '<div class="toolbar"><button type="button" class="button secondary" id="selectUnanswered"'+(answered?'':' disabled')+'>Cocher les non-répondants</button><button type="button" class="button secondary" id="clearFormRecipients">Tout décocher</button><span id="formRecipientCount" aria-live="polite">0 sélectionné</span></div>'+
+      '<div id="formTrackingRows" style="max-height:430px;overflow:auto;border:1px solid var(--border,#dce1e8);border-radius:12px">'+items.map(function(x){
+        var p=x.p, label=[p.firstName,p.lastName].filter(Boolean).join(' ');
+        var mail=x.last?(x.last.status+(x.last.error?' · '+x.last.error:'')):'Non envoyé';
+        var answer=x.ok===null?'Réponse non synchronisée':(x.ok?'Réponse reçue':'Sans réponse');
+        return '<label class="check form-track-row" data-name="'+esc(label.toLowerCase())+'" data-answer="'+(x.ok===null?'unknown':x.ok?'yes':'no')+'" data-sent="'+(x.sentOk?'yes':'no')+'" style="display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer">'+
+          '<input type="checkbox" name="formRecipient" value="'+esc(p.id)+'" data-answered="'+(x.ok===null?'unknown':x.ok?'yes':'no')+'" aria-label="Sélectionner '+esc(label)+'">'+
+          '<span style="min-width:0;flex:1"><b>'+esc(label)+'</b><small style="display:block">'+esc(mail)+' · '+esc(answer)+'</small></span></label>';
+      }).join('')+'</div><p id="formTrackingEmpty" class="muted" hidden>Aucun bénévole pour ce filtre.</p>'+
+      '<div class="toolbar" style="position:sticky;bottom:0;background:var(--surface,#fff);padding:10px 0"><button type="button" class="button primary" id="sendForms">Envoyer aux personnes cochées</button></div></section>';
   }
   function resetPanel() { return '<details class="card"><summary>Remise à zéro de l’édition</summary><p>Efface concerts, affectations, rotations, formulaires, messages, véhicules et suivis. Conserve les fiches bénévoles et les horaires des shifts. Les accès seront à recréer.</p><p>Les dossiers archivés dans Drive ne sont pas supprimés.</p><label>Recopie REMISE A ZERO<input id="resetConfirm" autocomplete="off"></label><button class="button danger" id="resetEdition">Remettre l’édition à zéro</button></details>'; }
   /* Simulations : consultation et calcul uniquement, jamais d'application automatique. */
@@ -1212,7 +1286,25 @@
     clicks('[data-terrain-shift]',function(b){state.terrainShift=b.dataset.terrainShift;go('terrain');});
     clicks('[data-vehicle]',function(b){state.vehicleId=b.dataset.vehicle;render();});
     var back=$('#vehiclesBack');if(back)back.onclick=function(){state.vehicleId='';render();};
-    var select=$('#selectUnanswered');if(select)select.onclick=function(){Array.prototype.forEach.call(document.querySelectorAll('[name="formRecipient"]'),function(x){x.checked=x.dataset.answered==='no';});};
+    var rows=Array.prototype.slice.call(document.querySelectorAll('.form-track-row'));
+    var search=$('#formTrackingSearch'), filter=$('#formTrackingFilter'), countLabel=$('#formRecipientCount');
+    function refreshTracking(){
+      var q=String(search&&search.value||'').trim().toLocaleLowerCase('fr');
+      var f=filter&&filter.value||'all', visible=0, selected=0;
+      rows.forEach(function(row){
+        var show=(!q||row.dataset.name.indexOf(q)>=0)&&(f==='all'||(f==='unanswered'&&row.dataset.answer==='no')||(f==='answered'&&row.dataset.answer==='yes')||(f==='unsent'&&row.dataset.sent==='no'));
+        row.hidden=!show;row.style.display=show?'flex':'none';if(show)visible++;
+        if(row.querySelector('input').checked)selected++;
+      });
+      if(countLabel)countLabel.textContent=selected+' sélectionné(s)';
+      var none=$('#formTrackingEmpty');if(none)none.hidden=visible>0;
+    }
+    if(search)search.oninput=refreshTracking;
+    if(filter)filter.onchange=refreshTracking;
+    rows.forEach(function(row){row.querySelector('input').onchange=refreshTracking;});
+    var select=$('#selectUnanswered');if(select)select.onclick=function(){rows.forEach(function(row){row.querySelector('input').checked=row.dataset.answer==='no';});refreshTracking();};
+    var clear=$('#clearFormRecipients');if(clear)clear.onclick=function(){rows.forEach(function(row){row.querySelector('input').checked=false;});refreshTracking();};
+    refreshTracking();
     var sendForms=$('#sendForms');if(sendForms)sendForms.onclick=function(){var ids=checkedIds('[name="formRecipient"]');if(!ids.length){notice('Coche au moins une personne.','error');return;}if(!window.confirm('Envoyer le formulaire par e-mail aux '+ids.length+' personnes sélectionnées ?'))return;submitTask(sendForms,function(){return onlineAction('sendForms',{people:ids}).then(function(){notice('Envoi traité. Consulte le suivi pour les éventuels échecs.','success');});});};
     var reset=$('#resetEdition');if(reset)reset.onclick=function(){if($('#resetConfirm').value!=='REMISE A ZERO'){notice('Recopie REMISE A ZERO pour confirmer.','error');return;}submitTask(reset,function(){return (window.Queue?Queue.list():Promise.resolve([])).then(function(rows){if(rows.length)throw Error('Vide ou résous les actions hors ligne avant la remise à zéro.');if(!window.confirm('Effacer les données de l’édition ? Fiches bénévoles et horaires seront conservés.'))return;return onlineAction('resetEdition',{confirm:'REMISE A ZERO'});});});};
     clicks('[data-message-read]',function(b){submitTask(b,function(){return onlineAction('read',{messageId:b.dataset.messageRead});});});
