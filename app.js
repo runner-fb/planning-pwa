@@ -959,18 +959,43 @@
     var match=id.match(/(\d+)$/);
     return match?Number(match[1]):999;
   }
-  function simChoiceInfo(d,personId,date,sim) {
-    /* La simulation conserve les réponses importées dans son instantané.
-       d.forms ne contient pas forcément les réponses du Sheet de test. */
-    var sourceForms=(sim&&sim.snapshot&&Array.isArray(sim.snapshot.forms))?sim.snapshot.forms:(d.forms||[]);
-    var f=sourceForms.filter(function(x){return x.personId===personId&&!x.deleted;}).sort(function(a,b){return String(b.updatedAt||b.envoi_formulaire||'').localeCompare(String(a.updatedAt||a.envoi_formulaire||''));})[0];
-    if(!f)return '<small style="display:block;opacity:.7">Choix non renseignés</small>';
-    var ch=(f.choices||[]).find(function(x){return String(x.date||'').slice(0,10)===date;});
-    if(!ch)return '<small style="display:block;opacity:.7">Choix non renseignés</small>';
-    var first=ch.first||ch.choix_1||'—', second=ch.second||ch.choix_2||'—';
-    var constrained=ch.work===true||ch.work==='oui'||ch.contrainte_pro==='oui';
-    return '<small style="display:block;font-weight:400;margin-top:4px">C1 : '+esc(first)+' · C2 : '+esc(second)+'</small>'+
-      (constrained?'<small style="display:block;color:#9a5200;font-weight:600">⚠ Contrainte professionnelle</small>':'');
+  function simChoiceInfo(d, personId, sh, sim) {
+    var forms=(sim&&sim.snapshot&&Array.isArray(sim.snapshot.forms))?sim.snapshot.forms:(d.forms||[]);
+    var f=forms.filter(function(x){return x.personId===personId&&!x.deleted;})[0];
+    var issues=[], color='red', info=[], concerts=[];
+    if (!f) issues.push('Réponse au formulaire absente');
+    var ch=f&&(f.choices||[]).find(function(x){return String(x.date||'').slice(0,10)===String(sh.date||'').slice(0,10);});
+    var first=ch?String(ch.first||ch.choix_1||'').trim():'', second=ch?String(ch.second||ch.choix_2||'').trim():'';
+    info.push('C1 : '+(first||'—')+' · C2 : '+(second||'—'));
+    if(f&&!ch) issues.push('Aucun choix pour cette journée');
+    if(ch){
+      if(sh.id!==first&&sh.id!==second) issues.push('Shift '+sh.id+' hors des choix C1/C2');
+      var work=ch.work===true||ch.work==='oui'||ch.contrainte_pro==='oui';
+      var confirmed=ch.confirmWork===true||ch.confirmWork==='oui'||ch.confirmation_pro==='oui';
+      if(work){
+        info.push('Contrainte professionnelle'+(confirmed?' (confirmée)':''));
+        if(!confirmed) issues.push('Contrainte professionnelle non confirmée');
+      }
+    }
+    var wished=(f&&Array.isArray(f.concerts))?f.concerts:[];
+    var catalogue=(sim&&sim.snapshot&&Array.isArray(sim.snapshot.concerts))?sim.snapshot.concerts:(d.concerts||[]);
+    wished.forEach(function(id){
+      var concert=catalogue.find(function(x){return String(x.id)===String(id);});
+      if(!concert){issues.push('Concert souhaité introuvable : '+id);concerts.push(String(id)+' (introuvable)');return;}
+      var label=concert.artist||concert.name||concert.id;
+      var a=period(sh), b=period(concert);
+      if(!isFinite(a[0])||!isFinite(a[1])||!isFinite(b[0])||!isFinite(b[1])){
+        issues.push('Horaires non vérifiables : '+label);
+        concerts.push(label+' (horaires inconnus)');
+      }else if(a[0]<b[1]&&b[0]<a[1]){
+        issues.push('Conflit concert : '+label);
+        concerts.push(label+' (conflit)');
+      }else concerts.push(label+' (compatible)');
+    });
+    info.push('Concerts : '+(concerts.length?concerts.join(', '):'aucun souhait renseigné'));
+    if(!issues.length) color=sh.id===first?'green':sh.id===second?'orange':'red';
+    var palette={green:{bg:'#d8f5df',border:'#27834a',fg:'#124f2c'},orange:{bg:'#ffe5bf',border:'#c67812',fg:'#754300'},red:{bg:'#ffe0df',border:'#bf3939',fg:'#781b1b'}};
+    return {color:color,style:palette[color],lines:info,reasons:issues};
   }
   function renderSimulations(d) {
     var sims=activeRows(d,'simulations').slice().reverse();
@@ -996,7 +1021,11 @@
             '<p class="muted">'+esc((sh.start||'')+' – '+(sh.end||''))+'</p>'+
             '<button type="button" class="button secondary" data-sim-target="'+esc(sim.id)+'" data-sim-shift="'+esc(sh.id)+'" data-sim-date="'+esc(date)+'" style="width:100%;margin-bottom:8px">Déplacer ici</button>'+
             members.map(function(a){
-              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0">'+esc(personLabel(a.personId))+simChoiceInfo(d,a.personId,date,sim)+'</button>';
+              var check=simChoiceInfo(d,a.personId,sh,sim);
+              return '<button type="button" class="button secondary" draggable="true" data-sim-person="'+esc(a.personId)+'" data-sim-source="'+esc(sh.id)+'" data-sim-id="'+esc(sim.id)+'" data-sim-date="'+esc(date)+'" style="display:block;width:100%;text-align:left;white-space:normal;margin:4px 0;background:'+check.style.bg+';border:2px solid '+check.style.border+';color:'+check.style.fg+'">'+
+                '<b>'+esc(personLabel(a.personId))+'</b>'+
+                check.lines.map(function(line){return '<small style="display:block;margin-top:4px;font-weight:400">'+esc(line)+'</small>';}).join('')+
+                (check.reasons.length?'<small style="display:block;margin-top:5px;font-weight:700">⚠ '+esc(check.reasons.join(' ; '))+'</small>':'')+'</button>';
             }).join('')+'</section>';
         }).join('');
         return '<details class="sim-day" '+(state.simOpenDay===sim.id+'|'+date?'open':'')+'><summary>'+esc(label)+' — '+total+' affectation(s), '+cols.length+' shifts</summary>'+
