@@ -119,10 +119,11 @@
     if (bundle.full === true || !current.config) {
       var fresh = { config: bundle.config || current.config || {}, user: bundle.user || current.user || {} };
       COLLECTIONS.forEach(function (k) { fresh[k] = bundle[k] || []; });
+      if (bundle.responseStats) fresh.responseStats = bundle.responseStats;
       return fresh;
     }
 
-    var next = { config: bundle.config || current.config, user: bundle.user || current.user };
+    var next = { config: bundle.config || current.config, user: bundle.user || current.user, responseStats: bundle.responseStats || current.responseStats || null };
     COLLECTIONS.forEach(function (k) {
       var received = bundle[k];
       var hasIds = bundle.ids && Object.prototype.hasOwnProperty.call(bundle.ids, k);
@@ -859,14 +860,16 @@
     if(state.role!=='admin'){go('home');return;}
     var cfg=d.config||{}, people=activeRows(d,'people').filter(function(p){return p.status!=='Désisté';});
     var shifts=activeRows(d,'shifts'), concerts=activeRows(d,'concerts');
-    var forms=activeRows(d,'forms'), answered=people.filter(function(p){return forms.some(function(f){return f.personId===p.id&&f.status==='Reçu';});}).length;
+    var stats=d.responseStats||null;
+    var answered=stats ? Number(stats.received||0) : null;
     var sims=activeRows(d,'simulations'), assignments=activeRows(d,'assignments');
     var pubs=activeRows(d,'publications');
     var formSent=people.filter(function(p){return (d.deliveries||[]).some(function(x){return x.personId===p.id&&x.kind==='form'&&x.status!=='Échec';});}).length;
     var hasSim=sims.length>0, hasPublished=pubs.length>0;
+    var answerLabel=answered===null?'Non synchronisé':answered+' / '+people.length;
     var steps=[
       {title:'Préparation',detail:people.length+' bénévoles · '+shifts.length+' shifts · '+concerts.length+' concerts',done:people.length>0&&shifts.length>0&&concerts.length>0,page:'setup'},
-      {title:'Formulaires',detail:answered+' / '+people.length+' réponses reçues · '+formSent+' envois signalés',done:people.length>0&&answered===people.length,page:'setup'},
+      {title:'Formulaires',detail:answerLabel+' réponses reçues · '+formSent+' envois signalés',done:answered!==null&&people.length>0&&answered===people.length,page:'setup'},
       {title:'Simulation',detail:hasSim?sims.length+' simulation(s) enregistrée(s)':'Aucune simulation enregistrée',done:hasSim,page:'planning'},
       {title:'Contrôles',detail:'À vérifier dans le planning (pas de validation automatique)',done:false,page:'planning'},
       {title:'Publication',detail:hasPublished?pubs.length+' publication(s) enregistrée(s)':'Aucune publication enregistrée',done:hasPublished,page:'planning'}
@@ -878,7 +881,7 @@
       '<h3>'+done+' étape(s) sur 5 renseignée(s)</h3><div style="height:10px;border-radius:20px;background:#e2e8f0;overflow:hidden"><div style="height:100%;width:'+(done*20)+'%;background:#26815a"></div></div>'+
       '<p class="muted">Indicateur de suivi, non une validation officielle. Les contrôles restent à effectuer dans le planning.</p></section>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:14px 0">'+
-      tile(people.length,'Bénévoles actifs')+tile(answered+' / '+people.length,'Réponses reçues')+tile(shifts.length,'Shifts créés')+tile(sims.length,'Simulations')+tile(assignments.length,'Affectations officielles')+tile(concerts.length,'Concerts')+'</div>'+
+      tile(people.length,'Bénévoles actifs')+tile(answerLabel,'Réponses reçues (Sheets)')+tile(shifts.length,'Shifts créés')+tile(sims.length,'Simulations')+tile(assignments.length,'Affectations officielles')+tile(concerts.length,'Concerts')+'</div>'+
       '<section class="card"><h2>Étapes de préparation</h2>'+steps.map(function(x,i){return '<button type="button" class="person-row" data-page="'+x.page+'" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:14px 8px"><span aria-hidden="true" style="font-size:22px;color:'+(x.done?'#23814e':'#8a94a3')+'">'+(x.done?'✓':'○')+'</span><span class="person-main" style="flex:1"><b>'+(i+1)+'. '+esc(x.title)+'</b><small>'+esc(x.detail)+'</small></span><span aria-hidden="true">›</span></button>';}).join('')+'</section>'+
       (next?'<section class="card"><h2>Prochaine action</h2><p>'+esc(next.title)+' : '+esc(next.detail)+'</p><button class="button primary" data-page="'+next.page+'">Accéder à cette étape →</button></section>':'')+
       '<section class="card"><h2>Accès rapide</h2><div class="toolbar"><button class="button secondary" data-page="team">Bénévoles</button><button class="button secondary" data-page="creneaux">Shifts</button><button class="button secondary" data-page="concerts">Concerts</button><button class="button secondary" data-page="vehicles">Véhicules</button><button class="button secondary" data-page="planning">Planning</button></div></section>';
