@@ -42,19 +42,14 @@
     var rows = people.map(function (p) {
       var flags = [];
       if (p.role === "referent") flags.push("Référent");
-      if (p.status && p.status !== "Actif") flags.push(p.status);
-      if (p.forbidC3) flags.push("C3 interdit");
-      if (p.driverOnly) flags.push("Conducteur uniquement");
-      if (p.priorityLoader) flags.push("PC");
-      if (p.noLoader) flags.push("NC");
-      if (p.firstYear) flags.push("1A");
-      if (!hasCode[p.id]) flags.push("sans accès");
-      var sub = (p.phone || "sans téléphone") + " \u00b7 " + (p.email || "sans email");
+      flags.push(hasCode[p.id] ? "Accès créé" : "Sans accès");
       return '<button class="person-row" data-person="' + esc(p.id) + '">' +
         (p.photo ? '<img class="avatar" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar">' + esc(label(p).slice(0, 1)) + "</span>") +
-        '<span class="person-main"><b>' + esc(label(p)) + "</b><small>" + esc(sub) + "</small></span>" +
+        '<span class="person-main"><b>' + esc(label(p)) + "</b></span>" +
         '<span class="person-flags">' + esc(flags.join(" \u00b7 ")) + "</span>" +
-        "</button>";
+        "</button>" + (ctx.role === "referent" ? '<div class="contact-actions">' +
+          (p.phone ? '<a class="button secondary" href="tel:' + esc(String(p.phone).replace(/[^+0-9]/g, "")) + '">Appeler</a>' : '') +
+          (p.email ? '<a class="button secondary" href="mailto:' + esc(p.email) + '">Écrire</a>' : '') + '</div>' : '');
     }).join("");
 
     var withCode = access.filter(function (a) { return a.hasCode; }).length;
@@ -65,8 +60,8 @@
       "</div>" +
       '<div class="toolbar">' +
       '<span class="badge">' + withCode + " acc\u00e8s cr\u00e9\u00e9(s)</span>" +
-      '<button class="button primary" data-team="new">Nouvelle fiche</button>' +
-      '<button class="button secondary" data-team="access">Cr\u00e9er les acc\u00e8s</button>' +
+      (ctx.role === "admin" ? '<button class="button primary" data-team="new">Nouvelle fiche</button>' +
+      '<button class="button secondary" data-team="access">Cr\u00e9er les acc\u00e8s</button>' : "") +
       "</div>" +
       '<div class="card">' +
       (rows || '<div class="empty"><b>Aucune fiche</b>Aucune personne ne correspond \u00e0 cette recherche.</div>') +
@@ -79,11 +74,10 @@
     };
     return '<div class="full contraintes"><div class="section-title">Contraintes et pr\u00e9f\u00e9rences</div>' +
       one("forbidC3", "C3 interdit (contrainte dure)", p.forbidC3) +
-      one("driverOnly", "Conducteur uniquement (contrainte dure)", p.driverOnly) +
+      one("driverOnly", "Conducteur uniquement (contrainte dure)", (p.driverOnly || p.noLoader)) +
       one("priorityLoader", "Priorit\u00e9 Chargeur (PC)", p.priorityLoader) +
-      one("noLoader", "Non-Chargeur (NC)", p.noLoader) +
       one("firstYear", "Premi\u00e8re ann\u00e9e (1A)", p.firstYear) +
-      one("wednesday", "Mercredi autoris\u00e9", p.wednesday) +
+      one("wednesday", "Mercredi présent", p.wednesday) +
       "</div>";
   }
 
@@ -91,11 +85,13 @@
     var p = (ctx.data.people || []).filter(function (x) { return x.id === id; })[0];
     if (!p) return '<div class="empty"><b>Fiche introuvable</b>Elle a peut-\u00eatre \u00e9t\u00e9 supprim\u00e9e.</div>' +
       '<div class="toolbar"><button class="button secondary" data-team="back">\u2039 \u00c9quipe</button></div>';
+    var locked = ctx.role !== "admin" ? " disabled" : "";
+    var formReply = (ctx.data.forms || []).find(function (x) { return x.personId === id; }) || {};
     var acc = (ctx.data.access || []).filter(function (a) { return a.personId === id; })[0];
     /* Le serveur ne transmet jamais le hash : seulement hasCode. */
     var codeOk = !!(acc && (acc.hasCode || acc.hash));
 
-    return '<div class="toolbar"><button class="button secondary" data-team="back">\u2039 \u00c9quipe</button>' +
+    var html = '<div class="toolbar"><button class="button secondary" data-team="back">\u2039 \u00c9quipe</button>' +
       '<span class="badge">' + esc(p.role === "referent" ? "R\u00e9f\u00e9rent" : "B\u00e9n\u00e9vole") + "</span>" +
       (codeOk ? '<span class="badge good">Acc\u00e8s cr\u00e9\u00e9</span>' : '<span class="badge bad">Sans acc\u00e8s</span>') +
       "</div>" +
@@ -119,14 +115,17 @@
       checks(p) +
       '<div class="full"><label>Note interne<textarea name="internalNote" rows="3">' + esc(p.internalNote || "") + "</textarea></label></div>" +
       '<div class="full modal-actions">' +
-      '<button type="button" class="button secondary" data-team="access-one" data-id="' + esc(p.id) + '">' +
-      (codeOk ? "R\u00e9initialiser le code" : "Cr\u00e9er l\u2019acc\u00e8s") + "</button>" +
+      (ctx.role === "admin" ? '<button type="button" class="button secondary" data-team="access-one" data-id="' + esc(p.id) + '">' +
+      (codeOk ? "R\u00e9initialiser le code" : "Cr\u00e9er l\u2019acc\u00e8s") + "</button>" : "") +
       '<button class="button primary">Enregistrer</button></div>' +
       "</form>" +
-      '<div class="toolbar"><button class="button secondary" data-team="remove">Supprimer la fiche</button></div>' +
+      (ctx.role === "admin" ? '<div class="toolbar"><button class="button secondary" data-team="remove">Supprimer la fiche</button></div>' : "") +
+      '<article class="card"><h2>Note du formulaire</h2><p>' + esc(formReply.note || formReply.notes || "Aucune note transmise") + "</p></article>" +
       '<div class="notice" data-type="info">' +
       (acc ? "Acc\u00e8s : " + (codeOk ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
            : "Aucun acc\u00e8s cr\u00e9\u00e9 pour cette personne.") + "</div>";
+    if (locked) html = html.replace(/name="(lastName|firstName|phone|email|isReferent)"/g, '$& disabled');
+    return html;
   }
 
   function blank() {
@@ -161,7 +160,7 @@
       forbidC3: on("forbidC3"),
       driverOnly: on("driverOnly"),
       priorityLoader: on("priorityLoader"),
-      noLoader: on("noLoader"),
+      noLoader: on("driverOnly"),
       firstYear: on("firstYear"),
       wednesday: on("wednesday"),
       internalNote: get("internalNote")
