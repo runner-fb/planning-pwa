@@ -1004,7 +1004,7 @@
   }
   function renderSimulations(d) {
     var sims=activeRows(d,'simulations').slice().reverse();
-    var html='<p class="muted">Vue par journée : sélectionne un bénévole, puis clique sur « Déplacer ici » dans le shift de destination. Aucun changement du planning officiel.</p>'+
+    var html='<p class="muted">Vue par journée : sélectionne un bénévole, puis clique sur « Déplacer ici » ou dépose sa fiche n’importe où dans la colonne de destination. Aucun changement du planning officiel.</p>'+
       '<button type="button" class="button primary" id="runSimulation">Lancer une simulation</button>';
     if(!sims.length)return card('Simulations',html+'<p>Aucune simulation enregistrée.</p>');
     html+=sims.map(function(sim,idx){
@@ -1021,7 +1021,7 @@
         var label=new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
         var columns=cols.map(function(sh){
           var members=assignments.filter(function(a){return a.shiftId===sh.id;});
-          return '<section class="sim-shift-column" style="flex:0 0 210px;min-width:210px;border:1px solid #d0d6dd;border-radius:10px;padding:10px;background:var(--card,#fff)">'+
+          return '<section class="sim-shift-column" data-sim-target="'+esc(sim.id)+'" data-sim-shift="'+esc(sh.id)+'" data-sim-date="'+esc(date)+'" style="flex:0 0 210px;min-width:210px;border:1px solid #d0d6dd;border-radius:10px;padding:10px;background:var(--card,#fff)">'+
             '<h3>'+esc(sh.id)+' <small>('+members.length+')</small></h3>'+
             '<p class="muted">'+esc((sh.start||'')+' – '+(sh.end||''))+'</p>'+
             '<button type="button" class="button secondary" data-sim-target="'+esc(sim.id)+'" data-sim-shift="'+esc(sh.id)+'" data-sim-date="'+esc(date)+'" style="width:100%;margin-bottom:8px">Déplacer ici</button>'+
@@ -1061,7 +1061,7 @@
         if(e.dataTransfer)e.dataTransfer.setData('text/plain',b.dataset.simPerson);
       });
     });
-    Array.prototype.forEach.call(host.querySelectorAll('[data-sim-target]'),function(b){
+    Array.prototype.forEach.call(host.querySelectorAll('.sim-shift-column'),function(b){
       function move(){
         var pick=state.simPick;
         if(!pick||pick.id!==b.dataset.simTarget||pick.date!==b.dataset.simDate){notice('Sélectionne un bénévole de cette journée.','error');return;}
@@ -1079,9 +1079,21 @@
         render();
         notice('Bénévole déplacé dans le brouillon. Planning officiel inchangé.','success');
       }
-      b.onclick=move;
-      b.addEventListener('dragover',function(e){e.preventDefault();});
-      b.addEventListener('drop',function(e){e.preventDefault();move();});
+      var button=b.querySelector('button[data-sim-target]');
+      if(button)button.onclick=move;
+      b.addEventListener('dragover',function(e){
+        var pick=state.simPick;
+        if(!pick||pick.id!==b.dataset.simTarget||pick.date!==b.dataset.simDate)return;
+        e.preventDefault();
+        if(e.dataTransfer)e.dataTransfer.dropEffect='move';
+        b.style.outline='3px dashed #268a9d';
+      });
+      b.addEventListener('dragleave',function(e){
+        if(!e.relatedTarget||!b.contains(e.relatedTarget))b.style.outline='';
+      });
+      b.addEventListener('drop',function(e){
+        e.preventDefault();e.stopPropagation();b.style.outline='';move();
+      });
     });
     Array.prototype.forEach.call(host.querySelectorAll('[data-sim-reset]'),function(b){
       b.onclick=function(){
