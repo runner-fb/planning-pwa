@@ -20,6 +20,7 @@
 (function () {
   "use strict";
 
+
   var $ = function (s) { return document.querySelector(s); };
   var esc = function (s) {
     return String(s === undefined || s === null ? "" : s).replace(
@@ -30,7 +31,9 @@
     );
   };
 
+
   var ROLE = { benevole: "Bénévole", referent: "Référent", admin: "Organisation", vehicles: "Véhicules" };
+
 
   var ICON = {
     Accueil: "\u2302", "Mes créneaux": "\u25A6", Planning: "\u25A4", Contacts: "\u2663",
@@ -39,6 +42,7 @@
     Formulaires: "\u25A7", Simulations: "\u27F3", Arbitrages: "\u25C7",
     Rotations: "\u21BB", Contrôles: "\u2713", Validation: "\u25C9", Publication: "\u2197", Terrain: "\u2316"
   };
+
 
   var NAV = {
     benevole: [["Accueil", "home"], ["Mes créneaux", "myshifts"], ["Planning", "planning"], ["Contacts", "contacts"]],
@@ -49,6 +53,7 @@
     ],
     vehicles: [["Accueil", "home"], ["Véhicules", "vehicles"]]
   };
+
 
   var META = {
     home: ["MON FESTIVAL", "Accueil", "L'essentiel de ton engagement, disponible hors ligne."],
@@ -73,12 +78,14 @@
     terrain: ["PENDANT LE FESTIVAL", "Suivi terrain", "Créneaux et changements sur place."]
   };
 
+
   var COLLECTIONS = [
     "people", "access", "shifts", "missions", "concerts", "forms", "simulations",
     "assignments", "rotations", "arbitrations", "terrain", "vehicles",
     "receptions", "incidents", "messages", "reads", "publications",
     "conflicts", "amendments", "deliveries"
   ];
+
 
   var state = {
     user: null, role: "", data: null, page: "home", version: 0, pending: 0,
@@ -88,11 +95,13 @@
   var BOOT = window.Boot || null;
   var writeBusy = false;
 
+
   function bootDone() { if (BOOT && BOOT.done) BOOT.done(); else hideBoot(); }
   function bootFail(m) { if (BOOT && BOOT.fail) BOOT.fail(m); else { hideBoot(); showLogin(); } }
   function bootSkip() { if (BOOT && BOOT.skip) BOOT.skip(); else hideBoot(); }
   function hideBoot() { var b = $("#bootScreen"); if (b) b.classList.add("hidden"); }
   function showLogin() { var l = $("#loginScreen"); if (l) l.classList.remove("hidden"); }
+
 
   function saveLocal() {
     try {
@@ -106,14 +115,17 @@
     } catch (e) { return null; }
   }
 
+
   var keyOf = function (k, row) {
     if (!row) return "";
     return k === "access" ? row.personId : row.id;
   };
 
+
   function mergeBundle(bundle) {
     if (!bundle) return state.data || {};
     var current = state.data || {};
+
 
     if (bundle.full === true || !current.config) {
       var fresh = { config: bundle.config || current.config || {}, user: bundle.user || current.user || {} };
@@ -121,11 +133,13 @@
       return fresh;
     }
 
+
     var next = { config: bundle.config || current.config, user: bundle.user || current.user };
     COLLECTIONS.forEach(function (k) {
       var received = bundle[k];
       var hasIds = bundle.ids && Object.prototype.hasOwnProperty.call(bundle.ids, k);
       if (received === undefined && !hasIds) { next[k] = current[k] || []; return; }
+
 
       var byKey = {};
       (current[k] || []).forEach(function (row) { var id = keyOf(k, row); if (id) byKey[id] = row; });
@@ -140,6 +154,7 @@
     return next;
   }
 
+
   function notice(msg, type) {
     var n = $("#appNotice");
     if (!n) return;
@@ -149,6 +164,7 @@
     clearTimeout(notice.t);
     notice.t = setTimeout(function () { n.classList.add("hidden"); }, 6500);
   }
+
 
   function syncBadge() {
     var el = $("#connectionText");
@@ -170,10 +186,12 @@
     if (el.parentElement) el.parentElement.dataset.kind = kind;
   }
 
+
   function refreshPending() {
     if (!window.Queue) return Promise.resolve(0);
     return Queue.count().then(function (n) { state.pending = n; syncBadge(); return n; }).catch(function () { return 0; });
   }
+
 
   function setTitle() {
     var m = META[state.page] || META.home;
@@ -183,6 +201,7 @@
     $("#pageCrumb").textContent = m[1];
     document.title = m[1] + " — Beauregard";
   }
+
 
   function nav() {
     var items = NAV[state.role] || NAV.benevole;
@@ -206,6 +225,7 @@
     wireNav();
   }
 
+
   function toggleMore() {
     var items = (NAV[state.role] || NAV.benevole).slice(4);
     var more = $("#navMore");
@@ -226,11 +246,13 @@
     wireNav();
   }
 
+
   function wireNav() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-page]"), function (b) {
       b.onclick = function () { go(b.dataset.page); };
     });
   }
+
 
   function go(key) {
     var drawer = $("#navDrawer");
@@ -251,6 +273,7 @@
     render();
   }
 
+
   function card(title, body) {
     return '<article class="card"><h2>' + esc(title) + "</h2>" + body + "</article>";
   }
@@ -269,6 +292,7 @@
   function shift(id) {
     return ((state.data && state.data.shifts) || []).filter(function (x) { return x.id === id; })[0] || null;
   }
+
 
   function render() {
     var c = $("#pageContent");
@@ -290,6 +314,7 @@
     c.innerHTML = empty("Module en préparation", "Cet écran sera branché à l'étape suivante.");
   }
 
+
   /* ---------- Équipe ---------- */
   function renderTeam(c, d) {
     var T = window.ScreenTeam;
@@ -298,9 +323,11 @@
     wireTeam();
   }
 
+
   function wireTeam() {
     var T = window.ScreenTeam;
     if (!T) return;
+
 
     var search = $("#teamSearch");
     if (search) {
@@ -314,12 +341,14 @@
       };
     }
 
+
     Array.prototype.forEach.call(document.querySelectorAll("[data-person]"), function (b) {
       b.onclick = function () {
         state.personId = String(b.dataset.person || "");
         render();
       };
     });
+
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-team]"), function (b) {
       b.onclick = function () {
@@ -334,11 +363,13 @@
       };
     });
 
+
     var form = $("#personForm");
     if (form) {
       form.onsubmit = function (e) { e.preventDefault(); if (writeBusy) return; savePerson(form); };
     }
   }
+
 
   function openPersonForm() {
     if (state.role !== "admin") return;
@@ -348,9 +379,11 @@
     wireTeam();
   }
 
+
   function savePerson(form) {
     var data = window.ScreenTeam.readForm(form);
     if (!data.lastName || !data.firstName) { notice("Nom et prénom obligatoires.", "error"); return; }
+
 
     if (state.role !== "admin") {
       var original = (state.data.people || []).find(function(p){return p.id===state.personId;});
@@ -370,6 +403,7 @@
       row.id = "p-" + Transport.requestId().slice(0, 8);
     }
 
+
     writeBusy = true;
     sendSave("people", row, baseVersion, base)
       .then(function (out) {
@@ -383,6 +417,7 @@
       .catch(function (e) { notice(String(e.message || e), "error"); })
       .then(function () { writeBusy = false; });
   }
+
 
   function removePerson() {
     if (state.role !== "admin") return;
@@ -403,16 +438,19 @@
       .catch(function (e) { notice(String(e.message || e), "error"); wireTeam(); });
   }
 
+
   function accessRow(personId, code, alreadyShown) {
     var p = (state.data.people || []).filter(function (x) { return x.id === personId; })[0];
     if (!p) return { nom: personId, prenom: "(fiche locale inconnue)", code: code || "", alreadyShown: !!alreadyShown };
     return { nom: p.lastName, prenom: p.firstName, code: code || "", alreadyShown: !!alreadyShown };
   }
 
+
   function createAccessOne(id) {
     if (state.role !== "admin") return;
     var target = String(id || state.personId || "");
     if (!target) { notice("Aucune fiche sélectionnée.", "error"); return; }
+
 
     Transport.mutate("access", { personId: target })
       .then(function (out) {
@@ -427,11 +465,13 @@
       .catch(function (e) { notice(String(e.message || e), "error"); render(); });
   }
 
+
   function createAccessBatch() {
     if (state.role !== "admin") return;
     var people = (state.data.people || []).filter(function (p) { return !p.deleted && p.status !== "Désisté"; });
     if (!people.length) { notice("Aucune personne active.", "error"); return; }
     if (!window.confirm("Créer les accès pour " + people.length + " personne(s) ?\nLes codes existants seront remplacés.")) return;
+
 
     var rows = [], failures = [];
     var chain = Promise.resolve();
@@ -452,9 +492,11 @@
     });
   }
 
+
   function rememberAccess(id) {
     state.data.access = (state.data.access || []).filter(function (a) { return a.personId !== id; }).concat([{ personId: id, hasCode: true, active: true }]); saveLocal();
   }
+
 
   function copyCodes(text) {
     if (navigator.clipboard) {
@@ -467,6 +509,7 @@
     }
   }
 
+
   /* ---------- Créneaux ---------- */
   function renderCreneaux(c, d) {
     if (state.role !== "admin") { c.innerHTML = empty("Accès réservé", "Gestion des shifts réservée à l’admin."); return; }
@@ -476,6 +519,7 @@
     c.innerHTML = S.shiftForm({ data: d }, state.shiftMode, state.shiftId);
   }
 
+
   /* ---------- Concerts ---------- */
   function renderConcerts(c, d) {
     if (state.role !== "admin") { c.innerHTML = concertPanel(d, true); wireNav(); return; }
@@ -484,6 +528,7 @@
     if (!state.concertMode) { c.innerHTML = S.concerts({ data: d }); return; }
     c.innerHTML = S.concertForm({ data: d }, state.concertMode, state.concertId);
   }
+
 
   /* ---------- Action déléguée des créneaux et concerts ---------- */
   function scenesAction(b) {
@@ -503,10 +548,12 @@
     if (b.dataset.concertRemove !== undefined) { removeConcert(); return; }
   }
 
+
   function removeShift() {
     var s = (state.data.shifts || []).filter(function (x) { return x.id === state.shiftId; })[0];
     if (!s) return;
     if (!window.confirm("Supprimer le créneau " + (s.name || s.id) + " ?")) return;
+
 
     /* Meme regle que pour les concerts : suppression reelle par id.
      * On n'envoie jamais active:false pour simuler une suppression. */
@@ -520,10 +567,12 @@
     }).catch(function (e) { notice(String(e.message || e), "error"); });
   }
 
+
   function removeConcert() {
     var k = (state.data.concerts || []).filter(function (x) { return x.id === state.concertId; })[0];
     if (!k) return;
     if (!window.confirm("Supprimer le concert " + (k.artist || k.id) + " ?")) return;
+
 
     /* Suppression reelle : le serveur retire la ligne par son id et
      * renumeroie la programmation. On ne simule rien avec active:false. */
@@ -536,6 +585,7 @@
       render();
     }).catch(function (e) { notice(String(e.message || e), "error"); });
   }
+
 
   function saveShift(row, old) {
     var full = old ? Object.assign({}, old, row) : row;
@@ -554,6 +604,7 @@
       render();
     }).catch(function (e) { notice(String(e.message || e), "error"); }).then(function () { writeBusy = false; });
   }
+
 
   function saveConcert(row, old) {
     var full = old ? Object.assign({}, old, row) : row;
@@ -574,6 +625,7 @@
     }).catch(function (e) { notice(String(e.message || e), "error"); }).then(function () { writeBusy = false; });
   }
 
+
   /* ------------------------------------------------------------------
    * ÉCOUTEUR UNIQUE DES CRÉNEAUX ET CONCERTS
    * Un seul écouteur, posé sur #pageContent qui existe en permanence.
@@ -581,6 +633,7 @@
    * chaque render(), un gestionnaire posé dessus ne survivrait pas.
    * L'enregistrement ne dépend pas de l'événement submit.
    * ------------------------------------------------------------------ */
+
 
   var SELECTEUR_ACTIONS = [
     "[data-creneaux]", "[data-concerts]",
@@ -591,6 +644,7 @@
     "[data-save-shift]", "[data-save-concert]"
   ].join(",");
 
+
   function actionsListener(e) {
     var b = e.target && e.target.closest ? e.target.closest(SELECTEUR_ACTIONS) : null;
     if (!b) return;
@@ -598,10 +652,12 @@
     if (host && !host.contains(b)) return;
     e.preventDefault();
 
+
     if (b.dataset.saveShift !== undefined) { if (!writeBusy) handleShiftSave(); return; }
     if (b.dataset.saveConcert !== undefined) { if (!writeBusy) handleConcertSave(); return; }
     scenesAction(b);
   }
+
 
   function wirePageContent() {
     var host = document.getElementById("pageContent");
@@ -611,11 +667,13 @@
     host.addEventListener("click", actionsListener);
   }
 
+
   /* Enregistrement d'un créneau : le mode est lu DANS le formulaire. */
   function handleShiftSave() {
     var f = document.getElementById("shiftForm");
     var S = window.ScreenShifts;
     if (!f || !S) { notice("Formulaire Créneaux indisponible.", "error"); return; }
+
 
     if (!f.reportValidity()) return;
     var row = S.readShift(f, { data: state.data });
@@ -623,15 +681,18 @@
     if (!row.start || !row.end) { notice("Horaires obligatoires.", "error"); return; }
     row.name = S.slotLabel(row.start, row.end, row.id);
 
+
     var isNew = f.getAttribute("data-mode") === "new";
     var current = f.getAttribute("data-id") || "";
     var existant = (state.data.shifts || []).filter(function (x) { return x.id === row.id; })[0];
     if (isNew && existant) { notice("Cet identifiant existe déjà.", "error"); return; }
 
+
     var old = isNew ? null : (state.data.shifts || []).filter(function (x) { return x.id === current; })[0];
     writeBusy = true;
     saveShift(row, old);
   }
+
 
   /* Enregistrement d'un concert : même principe. */
   function handleConcertSave() {
@@ -639,10 +700,12 @@
     var S = window.ScreenShifts;
     if (!f || !S) { notice("Formulaire Concerts indisponible.", "error"); return; }
 
+
     if (!f.reportValidity()) return;
     var con = S.readConcert(f);
     if (!con.artist) { notice("Artiste obligatoire.", "error"); return; }
     if (!con.start || !con.end) { notice("Horaires obligatoires.", "error"); return; }
+
 
     var isNew = f.getAttribute("data-mode") === "new";
     var current = f.getAttribute("data-id") || "";
@@ -651,12 +714,14 @@
     saveConcert(con, old);
   }
 
+
   /* Installation de l'écouteur, une seule fois, dès que #pageContent existe. */
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", wirePageContent);
   } else {
     wirePageContent();
   }
+
 
   /* ------------------------------------------------------------------
    * PRÉPARATION — LES GRANDES LIGNES DE L'ÉDITION
@@ -678,11 +743,13 @@
    * ------------------------------------------------------------------ */
   var PHASES = ["Préparation", "Migration à contrôler", "Test", "Active", "Formulaire ouvert", "Validé", "Réouvert", "Publié", "Archive"];
 
+
   /* Une date ISO pour un champ type=date : les dix premiers caractères. */
   function isoJour(v) {
     var s = String(v || "").trim().slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
   }
+
 
   /* Enregistrement d'UN bloc. On n'envoie que ses champs, sous les clés
    * attendues par la feuille CONFIG_EDITION. */
@@ -692,6 +759,7 @@
     var ouvert = host.querySelector(".acc-body");
     if (!ouvert) { notice("Ouvre un bloc avant d'enregistrer.", "error"); return; }
 
+
     var champs = ouvert.querySelectorAll("input, select");
     var get = function (nom) {
       for (var i = 0; i < champs.length; i++) if (champs[i].name === nom) return champs[i];
@@ -699,6 +767,7 @@
     };
     var val = function (nom) { var e = get(nom); return e ? String(e.value).trim() : ""; };
     var on = function (nom) { var e = get(nom); return !!(e && e.checked); };
+
 
     var charge = {};
     if (id === "edition") {
@@ -724,6 +793,7 @@
       return;
     }
 
+
     notice("Enregistrement\u2026", "info");
     Transport.mutate("config", charge)
       .then(function (out) {
@@ -736,11 +806,14 @@
       .catch(function (e) { notice(String((e && e.message) || e), "error"); });
   }
 
+
   function renderSetup(c, d) {
     var cfg = d.config || {};
     var n = function (k) { return (d[k] || []).filter(function (x) { return !x.deleted; }).length; };
     var withCode = (d.access || []).filter(function (a) { return a.hasCode; }).length;
     var ouvre = function (id) { return state.open === id; };
+
+
 
 
     var entete = function (id, titre, resume) {
@@ -751,10 +824,12 @@
         "</button>";
     };
 
+
     var bloc = function (id, titre, resume, corps) {
       return '<article class="card acc">' + entete(id, titre, resume) +
         (ouvre(id) ? '<div class="acc-body">' + corps + "</div>" : "") + "</article>";
     };
+
 
     /* ---------- 1. ÉDITION ---------- */
     var blocEdition =
@@ -765,6 +840,7 @@
       '<div><label>Dernier jour<input name="date_fin" type="date" value="' + esc(isoJour(cfg.date_fin)) + '"></label></div>' +
       '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="edition">Enregistrer l\u2019édition</button></div>' +
       "</div>";
+
 
     /* ---------- 2. PARAMÈTRES PLANNING ---------- */
     var blocPlanning =
@@ -777,6 +853,7 @@
       "</div>" +
       '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="planning">Enregistrer les paramètres</button></div>' +
       "</div>";
+
 
     /* ---------- 3. OUVERTURES ---------- */
     var closeDate = cfg.closeAt ? new Date(cfg.closeAt) : null;
@@ -794,6 +871,7 @@
       '<div class="full modal-actions"><button type="button" class="button primary" data-setup-save="ouvertures">Enregistrer le formulaire</button></div>' +
       "</div>";
 
+
     /* ---------- 4. ÉTAT DE LA PRÉPARATION ---------- */
     var blocsEtat = [
       ["Équipe", n("people") + " fiche(s)", n("people") ? "good" : "bad"],
@@ -807,16 +885,19 @@
     var corpsEtat = blocsEtat.map(function (b) { return listRow(b[0], b[1], "", b[2]); }).join("") +
       "";
 
+
     c.innerHTML =
       '<div class="hero-card"><div><p class="eyebrow">' + esc(cfg.year || "") + "</p><h2>" +
       esc(cfg.name || "Beauregard") + "</h2><p>" + esc(cfg.phase || "Préparation") + "</p></div>" +
       '<span class="hero-date">V' + esc(state.version) + "</span></div>" +
+
 
       bloc("edition", "Édition", cfg.year ? "Année " + cfg.year : "à renseigner", blocEdition) +
       bloc("planning", "Paramètres véhicules", cfg.vehiclesPlanned ? cfg.vehiclesPlanned + " véhicule(s)" : "à renseigner", blocPlanning) +
       bloc("shifts", "Paramètres shifts", n("shifts") + " créneau(x) · normaux, brunch et journées annexes", '<button class="button primary" data-page="creneaux">Gérer tous les shifts</button>') +
       bloc("ouvertures", "Formulaire", (cfg.formOpen ? "Formulaire ouvert" : "Formulaire fermé"), blocOuvertures + formTracking(d)) +
       bloc("etat", "État de la préparation", "compteurs et accès", corpsEtat) +
+
 
       resetPanel() +
       card("État de l\u2019appareil",
@@ -833,6 +914,7 @@
     });
     wireManagement();
     var retry = $("#retryQueue"); if (retry) retry.onclick = function () { Queue.retryBlocked().then(function () { syncNow(); }).catch(function (e) { notice("Impossible de relancer les actions : " + String(e.message || e), "error"); }); };
+
 
     /* Les boutons sont recréés à chaque rendu : les écouteurs sont posés
      * sur le conteneur, jamais sur les boutons eux-mêmes. */
@@ -852,6 +934,7 @@
     wireNav();
   }
 
+
   /* ---------- Préparation : suite des écrans ---------- */
   function renderMyShifts(c, d) {
     var uid = state.user && state.user.id;
@@ -868,12 +951,14 @@
     c.innerHTML = rows || empty("Aucun créneau publié", "Ton planning personnel s'affichera ici.");
   }
 
+
   function renderContacts(c,d) {
     var people=activeRows(d,'people').slice().sort(function(a,b){return String(a.firstName).localeCompare(String(b.firstName),'fr');}), refs=people.filter(function(p){return p.role==='referent';}), others=people.filter(function(p){return p.role!=='referent';});
     function call(p){return p.phone?'<a class="button secondary" href="tel:'+esc(String(p.phone).replace(/[^+0-9]/g,''))+'" aria-label="Appeler '+esc([p.firstName,p.lastName].join(' '))+'">☎</a>':'';}
     c.innerHTML=card('Référents','<div class="contact-ref-grid">'+refs.map(function(p){return '<div class="contact-ref">'+photo(p)+'<b>'+esc(p.firstName)+'</b>'+call(p)+'</div>';}).join('')+'</div>')+'<input class="search" id="contactSearch" type="search" placeholder="Rechercher un bénévole…" aria-label="Rechercher un bénévole">'+card('Bénévoles',others.map(function(p){var assignments=activeRows(d,'assignments').filter(function(a){return a.personId===p.id;});return '<div class="contact-compact" data-contact-name="'+esc([p.firstName,p.lastName].join(' ').toLowerCase())+'"><details><summary>'+photo(p)+'<b>'+esc([p.firstName,p.lastName].join(' '))+'</b></summary>'+assignments.map(function(a){var s=shift(a.shiftId)||{};return listRow(s.date||'',s.name||'Créneau','');}).join('')+(assignments.length?'':'<p>Aucun créneau publié.</p>')+(p.email?'<a class="button secondary" href="mailto:'+esc(p.email)+'">Écrire</a>':'')+'</details>'+call(p)+'</div>';}).join(''));
     var search=$('#contactSearch');if(search)search.oninput=function(){var q=search.value.toLowerCase().trim();Array.prototype.forEach.call(document.querySelectorAll('[data-contact-name]'),function(row){row.hidden=row.dataset.contactName.indexOf(q)<0;});};
   }
+
 
   /* Rôles, préparation et suivi terrain. Toutes les écritures sensibles sont
      contrôlées une seconde fois par Apps Script. */
@@ -942,9 +1027,27 @@
     }).join('')+'</section>';
   }
   function resetPanel() { return '<details class="card"><summary>Remise à zéro de l’édition</summary><p>Efface concerts, affectations, rotations, formulaires, messages, véhicules et suivis. Conserve les fiches bénévoles et les horaires des shifts. Les accès seront à recréer.</p><p>Les dossiers archivés dans Drive ne sont pas supprimés.</p><label>Recopie REMISE A ZERO<input id="resetConfirm" autocomplete="off"></label><button class="button danger" id="resetEdition">Remettre l’édition à zéro</button></details>'; }
+  /* Simulations : calcul et consultation, sans application automatique. */
+  function renderSimulations(d) {
+    var simulations = activeRows(d, 'simulations').slice().reverse();
+    var html = '<p class="muted">Le calcul utilise les données du serveur. Il ne remplace pas les affectations du planning.</p>' +
+      '<button type="button" class="button primary" id="runSimulation">Lancer une simulation</button>';
+    if (!simulations.length) return card('Simulations', html + '<p>Aucune simulation enregistrée.</p>');
+    html += simulations.map(function (sim) {
+      var aa = sim.assignments || [];
+      var detail = aa.map(function (a) {
+        var sh = shift(a.shiftId) || {};
+        return listRow(personLabel(a.personId), (sh.date || '') + ' · ' + (sh.name || a.shiftId || ''), '');
+      }).join('');
+      return '<details><summary>' + esc(sim.name || 'Simulation') + ' — ' + aa.length +
+        ' affectation(s)' + (sim.stale ? ' (périmée)' : '') + '</summary>' +
+        (detail || '<p>Aucune affectation calculée.</p>') + '</details>';
+    }).join('');
+    return card('Simulations', html);
+  }
   function renderPlanning(c,d) {
     var admin=state.role==='admin', rows=activeRows(d,'assignments');
-    c.innerHTML=(admin?card('Créer / modifier une affectation','<form id="assignmentForm" class="form-grid"><input type="hidden" name="id"><label>Bénévole<select name="personId">'+options(activeRows(d,'people'),' ',function(p){return [p.firstName,p.lastName].join(' ');})+'</select></label><label>Shift<select name="shiftId">'+options(activeRows(d,'shifts'),' ',function(s){return s.date+' · '+s.name;})+'</select></label><button class="button primary">Enregistrer l’affectation</button></form>')+'<p class="notice">Brouillon admin. Les autres rôles consultent uniquement la dernière version publiée.</p><div class="toolbar"><button class="button secondary" data-plan="rotations">Calculer les rotations</button><button class="button secondary" data-plan="checks">Contrôler le planning</button><button class="button secondary" data-plan="validate">Valider le planning</button><button class="button primary" data-plan="publish">Publier le planning</button><button class="button secondary" data-plan="reopen">Réouvrir les modifications</button></div>':'')+
+    c.innerHTML=(admin?renderSimulations(d):'')+(admin?card('Créer / modifier une affectation','<form id="assignmentForm" class="form-grid"><input type="hidden" name="id"><label>Bénévole<select name="personId">'+options(activeRows(d,'people'),' ',function(p){return [p.firstName,p.lastName].join(' ');})+'</select></label><label>Shift<select name="shiftId">'+options(activeRows(d,'shifts'),' ',function(s){return s.date+' · '+s.name;})+'</select></label><button class="button primary">Enregistrer l’affectation</button></form>')+'<p class="notice">Brouillon admin. Les autres rôles consultent uniquement la dernière version publiée.</p><div class="toolbar"><button class="button secondary" data-plan="rotations">Calculer les rotations</button><button class="button secondary" data-plan="checks">Contrôler le planning</button><button class="button secondary" data-plan="validate">Valider le planning</button><button class="button primary" data-plan="publish">Publier le planning</button><button class="button secondary" data-plan="reopen">Réouvrir les modifications</button></div>':'')+
       card(admin?'Affectations de travail':'Planning publié',rows.map(function(a){var s=shift(a.shiftId)||{};return listRow(personLabel(a.personId),(s.date||'')+' · '+(s.name||''),'')+(admin?'<div class="toolbar"><button class="button secondary" data-assignment-edit="'+esc(a.id)+'">Modifier</button><button class="button danger" data-assignment-remove="'+esc(a.id)+'">Retirer</button></div>':'');}).join('')||'<p>Aucune affectation.</p>');
     if(admin && state.planningChecks) c.innerHTML += card('Contrôles',state.planningChecks.map(function(x){return listRow(x.message || x.title || x.type || 'Contrôle',x.detail || x.description || '',x.level)+(x.level==='orange'?'<button class="button secondary" data-accept-check="'+esc(x.id)+'">Accepter cette alerte</button>':'');}).join('') || '<p>Aucune anomalie détectée.</p>');
     wireManagement();
@@ -998,6 +1101,14 @@
     clicks('[data-assignment-edit]',function(b){var a=(state.data.assignments||[]).find(function(a){return a.id===b.dataset.assignmentEdit;}),f=$('#assignmentForm');if(a&&f){['id','personId','shiftId'].forEach(function(k){f.elements[k].value=a[k]||'';});f.scrollIntoView({block:'start'});}});
     clicks('[data-assignment-remove]',function(b){if(window.confirm('Retirer cette affectation du planning de travail ?'))submitTask(b,function(){return onlineAction('remove',{collection:'assignments',id:b.dataset.assignmentRemove});});});
     var assignment=$('#assignmentForm');if(assignment)assignment.onsubmit=function(e){e.preventDefault();submitTask(assignment.querySelector('button'),function(){return putRow('assignments',{id:field(assignment,'id')||Transport.requestId(),personId:field(assignment,'personId'),shiftId:field(assignment,'shiftId')});});};
+    var runSimulation = $('#runSimulation');
+    if (runSimulation) runSimulation.onclick = function () {
+      if (!window.confirm('Lancer un calcul de simulation ? Aucune affectation ne sera appliquée automatiquement.')) return;
+      submitTask(runSimulation, function () {
+        return onlineAction('simulate', {name:'Simulation ' + new Date().toLocaleString('fr-FR')})
+          .then(function () { notice('Simulation calculée. Consulte les résultats ci-dessus.', 'success'); });
+      });
+    };
     clicks('[data-plan]',function(b){var action=b.dataset.plan,payload={};if(action==='checks'){submitTask(b,function(){return Transport.mutate('planningChecks',{},Transport.requestId()).then(function(out){state.planningChecks=out.checks;render();});});return;}if(action==='publish'&&!window.confirm('Publier ce planning et lancer les e-mails de publication ?'))return;if(action==='reopen'){payload.reason=window.prompt('Motif de réouverture :');if(!payload.reason)return;}submitTask(b,function(){return onlineAction(action,payload);});});
     clicks('[data-accept-check]',function(b){submitTask(b,function(){return onlineAction('acceptCheck',{id:b.dataset.acceptCheck});});});
     var terrain=$('#terrainForm');if(terrain)terrain.onsubmit=function(e){e.preventDefault();submitTask(terrain.querySelector('button'),function(){return putRow('terrain',{id:Transport.requestId(),personId:field(terrain,'personId'),shiftId:field(terrain,'shiftId'),role:field(terrain,'role'),note:field(terrain,'note'),status:'Modification'});});};
@@ -1006,6 +1117,7 @@
     clicks('[data-incident-close]',function(b){submitTask(b,function(){return onlineAction('closeIncident',{id:b.dataset.incidentClose});});});
     var vf=$('#volunteerForm');if(vf)vf.onsubmit=function(e){e.preventDefault();var old=(state.data.forms||[]).find(function(f){return f.personId===state.user.id;})||{};var choices=Array.prototype.map.call(vf.querySelectorAll('[data-choice-date]'),function(x,i){var work=vf.elements['work'+i].checked;return {date:x.dataset.choiceDate,first:field(vf,'first'+i),second:work?'':field(vf,'second'+i),work:work,confirmWork:work};});var data=Object.assign({},old,{personId:state.user.id,choices:choices,concerts:checkedIds('[name="favoriteConcert"]'),note:field(vf,'note'),confirmOrange:vf.elements.confirmOrange.checked});submitTask(vf.querySelector('button'),function(){return onlineAction('formSubmit',data).then(function(){notice('Réponse enregistrée.','success');});});};
   }
+
 
   function start() {
     hideBoot();
@@ -1023,6 +1135,7 @@
     syncBadge();
     wirePageContent();
   }
+
 
   /* ---------- Envoi ---------- */
   function send(action, data, okMessage) {
@@ -1049,6 +1162,7 @@
     });
   }
 
+
   /* ------------------------------------------------------------------
    * SUPPRESSION RÉELLE
    *
@@ -1066,6 +1180,7 @@
       return Promise.reject(new Error("Suppression impossible : identifiant manquant."));
     }
 
+
     if (!navigator.onLine && window.Queue) {
       return Queue.enqueue({ opId: opId, collection: collection, action: "remove", entityId: cible, payload: { collection: collection, id: cible } })
         .then(function () {
@@ -1073,6 +1188,7 @@
           return refreshPending();
         });
     }
+
 
     return Transport.mutate("remove", { collection: collection, id: cible }, opId)
       .then(function (out) { return out; })
@@ -1088,6 +1204,7 @@
         throw e;
       });
   }
+
 
   function sendSave(collection, row, baseVersion, baseRow) {
     var opId = Transport.requestId();
@@ -1110,6 +1227,7 @@
       throw e;
     });
   }
+
 
   var loginForm = $("#loginForm");
   if (loginForm) {
@@ -1143,6 +1261,7 @@
     });
   }
 
+
   window.logout = function () {
     try { Transport.logout().catch(function () {}); } catch (e) {}
     state.user = null; state.data = null; state.personId = "";
@@ -1156,7 +1275,9 @@
     var ac = $("#accessCode"); if (ac) ac.value = "";
   };
 
+
   window.navigate = go;
+
 
   function flushQueue() {
     if (!window.Queue) return Promise.resolve();
@@ -1170,6 +1291,7 @@
       if (conflicts.length) notice(conflicts.length + " modification(s) en conflit à arbitrer.", "error");
     }).catch(function () {});
   }
+
 
   function syncNow() {
     if (!state.user || !state.role) return Promise.resolve();
@@ -1197,12 +1319,15 @@
       });
   }
 
+
   var sn = $("#syncNow");
   if (sn) sn.onclick = function () { syncNow(); };
   window.addEventListener("online", function () { syncNow(); });
   window.addEventListener("offline", function () { syncBadge(); });
 
+
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function () {});
+
 
   try {
     if (window.Transport && Transport.token()) {
