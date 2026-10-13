@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-13-admin-ux';
+const SHELL = 'beauregard-v2-shell-14-admin-ux';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -11,15 +11,15 @@ const SHELL_FILES = [
   './style.css',
   './base.css',
   './theme.css',
-  './themes/2027/theme.css',
+  './themes/2027/theme.css?v=20261013-admin-ux',
   './config.js',
   './js/boot.js',
   './js/queue.js',
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './app.js',
-  './js/admin-ux.js',
+  './app.js?v=20261013-admin-ux',
+  './js/admin-ux.js?v=20261013-admin-ux',
   './assets/beauregard-2027.jpg',
   './manifest.json',
   './icon.svg'
