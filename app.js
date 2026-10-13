@@ -1,3 +1,5 @@
+app.js
+100 %
 /* Beauregard V2 — app.js (socle, Équipe, Créneaux, Concerts, Préparation)
  * Transport = fetch GET JSON, repris de la V1.
  * Queue = file d'actions hors ligne (IndexedDB, point 62 du cahier des charges).
