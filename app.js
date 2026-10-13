@@ -354,6 +354,22 @@
     var T = window.ScreenTeam;
     if (!T) { c.innerHTML = empty("Écran indisponible", "Le module Équipe n'est pas chargé."); return; }
     c.innerHTML = state.personId ? T.sheet({ data: d, role: state.role }, state.personId) : T.list({ data: d, role: state.role });
+    if (state.role === "admin" && state.personId) {
+      var p = (d.people || []).find(function(x){return String(x.id)===String(state.personId);});
+      var form = c.querySelector("#personForm");
+      if (p && form) {
+        var escGroup = function(v){return String(v||"").replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+        var groups = {};
+        (d.people||[]).forEach(function(x){if(x.mandatoryGroupId && !x.deleted){(groups[x.mandatoryGroupId]||(groups[x.mandatoryGroupId]=[])).push([x.firstName,x.lastName].filter(Boolean).join(' '));}});
+        var choices = Object.keys(groups).sort().map(function(id){return '<option value="'+escGroup(id)+'">'+escGroup(id)+' — '+escGroup(groups[id].join(', '))+'</option>';}).join('');
+        var el = document.createElement('div');el.className='full card';
+        el.innerHTML='<h3>Groupe indivisible · Administration</h3><p>Les membres d’un même groupe seront affectés ensemble sur chaque journée. Un groupe ne peut pas être séparé par la simulation.</p><label>Groupe existant<select id="groupChoice"><option value="">Aucun groupe / saisir un nouveau</option>'+choices+'</select></label><label>Identifiant du groupe<input name="mandatoryGroupId" id="mandatoryGroupId" maxlength="48" placeholder="Ex. groupe-dupont" value="'+escGroup(p.mandatoryGroupId||'')+'"></label><p class="muted">Pour créer un groupe, renseigne le même identifiant dans chaque fiche puis enregistre. Pour le dissoudre, vide ce champ sur toutes les fiches.</p>';
+        var note = form.querySelector('textarea[name="internalNote"]');
+        var anchor = note && note.closest('.full');if(anchor)form.insertBefore(el,anchor);else form.appendChild(el);
+        var select=el.querySelector('#groupChoice');select.value=p.mandatoryGroupId||'';
+        select.onchange=function(){el.querySelector('#mandatoryGroupId').value=select.value;};
+      }
+    }
     wireTeam();
   }
 
@@ -409,6 +425,7 @@
 
   function savePerson(form) {
     var data = window.ScreenTeam.readForm(form);
+    if (state.role === "admin" && form.elements.mandatoryGroupId) data.mandatoryGroupId = form.elements.mandatoryGroupId.value.trim();
     if (!data.lastName || !data.firstName) { notice("Nom et prénom obligatoires.", "error"); return; }
 
     if (state.role !== "admin") {
