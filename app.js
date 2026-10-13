@@ -257,7 +257,8 @@
     if (document.getElementById('bg-nav-v2-style')) return;
     var style=document.createElement('style');
     style.id='bg-nav-v2-style';
-    style.textContent = '.desktop-nav .nav-group-label{padding:8px 12px 3px;margin-top:12px;font-size:11px;letter-spacing:.11em;text-transform:uppercase;opacity:.65;font-weight:800}'+
+    style.textContent = '.bg-day-fold>summary{cursor:pointer;font-weight:800;padding:12px 4px}.bg-day-fold>.card{margin-top:12px}.bg-day-fold>summary::marker{color:var(--primary)}#bg-busy-overlay{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:24px}.bg-busy-card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px;border-radius:18px;background:var(--surface);color:var(--text);text-align:center;max-width:380px}.bg-busy-card small{color:var(--muted)}.bg-busy-spinner{height:42px;width:42px;border-radius:50%;border:4px solid var(--border);border-top-color:var(--primary);animation:bgspin .75s linear infinite}@keyframes bgspin{to{transform:rotate(360deg)}}'+
+      '.desktop-nav .nav-group-label{padding:8px 12px 3px;margin-top:12px;font-size:11px;letter-spacing:.11em;text-transform:uppercase;opacity:.65;font-weight:800}'+
       '.desktop-nav .nav-link{min-height:42px;width:100%}.desktop-nav .nav-link:focus-visible,.nav-drawer-v2 button:focus-visible,.mobile-nav button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}'+
       '.nav-drawer-v2{position:fixed;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px));max-height:min(72vh,650px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 12px 38px #0005;padding:14px;z-index:90}'+
       '.nav-drawer-v2 .nav-drawer-head{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 10px;position:sticky;top:-14px;background:var(--surface);z-index:1}'+
@@ -525,12 +526,24 @@
     }
   }
 
+  function foldDaySections(container){
+    // Le module historique renvoie un titre suivi d'une carte par journée.
+    // On les regroupe sans toucher aux boutons ni aux écouteurs délégués.
+    var titles=Array.prototype.slice.call(container.querySelectorAll('.section-title'));
+    titles.forEach(function(t){
+      var next=t.nextElementSibling;
+      if(!next||!next.classList.contains('card'))return;
+      var detail=document.createElement('details');detail.className='card bg-day-fold';
+      var summary=document.createElement('summary');summary.textContent=t.textContent||'Journée';
+      detail.appendChild(summary);next.parentNode.insertBefore(detail,t);detail.appendChild(next);t.remove();
+    });
+  }
   /* ---------- Créneaux ---------- */
   function renderCreneaux(c, d) {
     if (state.role !== "admin") { c.innerHTML = empty("Accès réservé", "Gestion des shifts réservée à l’admin."); return; }
     var S = window.ScreenShifts;
     if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Créneaux n'est pas chargé."); return; }
-    if (!state.shiftMode) { c.innerHTML = S.shifts({ data: d }); return; }
+    if (!state.shiftMode) { c.innerHTML = S.shifts({ data: d }); foldDaySections(c); return; }
     c.innerHTML = S.shiftForm({ data: d }, state.shiftMode, state.shiftId);
   }
 
@@ -539,7 +552,7 @@
     if (state.role !== "admin") { c.innerHTML = concertPanel(d, true); wireNav(); return; }
     var S = window.ScreenShifts;
     if (!S) { c.innerHTML = empty("Écran indisponible", "Le module Concerts n'est pas chargé."); return; }
-    if (!state.concertMode) { c.innerHTML = S.concerts({ data: d }); return; }
+    if (!state.concertMode) { c.innerHTML = S.concerts({ data: d }); foldDaySections(c); return; }
     c.innerHTML = S.concertForm({ data: d }, state.concertMode, state.concertId);
   }
 
@@ -1003,10 +1016,19 @@
       });
     });
   }
+  var busyCount=0;
+  function busyOverlay(active){
+    busyCount=Math.max(0,busyCount+(active?1:-1));
+    var el=document.getElementById('bg-busy-overlay');
+    if(!el){el=document.createElement('div');el.id='bg-busy-overlay';el.setAttribute('role','status');el.setAttribute('aria-live','assertive');el.innerHTML='<div class="bg-busy-card"><span class="bg-busy-spinner" aria-hidden="true"></span><b>Enregistrement en cours…</b><small>Merci de patienter, ne ferme pas cette page.</small></div>';document.body.appendChild(el);}
+    el.style.display=busyCount?'flex':'none';
+    document.body.setAttribute('aria-busy',busyCount?'true':'false');
+  }
   function submitTask(button, task) {
     if (button && button.disabled) return;
     if (button) button.disabled = true;
-    return Promise.resolve().then(task).catch(function (e) { notice(String(e.message || e), 'error'); }).then(function () { if (button) button.disabled = false; });
+    busyOverlay(true);
+    return Promise.resolve().then(task).catch(function (e) { notice(String(e.message || e), 'error'); }).then(function () { if (button) button.disabled = false; busyOverlay(false); });
   }
   function putRow(collection, row) {
     var old = (state.data[collection] || []).find(function (x) { return x.id === row.id; });
@@ -1269,6 +1291,25 @@
       };
     });
   }
+  function friendlyDay(date){
+    var d=/^\d{4}-\d{2}-\d{2}$/.test(String(date))?new Date(date+'T12:00:00'):null;
+    return d&&!isNaN(d.getTime())?new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(d):String(date||'Date non renseignée');
+  }
+  function friendlyTime(t){var m=String(t||'').match(/^(\d{1,2}):(\d{2})/);return m?Number(m[1])+'h'+(m[2]==='00'?'':m[2]):'';}
+  function friendlyShift(sh,count){
+    var start=friendlyTime(sh.start),end=friendlyTime(sh.end),name=String(sh.name||'').trim();
+    // Ne pas afficher deux horaires contradictoires : l'horaire structuré fait foi.
+    var title=start&&end?start+' – '+end:(name||'Créneau sans horaire');
+    var suffix=name&&!/\d{1,2}\s*h\s*\d*/i.test(name)&&!/^je\d+$/i.test(name)?' · '+name:'';
+    return title+suffix+' · '+count+' bénévole'+(count>1?'s':'');
+  }
+  function describeCheck(x,i){
+    var title=x.message||x.title||x.description||x.type||x.code||'';
+    var details=x.detail||x.reason||x.explanation||'';
+    if(!title||title==='Contrôle')title='Anomalie n°'+(i+1)+' — '+(x.level==='red'?'à corriger':x.level==='orange'?'à examiner':'à vérifier');
+    if(!details){var parts=[];['personId','shiftId','date','type','code'].forEach(function(k){if(x[k]!=null&&x[k]!=='')parts.push(k+': '+x[k]);});details=parts.join(' · ')||'Le moteur n’a pas fourni de détail. Cette alerte ne peut pas être résolue sérieusement sans sa cause.';}
+    return listRow(title,details,x.level==='red'?'Bloquant':x.level==='orange'?'À examiner':'Information',x.level);
+  }
   function renderPlanning(c,d){
     var admin=state.role==='admin',rows=activeRows(d,'assignments'),pubs=activeRows(d,'publications');
     var latest=pubs.slice().sort(function(a,b){return Number(b.number||0)-Number(a.number||0);})[0];
@@ -1277,7 +1318,7 @@
     rows.forEach(function(a){var sh=shift(a.shiftId)||{},date=sh.date||'Sans date',key=String(a.shiftId||'');
       if(!grouped[date])grouped[date]={};if(!grouped[date][key])grouped[date][key]={shift:sh,rows:[]};grouped[date][key].rows.push(a);
     });
-    var list=Object.keys(grouped).sort().map(function(date){return '<details class="card" open><summary><b>'+esc(date)+'</b></summary>'+Object.keys(grouped[date]).sort().map(function(id){var group=grouped[date][id],sh=group.shift;return '<details class="card"><summary>'+esc((sh.name||id)+' · '+(sh.start||'')+' – '+(sh.end||''))+' ('+group.rows.length+')</summary>'+group.rows.map(function(a){return listRow(personLabel(a.personId),'', '')+(admin?'<button type="button" class="button secondary" data-assignment-edit="'+esc(a.id)+'">Modifier</button><button type="button" class="button danger" data-assignment-remove="'+esc(a.id)+'">Retirer</button>':'');}).join('')+'</details>';}).join('')+'</details>';}).join('');
+    var list=Object.keys(grouped).sort().map(function(date){return '<details class="card" open><summary><b>'+esc(friendlyDay(date))+'</b></summary>'+Object.keys(grouped[date]).sort().map(function(id){var group=grouped[date][id],sh=group.shift;return '<details class="card"><summary>'+esc(friendlyShift(sh,group.rows.length))+'</summary>'+group.rows.map(function(a){return listRow(personLabel(a.personId),'', '')+(admin?'<button type="button" class="button secondary" data-assignment-edit="'+esc(a.id)+'">Modifier</button><button type="button" class="button danger" data-assignment-remove="'+esc(a.id)+'">Retirer</button>':'');}).join('')+'</details>';}).join('')+'</details>';}).join('');
     var actions=admin?card('Cycle du planning',
       '<p>État : <b>'+esc(d.config&&d.config.phase||'Préparation')+'</b>. Une simulation doit d’abord être appliquée, puis le planning contrôlé et validé.</p>'+ 
       '<div class="toolbar"><button class="button secondary" data-page="simulations">Retour à la simulation</button><button class="button secondary" data-plan="checks">Contrôler</button><button class="button primary" data-plan="validate">Valider le planning</button><button class="button secondary" data-plan="reopen">Rouvrir les modifications</button></div>'+ 
@@ -1289,7 +1330,7 @@
       status=card('Prise de connaissance — version '+esc(latest.number),'<p>La confirmation indique uniquement que le bénévole a été informé.</p>'+audience.map(function(id){var ok=msg&&(d.reads||[]).some(function(r){return r.messageId===msg.id&&r.personId===id;});return listRow(personLabel(id),ok?'A pris connaissance':'En attente',ok?'✓':'…',ok?'good':'');}).join(''));
     }
     c.innerHTML=(latest&&latest.mode==='draft'?'<p class="notice" role="status"><b>Planning provisoire — brouillon.</b> Les affectations peuvent encore changer.</p>':'')+actions+status+card(admin?'Planning de travail par jour et créneau':'Planning publié par jour et créneau',list||'<p>Aucune affectation.</p>');
-    if(admin&&state.planningChecks)c.innerHTML+=card('Résultats des contrôles',state.planningChecks.map(function(x){return listRow(x.message||x.title||x.type||'Contrôle',x.detail||x.description||'',x.level)+(x.level==='orange'?'<button class="button secondary" data-accept-check="'+esc(x.id)+'">Accepter cette alerte</button>':'');}).join('')||'<p>Aucune anomalie détectée.</p>');
+    if(admin&&state.planningChecks)c.innerHTML+=card('Résultats des contrôles',state.planningChecks.map(function(x,i){return describeCheck(x,i)+(x.level==='orange'&&x.id?'<button class="button secondary" data-accept-check="'+esc(x.id)+'">Accepter cette alerte</button>':'');}).join('')||'<p>Aucune anomalie détectée.</p>');
     wireManagement();wireNav();
   }
   function renderMessages(c,d) {
@@ -1313,15 +1354,16 @@
       [r.signature1,r.signature2].filter(Boolean).map(function(x){return listRow('Signé par',x.name||'',x.at||'');}).join('');
   }
   function vehicleSettings(d){
-    var cfg=d.config||{};
-    return card('Paramètres véhicules','<div class="form-grid"><label>Nombre de véhicules prévus<input id="vehiclePlanned" type="number" min="0" value="'+esc(cfg.vehiclesPlanned||0)+'"></label><label>Conduite minimale : <output id="vehicleMinLabel">'+esc(cfg.quotaMin==null?40:cfg.quotaMin)+'</output> %<input id="vehicleMin" type="range" min="0" max="100" value="'+esc(cfg.quotaMin==null?40:cfg.quotaMin)+'"></label><label>Conduite maximale : <output id="vehicleMaxLabel">'+esc(cfg.quotaMax==null?60:cfg.quotaMax)+'</output> %<input id="vehicleMax" type="range" min="0" max="100" value="'+esc(cfg.quotaMax==null?60:cfg.quotaMax)+'"></label><label class="check"><input id="vehicleReserve" type="checkbox" '+(cfg.reserveA===false?'':'checked')+'>Réserver le véhicule A aux référents</label><button type="button" class="button primary" id="saveVehicleSettings">Enregistrer les paramètres</button></div>');
+    var cfg=d.config||{}, driver=Math.round((Number(cfg.quotaMin==null?40:cfg.quotaMin)+Number(cfg.quotaMax==null?60:cfg.quotaMax))/2);
+    return card('Paramètres véhicules','<div class="form-grid"><label>Nombre de véhicules prévus<input id="vehiclePlanned" type="number" min="0" value="'+esc(cfg.vehiclesPlanned||0)+'"></label><div class="full"><label for="vehicleBalance">Répartition conduite / chargement</label><div style="display:flex;justify-content:space-between;gap:12px"><b>Conducteur <output id="vehicleDriverLabel">'+driver+'</output> %</b><b>Chargeur <output id="vehicleLoaderLabel">'+(100-driver)+'</output> %</b></div><input style="width:100%" id="vehicleBalance" type="range" min="0" max="100" step="5" value="'+driver+'" aria-label="Répartition conducteur chargeur"><small>Déplace le curseur vers la gauche pour favoriser les conducteurs, vers la droite pour favoriser les chargeurs.</small></div><label class="check"><input id="vehicleReserve" type="checkbox" '+(cfg.reserveA===false?'':'checked')+'>Réserver le véhicule A aux référents</label><button type="button" class="button primary" id="saveVehicleSettings">Enregistrer les paramètres</button></div>');
   }
   function wireVehicleSettings(){
-    ['Min','Max'].forEach(function(k){var el=$('#vehicle'+k),out=$('#vehicle'+k+'Label');if(el&&out)el.oninput=function(){out.textContent=el.value;};});
+    var slider=$('#vehicleBalance');if(slider)slider.oninput=function(){var v=Number(slider.value);$('#vehicleDriverLabel').textContent=v;$('#vehicleLoaderLabel').textContent=100-v;};
     var btn=$('#saveVehicleSettings');if(btn)btn.onclick=function(){
-      var n=Number($('#vehiclePlanned').value),min=Number($('#vehicleMin').value),max=Number($('#vehicleMax').value);
-      if(!Number.isInteger(n)||n<0||min>max){notice('Vérifie le nombre de véhicules et les limites min/max.','error');return;}
-      submitTask(btn,function(){return Transport.mutate('config',{vehicules_prevus:n,quota_min:min,quota_max:max,reserve_a:$('#vehicleReserve').checked}).then(function(){notice('Paramètres enregistrés.','success');syncNow();});});
+      var n=Number($('#vehiclePlanned').value),driver=Number($('#vehicleBalance').value);
+      if(!Number.isInteger(n)||n<0){notice('Indique un nombre de véhicules valide.','error');return;}
+      // Le serveur conserve les deux champs historiques : ils reçoivent la même valeur cible.
+      submitTask(btn,function(){return onlineAction('config',{vehicules_prevus:n,quota_min:driver,quota_max:driver,reserve_a:$('#vehicleReserve').checked}).then(function(){notice('Paramètres enregistrés.','success');});});
     };
   }
   function renderVehicles(c,d) {
