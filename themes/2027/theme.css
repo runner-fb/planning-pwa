@@ -212,3 +212,9 @@ progress { width:100%; height:12px; accent-color:var(--success); }
 .form-tracking>.toolbar:last-child { position:static!important; }
 .person-main b,.person-main small { white-space:normal; overflow-wrap:anywhere; }
 @media print {.side-rail,.mobile-nav,.topbar,.sync-status,.heading-actions,button{display:none!important}.app-shell{display:block}.planning-columns{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}.card{break-inside:avoid;box-shadow:none}}
+
+/* Terrain : lecture et navigation au pouce, sans changer les colonnes PC. */
+.field-shortcuts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.sync-status{flex-wrap:wrap;gap:8px}.sync-status>span{flex:1;min-width:180px;font-size:13px;line-height:1.5}
+.mobile-day-picker{display:none}
+@media(max-width:899px){.mobile-day-picker{display:grid;gap:8px;padding:12px 0;font-weight:700}.mobile-day-picker select{width:100%;min-height:48px;font:inherit;border:1px solid var(--border);border-radius:10px;padding:10px}.plan-day.mobile-day-hidden{display:none}.field-shortcuts .button{flex:1 1 140px;min-height:48px}.form-grid input,.form-grid select,.form-grid textarea{font-size:16px}.pub-ack-panel button{min-height:48px}.contact-actions a{min-height:44px;display:inline-flex;align-items:center}}
