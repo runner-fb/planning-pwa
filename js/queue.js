@@ -120,14 +120,15 @@
     flush.running = list()
       .then(function (rows) {
         var me = author();
-        var pending = rows.filter(function (r) { return r.state === "pending" && r.authorId === me.id; });
+        var pending = rows.filter(function (r) { return r.state === "pending" && r.authorId === me.id; }).sort(function(a,b){return a.at.localeCompare(b.at);});
         if (!pending.length) return count().then(function (n) { return { sent: 0, remaining: n }; });
 
-        var sent = 0;
+        var sent = 0, stopped = false, networkError = false;
         var chain = Promise.resolve();
 
         pending.forEach(function (row) {
           chain = chain.then(function () {
+            if(stopped||!navigator.onLine||author().id!==me.id)return;
             var call;
             if (row.action === "remove") {
               call = Transport.mutate("remove", row.payload || { collection: row.collection, id: row.entityId }, row.id);
@@ -146,7 +147,7 @@
             return call
               .then(function (out) {
                 if (out && out.conflict) {
-                  row.state = "conflict";
+                  stopped=true;row.state = "conflict";
                   row.error = String(out.conflict);
                   return update(row);
                 }
@@ -158,14 +159,16 @@
                 row.error = String((e && e.message) || e);
                 /* Après trois essais, l'action reste visible et bloquée au lieu
                  * de disparaître en silence. */
-                if (row.tries >= 3) row.state = "blocked";
+                stopped=true;
+                networkError=e.name==='TypeError'||e.name==='AbortError'||/ne répond pas|HTTP_(408|429|5\d\d)|Failed to fetch/.test(row.error);
+                if (!networkError) row.state = /conflit|conflict/i.test(row.error)?'conflict':'blocked';
                 return update(row);
               });
           });
         });
 
         return chain.then(function () {
-          return count().then(function (n) { return { sent: sent, remaining: n }; });
+          return count().then(function (n) { return { sent: sent, remaining: n, networkError: networkError }; });
         });
       })
       .then(
