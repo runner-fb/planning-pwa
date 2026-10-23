@@ -73,6 +73,7 @@
       return '<label class="check"><input type="checkbox" name="' + name + '"' + (on ? " checked" : "") + "><span>" + esc(text) + "</span></label>";
     };
     return '<div class="full contraintes"><div class="section-title">Contraintes et pr\u00e9f\u00e9rences</div>' +
+      one("vehicleControl", "Contrôle véhicule", p.vehicleControl === true) +
       one("forbidC3", "C3 interdit (contrainte dure)", p.forbidC3) +
       one("driverOnly", "Conducteur uniquement (contrainte dure)", (p.driverOnly || p.noLoader)) +
       one("priorityLoader", "Priorit\u00e9 Chargeur (PC)", p.priorityLoader) +
@@ -124,7 +125,7 @@
       '<div class="notice" data-type="info">' +
       (acc ? "Acc\u00e8s : " + (codeOk ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
            : "Aucun acc\u00e8s cr\u00e9\u00e9 pour cette personne.") + "</div>";
-    if (locked) html = html.replace(/name="(lastName|firstName|phone|email|isReferent)"/g, '$& disabled');
+    if (locked) html = html.replace(/name="(lastName|firstName|phone|email|isReferent|vehicleControl)"/g, '$& disabled');
     return html;
   }
 
@@ -157,6 +158,7 @@
       status: get("status") || "Actif",
       gearbox: get("gearbox"),
       role: on("isReferent") ? "referent" : "benevole",
+      vehicleControl: on("vehicleControl"),
       forbidC3: on("forbidC3"),
       driverOnly: on("driverOnly"),
       priorityLoader: on("priorityLoader"),
