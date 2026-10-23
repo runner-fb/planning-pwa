@@ -1084,6 +1084,8 @@
       card('Messages',msgs.map(function(m){return listRow(m.title,m.body,m.priority||'Info');}).join('')+'<button class="button secondary" data-page="messages">'+(ref?'Envoyer / gérer les messages':'Tous les messages')+'</button>')+
       concertPanel(d,false)+(d.config && d.config.formOpen && state.role!=='vehicles'?'<button class="button primary" data-page="form">Mon formulaire de disponibilités</button>':'')+
       (ref?'<button class="button secondary" data-page="contacts">Contacts</button><button class="button secondary" data-page="concerts">Tous les concerts</button>':'');
+    var person=(d.people||[]).find(function(p){return p.id===(state.user||{}).id;});
+    if(person&&person.vehicleControl===true){var vehicleButton=document.createElement('button');vehicleButton.className='button primary';vehicleButton.textContent='Contrôle véhicule';c.appendChild(vehicleButton);vehicleButton.onclick=async function(){if(vehicleButton.disabled)return;vehicleButton.disabled=true;vehicleButton.textContent='Ouverture…';try{if(!navigator.onLine)throw Error('Reconnecte-toi pour ouvrir le contrôle véhicule.');var out=await Transport.read('vehicleIdentity',{});if(out.url!=='https://runner-fb.github.io/beauregard-vehicules/'||!out.ticket)throw Error('Liaison Véhicules invalide');window.location.assign(out.url+'#runnerTicket='+encodeURIComponent(out.ticket));}catch(error){notice(error.message,'error');}finally{vehicleButton.disabled=false;vehicleButton.textContent='Contrôle véhicule';}};}
     wireManagement(); wireNav();
   }
   /* Suivi unifié : seule REPONSES_FORMULAIRE décide si un bénévole a répondu.
