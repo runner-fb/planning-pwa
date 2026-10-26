@@ -8,7 +8,7 @@
   <link rel="icon" href="./assets/beauregard-2027.jpg" type="image/jpeg">
   <link rel="stylesheet" href="./base.css">
   <link rel="stylesheet" href="./theme.css">
-  <link rel="stylesheet" href="./themes/2027/theme.css?v=20261014-terrain">
+  <link rel="stylesheet" href="./themes/2027/theme.css?v=20261026-volunteer">
   <title>Beauregard — Espace festival</title>
 </head>
 <body>
@@ -55,14 +55,14 @@
 
     <main class="workspace">
       <header class="topbar">
-        <div class="topbar-context"><span id="roleLabel">Bénévole</span><span class="separator">/</span><span id="pageCrumb">Accueil</span></div>
-        <div class="topbar-user"><span id="userAvatar" class="avatar">B</span><span id="userLabel">Mon espace</span><button class="icon-button" aria-label="Déconnexion" onclick="logout()">↗</button></div>
+        <span class="brand-mark volunteer-logo" role="img" aria-label="Beauregard Runner Navettes"></span><div class="topbar-context"><span id="roleLabel">Bénévole</span><span class="separator">/</span><span id="pageCrumb">Accueil</span></div>
+        <div class="topbar-user"><span id="userAvatar" class="avatar">B</span><span id="userLabel">Mon espace</span><button class="icon-button" aria-label="Changer d’utilisateur" title="Changer d’utilisateur" onclick="logout()">⇄</button></div>
       </header>
       <section class="page-heading">
         <div><p class="eyebrow" id="pageEyebrow">MON FESTIVAL</p><h1 id="pageTitle">Accueil</h1><p id="pageSubtitle" class="muted">Toutes les informations utiles au même endroit.</p></div>
         <div id="headingActions" class="heading-actions"></div>
       </section>
-      <div id="mobileSyncStatus" class="sync-status" role="status"><span id="mobileConnectionText">État du réseau…</span><button id="syncMobile" class="quiet-button">Actualiser</button></div>
+      <div id="mobileSyncStatus" class="sync-status" role="status"><span id="mobileConnectionText">État du réseau…</span><button id="syncMobile" class="quiet-button" aria-label="Actualiser" title="Actualiser">↻</button></div>
       <div id="unsavedStatus" class="unsaved-status" role="status" hidden>Modifications non enregistrées</div>
       <div id="appNotice" class="notice hidden" role="status"><span id="noticeText"></span><button id="dismissNotice" aria-label="Fermer le message">✕</button></div>
       <section id="pageContent" class="page-content" aria-live="polite"></section>
@@ -79,6 +79,6 @@
   <script src="./js/screens-team.js"></script>
   <script src="./js/screens-shifts.js"></script>
   <script src="./js/admin-ux.js?v=20261014-terrain"></script>
-  <script src="./app.js?v=20261014-terrain"></script>
+  <script src="./app.js?v=20261026-volunteer"></script>
 </body>
 </html>
