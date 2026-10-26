@@ -268,3 +268,18 @@ progress { width:100%; height:12px; accent-color:var(--success); }
 }
 
 .volunteer-space .sync-status #volunteerSyncDetails{font-size:12px;flex-shrink:0}
+
+/* En-tête Runner aligné sur l’espace Véhicules. */
+.volunteer-brand{display:none}
+.volunteer-space .topbar{background:var(--aqua,#a5f5f1);border-bottom:3px solid var(--text);padding:16px;justify-content:space-between;gap:10px;color:var(--text)}
+.volunteer-space .volunteer-brand{display:flex;align-items:center;gap:6px;min-width:0}
+.volunteer-space .volunteer-logo{width:32px;height:38px;flex-basis:32px;border-radius:8px 8px 8px 0;background-size:cover}
+.volunteer-brand b{font-size:12px;letter-spacing:.07em;display:block}
+.volunteer-brand small{display:block;font-size:12px;white-space:nowrap}
+.volunteer-space .topbar-user{border:1px solid var(--border);border-radius:12px;padding:4px 6px;gap:2px;flex:0 1 auto}
+.volunteer-space #userLabel{font-size:12px;font-weight:700}
+.volunteer-space .topbar-user .icon-button{min-width:36px;font-size:20px}
+.login-screen{align-content:start;padding-top:32px}
+.login-brand{font-size:clamp(19px,5vw,26px);line-height:1.15;gap:16px}
+.vehicle-access h2{margin:0 0 12px}.vehicle-access .button{display:block;text-align:center;white-space:normal}
+@media(min-width:600px){.volunteer-brand b,.volunteer-brand small,.volunteer-space #userLabel{font-size:14px}}
