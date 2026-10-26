@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-18-runner-team-photos';
+const SHELL = 'beauregard-v2-shell-19-runner-header-team';
 const SHELL_FILES = [
   './',
   './index.html',
