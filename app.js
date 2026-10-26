@@ -1050,7 +1050,7 @@
     else if(/^[a-zA-Z0-9_-]{20,}$/.test(src))src='https://drive.google.com/thumbnail?id='+encodeURIComponent(src)+'&sz=w256';
     if(!/^(https?:\/\/|data:image\/(?:png|jpeg|webp);base64,)/i.test(src))src='';
     var savedPhotos={"https://www.benevoles-beauregard.com/logos/photos/vignettes/17/1c6730949de4ee7a908a375483f7e729.png": "./assets/1c6730949de4ee7a908a375483f7e729.png", "https://www.benevoles-beauregard.com/logos/photos/vignettes/17/fbb093512160732bdad41ac9fa153e32.png": "./assets/fbb093512160732bdad41ac9fa153e32.png", "https://www.benevoles-beauregard.com/logos/photos/vignettes/17/a3e2db87b948ddb2c45d62f5814b62ae.JPG": "./assets/a3e2db87b948ddb2c45d62f5814b62ae.JPG"};
-    src=savedPhotos[src]||src;
+    src=(window.RUNNER_CONTACT_PHOTOS||{})[src]||savedPhotos[src]||src;
     var initials=[p.firstName,p.lastName].filter(Boolean).map(function(t){return t.trim().slice(0,1);}).join('').toUpperCase()||'?';
     return '<span class="avatar photo-avatar"><span>'+esc(initials)+'</span>'+(src?'<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</span>';
   }
@@ -1113,7 +1113,7 @@
     var current=shifts.filter(function(s){var p=period(s);return p[0]<=now&&p[1]>now;}), next=shifts.find(function(s){return period(s)[0]>now;});
     function slot(s){if(state.role==='benevole')return shiftCard(s,d);return '<button class="person-row" '+(ref?'data-terrain-shift="'+esc(s.id)+'"':'data-page="myshifts"')+'><span class="person-main"><b>'+esc(s.name)+'</b><small>'+esc(s.date+' · '+s.start+'–'+s.end)+'</small></span><span aria-hidden="true">›</span></button>';}
     var msgs=activeRows(d,'messages').slice(-3).reverse();
-    c.innerHTML=(state.role==='benevole'?'':'<div class="field-shortcuts">'+(ref?'<button class="button primary" data-page="terrain">Gérer le terrain</button>':'<button class="button primary" data-page="myshifts">Mes horaires et mes postes</button>')+'<button class="button secondary" data-page="contacts">Appeler un référent</button><button class="button secondary" data-page="syncstatus">Mes envois en attente</button></div>')+(current.length?card('Créneau en cours',current.map(slot).join('')):'<p>Aucun créneau en cours.</p>')+(next?card('Mon prochain créneau',slot(next)):'<p>Aucun créneau à venir.</p>')+
+    c.innerHTML=(state.role==='benevole'?'':'<div class="field-shortcuts">'+(ref?'<button class="button primary" data-page="terrain">Gérer le terrain</button>':'<button class="button primary" data-page="myshifts">Mes horaires et mes postes</button>')+'<button class="button secondary" data-page="contacts">Appeler un référent</button><button class="button secondary" data-page="syncstatus">Mes envois en attente</button></div>')+(current.length?card('Créneau en cours',current.map(slot).join('')):card('Créneau en cours','<p>Aucun créneau en cours.</p>'))+(next?card('Mon prochain créneau',slot(next)):card('Mon prochain créneau','<p>Aucun créneau à venir.</p>'))+
       card('Messages',msgs.map(function(m){return listRow(m.title,m.body,m.priority||'Info');}).join('')+'<button class="button secondary" data-page="messages">'+(ref?'Envoyer / gérer les messages':'Tous les messages')+'</button>')+
       concertPanel(d,false)+(d.config && d.config.formOpen && state.role!=='vehicles'?'<button class="button primary" data-page="form">Mon formulaire de disponibilités</button>':'')+
       (ref?'<button class="button secondary" data-page="contacts">Contacts</button><button class="button secondary" data-page="concerts">Tous les concerts</button>':'');

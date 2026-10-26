@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-17-volunteer-photos';
+const SHELL = 'beauregard-v2-shell-18-runner-team-photos';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -11,14 +11,15 @@ const SHELL_FILES = [
   './style.css',
   './base.css',
   './theme.css',
-  './themes/2027/theme.css?v=20261026-volunteer',
+  './themes/2027/theme.css?v=20261026-runner2',
   './config.js',
+  './contact-photos.js',
   './js/boot.js',
   './js/queue.js?v=20261014-terrain',
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './app.js?v=20261026-volunteer',
+  './app.js?v=20261026-runner2',
   './js/admin-ux.js?v=20261014-terrain',
   './assets/beauregard-2027.jpg',
   './assets/1c6730949de4ee7a908a375483f7e729.png',
