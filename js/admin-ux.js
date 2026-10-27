@@ -22,7 +22,7 @@
       {page:'creneaux',label:'Créneaux',done:!!(active(d,'shifts').length&&c.shiftsChecked),detail:active(d,'shifts').length+' créneaux · '+(c.shiftsChecked?'vérifiés':'à vérifier')},
       {page:'concerts',label:'Concerts',done:!!c.concertsChecked,detail:active(d,'concerts').length+' concerts · '+(c.concertsChecked?'vérifiés':'à vérifier')},
       {page:'team',label:'Équipe et accès',done:!!(ps.length&&c.teamChecked&&access===ps.length),detail:ps.length+' bénévoles · '+access+' accès actifs'},
-      {page:'forms',label:'Disponibilités',done:received!==null&&ps.length>0&&received===ps.length,detail:received===null?'Réponses à actualiser':received+' / '+ps.length+' réponses'},
+      {page:'forms',label:'Formulaire',done:received!==null&&ps.length>0&&received===ps.length,detail:received===null?'Réponses à actualiser':received+' / '+ps.length+' réponses'},
       {page:'simulations',label:'Simulation',done:active(d,'simulations').some(s=>!s.stale),detail:'Construire et ajuster les affectations'},
       {page:'planning',label:'Contrôle et validation',done:!!c.validated,detail:c.validated?'Planning validé':checksCurrent?'Contrôles disponibles · validation à effectuer':'Contrôles à effectuer'},
       {page:'planning',label:'Publication',done:published,detail:published?'Version '+pub.number+' publiée':pub?'Modifications ou validation à vérifier':'Aucune version finale publiée'}
