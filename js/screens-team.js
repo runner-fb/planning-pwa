@@ -44,12 +44,12 @@
       if (p.role === "referent") flags.push("Référent");
       flags.push(hasCode[p.id] ? "Accès créé" : "Sans accès");
       return '<button class="person-row" data-person="' + esc(p.id) + '">' +
-        (p.photo ? '<img class="avatar" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar">' + esc(label(p).slice(0, 1)) + "</span>") +
+        root.RunnerPhotos.html(p) +
         '<span class="person-main"><b>' + esc(label(p)) + "</b></span>" +
         '<span class="person-flags">' + esc(flags.join(" \u00b7 ")) + "</span>" +
         "</button>" + (ctx.role === "referent" ? '<div class="contact-actions">' +
           (p.phone ? '<a class="button secondary" href="tel:' + esc(String(p.phone).replace(/[^+0-9]/g, "")) + '">Appeler</a>' : '') +
-          (p.email ? '<a class="button secondary" href="mailto:' + esc(p.email) + '">Écrire</a>' : '') + '</div>' : '');
+          (p.email ? '<a class="button secondary" href="mailto:' + esc(p.email) + '">Mail</a>' : '') + '</div>' : '');
     }).join("");
 
     var withCode = access.filter(function (a) { return a.hasCode; }).length;
@@ -81,6 +81,14 @@
       "</div>";
   }
 
+  function formSection(ctx,p,reply){
+    var d=ctx.data, published=!!(window.AdminUX&&AdminUX.latest(d)), assigned=(d.assignments||[]).filter(function(a){return !a.deleted&&a.personId===p.id;}), shifts=d.shifts||[];
+    function name(id){var sh=shifts.find(function(x){return x.id===id;});return sh?(sh.name+' · '+sh.start+'–'+sh.end):'Non renseigné';}
+    function interval(x){var date=x.date;if(!date||!x.start||!x.end)return null;var start=Number(x.start.slice(0,2))*60+Number(x.start.slice(3,5)),end=Number(x.end.slice(0,2))*60+Number(x.end.slice(3,5)),base=Date.parse(date+'T00:00:00Z');if(start<360)start+=1440;if(end<=start)end+=1440;return [base+start*60000,base+end*60000];}
+    var choices=(reply.choices||[]).map(function(c){var actual=assigned.filter(function(a){return shifts.some(function(sh){return sh.id===a.shiftId&&sh.date===c.date;});});var first=actual.some(function(a){return a.shiftId===c.first;}),second=actual.some(function(a){return a.shiftId===c.second;});var text=first?'Premier choix respecté':second?'Second choix respecté':'Choix non respecté';return '<div class="form-preference '+(published?(first?'choice-good':second?'choice-second':'choice-bad'):'')+'"><b>'+esc(c.date)+'</b><p>1. '+esc(name(c.first))+'</p><p>2. '+esc(name(c.second))+'</p>'+(c.work?'<p>Contrainte professionnelle</p>':'')+(published?'<small>'+text+'</small>':'')+'</div>';}).join('');
+    var concerts=(reply.concerts||[]).map(function(id){var concert=(d.concerts||[]).find(function(x){return x.id===id;});if(!concert)return '';var ci=interval(concert), conflicts=assigned.some(function(a){var sh=shifts.find(function(x){return x.id===a.shiftId;}),si=sh&&interval(sh);return ci&&si&&ci[0]<si[1]&&si[0]<ci[1];});return '<p class="form-preference '+(published?(conflicts?'choice-bad':'choice-good'):'')+'">'+esc((concert.artist||concert.name)+' · '+concert.date+' · '+concert.start)+(published?' — '+(conflicts?'Chevauchement avec un créneau':'Concert disponible'):'')+'</p>';}).join('');
+    return '<section class="full form-replies"><h3>Formulaire · lecture seule</h3>'+choices+concerts+'<h4>Note du formulaire</h4><p>'+esc(reply.note||reply.notes||'Aucune note transmise')+'</p></section>';
+  }
   function sheet(ctx, id) {
     var p = (ctx.data.people || []).filter(function (x) { return x.id === id; })[0];
     if (!p) return '<div class="empty"><b>Fiche introuvable</b>Elle a peut-\u00eatre \u00e9t\u00e9 supprim\u00e9e.</div>' +
@@ -96,23 +104,24 @@
       (codeOk ? '<span class="badge good">Acc\u00e8s cr\u00e9\u00e9</span>' : '<span class="badge bad">Sans acc\u00e8s</span>') +
       "</div>" +
       '<div class="card contact-head">' +
-      (p.photo ? '<img class="avatar big" src="' + esc(p.photo) + '" alt="">' : '<span class="avatar big">' + esc(label(p).slice(0, 1)) + "</span>") +
+      root.RunnerPhotos.html(p) +
       "<div><b>" + esc(label(p)) + "</b><small>" + esc(p.status || "Actif") + "</small></div></div>" +
       '<form id="personForm" class="form-grid">' +
       '<div><label>Nom<input name="lastName" value="' + esc(p.lastName) + '" required></label></div>' +
       '<div><label>Pr\u00e9nom<input name="firstName" value="' + esc(p.firstName) + '" required></label></div>' +
       '<div><label>T\u00e9l\u00e9phone<input name="phone" type="tel" value="' + esc(p.phone || "") + '"></label></div>' +
       '<div><label>Email<input name="email" type="email" value="' + esc(p.email || "") + '"></label></div>' +
-      '<div><label>Statut<select name="status">' +
-      ["Actif", "Absent", "D\u00e9sist\u00e9"].map(function (s) {
-        return "<option" + ((p.status || "Actif") === s ? " selected" : "") + ">" + s + "</option>";
-      }).join("") + "</select></label></div>" +
       '<div><label>Bo\u00eete de vitesses<select name="gearbox">' +
       ["", "Manuelle", "Automatique", "Peu importe"].map(function (s) {
         return '<option value="' + esc(s) + '"' + ((p.gearbox || "") === s ? " selected" : "") + ">" + (s || "Non renseign\u00e9e") + "</option>";
       }).join("") + "</select></label></div>" +
       '<div class="full"><label class="check"><input type="checkbox" name="isReferent"' + (p.role === "referent" ? " checked" : "") + "><span>R\u00e9f\u00e9rent</span></label></div>" +
       checks(p) +
+      formSection(ctx,p,formReply) +
+      '<div><label>Statut<select name="status">' +
+      ["Actif", "Absent", "D\u00e9sist\u00e9"].map(function (s) {
+        return "<option" + ((p.status || "Actif") === s ? " selected" : "") + ">" + s + "</option>";
+      }).join("") + "</select></label></div>" +
       '<div class="full"><label>Note interne<textarea name="internalNote" rows="3">' + esc(p.internalNote || "") + "</textarea></label></div>" +
       '<div class="full modal-actions">' +
       (ctx.role === "admin" ? '<button type="button" class="button secondary" data-team="access-one" data-id="' + esc(p.id) + '">' +
@@ -120,11 +129,10 @@
       '<button class="button primary">Enregistrer</button></div>' +
       "</form>" +
       (ctx.role === "admin" ? '<div class="toolbar"><button class="button secondary" data-team="remove">Supprimer la fiche</button></div>' : "") +
-      '<article class="card"><h2>Note du formulaire</h2><p>' + esc(formReply.note || formReply.notes || "Aucune note transmise") + "</p></article>" +
       '<div class="notice" data-type="info">' +
       (acc ? "Acc\u00e8s : " + (codeOk ? "code cr\u00e9\u00e9" : "pas encore de code") + " \u00b7 " + esc(acc.active ? "actif" : "inactif")
            : "Aucun acc\u00e8s cr\u00e9\u00e9 pour cette personne.") + "</div>";
-    if (locked) html = html.replace(/name="(lastName|firstName|phone|email|isReferent)"/g, '$& disabled');
+    if (locked) html = html.replace(/name="(lastName|firstName|phone|email|isReferent|gearbox|forbidC3|driverOnly|priorityLoader|firstYear|wednesday)"/g, '$& disabled');
     return html;
   }
 
