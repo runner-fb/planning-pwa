@@ -35,37 +35,12 @@
       return label(a).localeCompare(label(b), "fr");
     });
 
-    var access = ctx.data.access || [];
-    var hasCode = {};
-    access.forEach(function (a) { if (a.hasCode) hasCode[a.personId] = true; });
-
-    var rows = people.map(function (p) {
-      var flags = [];
-      if (p.role === "referent") flags.push("Référent");
-      flags.push(hasCode[p.id] ? "Accès créé" : "Sans accès");
-      return '<button class="person-row" data-person="' + esc(p.id) + '">' +
-        root.RunnerPhotos.html(p) +
-        '<span class="person-main"><b>' + esc(label(p)) + "</b></span>" +
-        '<span class="person-flags">' + esc(flags.join(" \u00b7 ")) + "</span>" +
-        "</button>" + (ctx.role === "referent" ? '<div class="contact-actions">' +
-          (p.phone ? '<a class="button secondary" href="tel:' + esc(String(p.phone).replace(/[^+0-9]/g, "")) + '">Appeler</a>' : '') +
-          (p.email ? '<a class="button secondary" href="mailto:' + esc(p.email) + '">Mail</a>' : '') + '</div>' : '');
-    }).join("");
-
-    var withCode = access.filter(function (a) { return a.hasCode; }).length;
-
-    return '<div class="toolbar">' +
-      '<input class="search" id="teamSearch" type="search" placeholder="Chercher un nom, un t\u00e9l\u00e9phone\u2026" value="' + esc(filter) + '">' +
-      '<span class="badge">' + people.length + " / " + all.length + " fiche(s)</span>" +
-      "</div>" +
-      '<div class="toolbar">' +
-      '<span class="badge">' + withCode + " acc\u00e8s cr\u00e9\u00e9(s)</span>" +
-      (ctx.role === "admin" ? '<button class="button primary" data-team="new">Nouvelle fiche</button>' +
-      '<button class="button secondary" data-team="access">Cr\u00e9er les acc\u00e8s</button>' : "") +
-      "</div>" +
-      '<div class="card">' +
-      (rows || '<div class="empty"><b>Aucune fiche</b>Aucune personne ne correspond \u00e0 cette recherche.</div>') +
-      "</div>";
+    var access=ctx.data.access||[],hasCode={};access.forEach(function(a){if(a.hasCode)hasCode[a.personId]=true;});
+    var stats=ctx.data.responseStats,received=stats&&Array.isArray(stats.receivedIds)?new Set(stats.receivedIds.map(String)):null;
+    function answered(p){if(received)return received.has(String(p.id));return (ctx.data.forms||[]).some(function(f){return !f.deleted&&f.personId===p.id&&(f.submittedAt||/^(reçu|recu|validé|valide)$/i.test(f.status||''));});}
+    var volunteers=all.filter(function(p){return p.role!=='referent'&&p.status!=='Désisté'&&p.active!==false;}),filled=volunteers.filter(answered).length;
+    var rows=people.map(function(p){var flags=(p.role==='referent'?'<span>Référent</span>':'')+'<span>'+ (hasCode[p.id]?'Accès créé':'Sans accès')+'</span>'+(p.role==='referent'?'':'<span class="'+(answered(p)?'form-received':'')+'">'+(answered(p)?'Formulaire reçu':'Formulaire non reçu')+'</span>');return '<article class="team-card"><button type="button" class="person-row team-person" data-person="'+esc(p.id)+'">'+root.RunnerPhotos.html(p)+'<span class="person-main"><b>'+esc(label(p))+'</b></span><span class="team-flags">'+flags+'</span></button><div class="team-actions">'+(p.phone?'<a class="contact-icon" href="tel:'+esc(String(p.phone).replace(/[^+0-9]/g,''))+'" aria-label="Appeler '+esc(label(p))+'" title="Appeler">☎</a>':'')+(p.email?'<a class="contact-icon" href="mailto:'+esc(p.email)+'" aria-label="Envoyer un mail à '+esc(label(p))+'" title="Mail">✉</a>':'')+'</div></article>';}).join('');
+    return '<div class="team-search"><input class="search" id="teamSearch" type="search" placeholder="Chercher un nom, un téléphone…" value="'+esc(filter)+'"><div class="team-stats"><span>'+people.length+' / '+all.length+' fiches</span><span>'+all.filter(function(p){return hasCode[p.id];}).length+' accès créés</span><span>'+filled+' / '+volunteers.length+' formulaires bénévoles</span></div></div>'+(ctx.role==='admin'?'<div class="toolbar"><button class="button primary" data-team="new">Nouvelle fiche</button><button class="button secondary" data-team="access">Créer les accès</button></div>':'')+'<div class="card team-list">'+(rows||'<p>Aucune personne ne correspond à cette recherche.</p>')+'</div>';
   }
 
   function checks(p) {
