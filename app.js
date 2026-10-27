@@ -114,7 +114,7 @@
 
   function saveLocal() {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), version: state.version, lastSyncAt: state.lastSyncAt, role: state.role, data: state.data }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), uiVersion: 2, version: state.version, lastSyncAt: state.lastSyncAt, role: state.role, authRole: state.authRole || state.role, data: state.data }));
     } catch (e) { throw new Error("Stockage local indisponible : les données ne sont pas garanties après fermeture."); }
   }
   function readLocal() {
@@ -203,10 +203,31 @@
 
   function refreshPending() {
     if (!window.Queue) return Promise.resolve(0);
-    return Queue.list().then(function(rows){state.retryablePending=rows.filter(function(r){return r.authorId===(state.user||{}).id&&r.state==='pending';}).length;state.pendingReads={};state.pendingMessageReads={};rows.filter(function(r){return r.authorId===(state.user||{}).id&&r.action==='read'&&r.state==='pending';}).forEach(function(r){var id=(r.payload||{}).messageId||'';state.pendingMessageReads[id]=true;if(id.indexOf('publication-')===0)state.pendingReads[id.slice(12)]=true;});return Queue.count();}).then(function (n) { state.pending = n; syncBadge(); return n; }).catch(function (e) {state.syncError='File locale inaccessible : '+e.message;syncBadge();throw e;});
+    return Queue.list().then(function(rows){state.retryablePending=rows.filter(function(r){return r.authorId===(state.user||{}).id&&r.state==='pending';}).length;state.pendingReads={};state.pendingMessageReads={};fleetPending={};rows.filter(function(r){return r.authorId===(state.user||{}).id&&['pending','blocked','conflict'].includes(r.state);}).forEach(function(r){var p=r.payload||{};if(r.action==='incident'&&p.vehicleId)fleetPending[p.vehicleId]=Object.assign({},fleetPending[p.vehicleId],p.type==='Plein à faire'?{fuel:true}:{panne:true});if(r.action==='vehicleAvailability')fleetPending[p.vehicleId]=Object.assign({},fleetPending[p.vehicleId],{active:p.active});});rows.filter(function(r){return r.authorId===(state.user||{}).id&&r.action==='read'&&r.state==='pending';}).forEach(function(r){var id=(r.payload||{}).messageId||'';state.pendingMessageReads[id]=true;if(id.indexOf('publication-')===0)state.pendingReads[id.slice(12)]=true;});return Queue.count();}).then(function (n) { state.pending = n; syncBadge(); return n; }).catch(function (e) {state.syncError='File locale inaccessible : '+e.message;syncBadge();throw e;});
   }
 
+  function selfPersonId(){
+    if((state.authRole||state.role)!=='admin')return (state.user||{}).id;
+    var matches=((state.data||{}).people||[]).filter(function(p){return !p.deleted&&String(p.firstName).trim().toLowerCase()==='anthony'&&String(p.lastName).trim().toLowerCase()==='bodereau';});
+    return matches.length===1?matches[0].id:(state.user||{}).id;
+  }
+  function viewData(){
+    var d=state.data||{};if(state.authRole!=='admin'||state.role==='admin')return d;
+    var pub=AdminUX.latest(d),snapshot=pub&&pub.snapshot||{},id=selfPersonId();
+    var out=Object.assign({},d,{assignments:snapshot.assignments||[],rotations:snapshot.rotations||[]});
+    if(state.role==='benevole')out.messages=(d.messages||[]).filter(function(m){var t=m.targets||{};return t.all||(t.people||[]).includes(id)||(out.assignments||[]).some(function(a){return a.personId===id&&(t.shifts||[]).includes(a.shiftId);})||(out.rotations||[]).some(function(r){return r.personId===id&&(t.roles||[]).includes(r.role);});});
+    return out;
+  }
+  function identityHeader(){
+    var admin=(state.authRole||state.role)==='admin',label=$('#userLabel'),host=$('#identityExtras');
+    if(!host){host=document.createElement('div');host.id='identityExtras';label.parentElement.insertBefore(host,label.nextSibling);}
+    label.textContent=admin?'Anthony':(state.user||{}).name||'Mon espace';
+    host.innerHTML=admin?'<div class="view-switch" role="group" aria-label="Choisir la vue">'+[['admin','Admin'],['referent','Référent'],['benevole','Bénévole']].map(function(x){return '<button type="button" data-view-role="'+x[0]+'" aria-pressed="'+(state.role===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>':state.role==='referent'?'<small>Référent</small>':'';
+    document.body.classList.toggle('runner-header',admin||['referent','benevole'].includes(state.role));
+    host.querySelectorAll('[data-view-role]').forEach(function(b){b.onclick=function(){if(!canLeave()||b.dataset.viewRole===state.role)return;state.role=b.dataset.viewRole;state.page=state.role==='admin'?'dashboard':'home';state.personId='';state.vehicleId='';saveLocal();nav();setTitle();syncBadge();render();};});
+  }
   function setTitle() {
+    identityHeader();
     document.body.classList.toggle('volunteer-space',['benevole','referent'].includes(state.role));
     document.body.classList.toggle('referent-space',state.role==='referent');
     document.body.dataset.currentPage=state.page;
@@ -300,11 +321,11 @@
   function go(key) {
     if(!canLeave())return;
     closeNavDrawer();
-    if ((state.role !== "admin" && ["setup", "creneaux"].indexOf(key) >= 0) || (state.role === "benevole" && ["team", "vehicles", "terrain"].indexOf(key) >= 0)) { notice("Accès réservé à l’organisation.", "error"); return; }
+    if ((state.role !== "admin" && ["setup", "creneaux"].indexOf(key) >= 0) || (state.role === "benevole" && ["team", "terrain"].indexOf(key) >= 0)) { notice("Accès réservé à l’organisation.", "error"); return; }
     state.page = key;
 
     if (key === "form" && navigator.onLine && !(state.data.forms || []).some(function(f){return f.personId === state.user.id;})) {
-      onlineAction("formStart", {personId:state.user.id}).catch(function(e){notice(e.message,"error");});
+      onlineAction("formStart", {personId:selfPersonId()}).catch(function(e){notice(e.message,"error");});
     }
     state.open = "";
     if (key !== "team") state.personId = "";
@@ -366,7 +387,7 @@
   function renderPage() {
     var c = $("#pageContent");
     if (!c) return;
-    var d = state.data || {};
+    var d = viewData();
     var p = state.page;
     if (p === "syncstatus") return renderSyncStatus(c);
     if (p === "prepare") return renderPreparation(c,d);
@@ -1018,7 +1039,7 @@
 
   function personalAssignments(d){
     if(state.role==='benevole'&&!AdminUX.latest(d))return [];
-    return activeRows(d,'assignments').filter(function(a){return a.personId===(state.user||{}).id&&shift(a.shiftId)&&shift(a.shiftId).active!==false;});
+    return activeRows(d,'assignments').filter(function(a){return a.personId===selfPersonId()&&shift(a.shiftId)&&shift(a.shiftId).active!==false;});
   }
   function shiftInfo(s,d){
     var parts=[];
@@ -1098,11 +1119,14 @@
     var extra = row.start < '06:00' ? 1 : 0;
     return [stamp(row.start, extra), stamp(row.end, extra + (row.end <= row.start ? 1 : 0))];
   }
+  function priorityClass(priority){var p=String(priority||'Info').toLowerCase();return /urgent|critique/.test(p)?'priority-urgent':/important|haut/.test(p)?'priority-important':/normal/.test(p)?'priority-normal':'priority-info';}
+  function messageRow(m){return listRow(m.title,m.body,m.priority||'Info',priorityClass(m.priority));}
   function concertPanel(d, all) {
     var rows = activeRows(d, 'concerts').sort(function (a,b) { return period(a)[0] - period(b)[0]; });
     var now = Date.now(), current = rows.filter(function (x) { var p=period(x); return p[0]<=now && now<p[1]; });
     var next = rows.find(function (x) { return period(x)[0]>now; });
-    function row(x) { return '<div class="'+(period(x)[1]<=now?'concert-past':'')+'">'+listRow(x.artist||x.name||'Concert', [x.scene||x.stage,x.description||x.notes].filter(Boolean).join(' · '),x.start+'–'+x.end)+'</div>'; }
+    function row(x) {var src=String(x.photo||'').trim();if(!/^https:\/\//i.test(src))src='';return '<article class="concert-tile '+(period(x)[1]<=now?'concert-past':'')+'">'+(src?'<img class="concert-photo" src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'<div class="concert-caption"><b>'+esc(x.artist||x.name||'Concert')+'</b><span>'+esc(x.start+'–'+x.end)+'</span><small>'+esc([x.scene||x.stage,x.description||x.notes].filter(Boolean).join(' · '))+'</small></div></article>'; }
+
     var today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(new Date());
     var days=Array.from(new Set(rows.map(function(x){return x.date;}))).sort(function(a,b){return (a<today)-(b<today)||a.localeCompare(b);});
     var grouped=days.map(function(day){var concerts=rows.filter(function(x){return x.date===day;}).sort(function(a,b){return (period(a)[1]<=now)-(period(b)[1]<=now)||period(a)[0]-period(b)[0];});return '<section class="concert-day"><h3>'+esc(friendlyDay(day))+'</h3>'+concerts.map(row).join('')+'</section>';}).join('');
@@ -1121,7 +1145,8 @@
     }else body='<p>'+(ref?'Aucun créneau en cours.':'Aucun créneau publié à venir.')+'</p>';
     if(chosen)body+=ref?'<button class="person-row" data-terrain-shift="'+esc(chosen.id)+'"><span>'+esc(chosen.name+' · '+chosen.start+'–'+chosen.end)+'</span><span>›</span></button>':shiftCard(chosen,d);
     var msgs=activeRows(d,'messages').slice(-3).reverse();
-    c.innerHTML=card('Créneau en cours',body)+card('Messages',msgs.map(function(m){return listRow(m.title,m.body,m.priority||'Info');}).join('')+'<button class="button secondary" data-page="messages">'+(ref?'Envoyer / gérer les messages':'Tous les messages')+'</button>')+concertPanel(d,false)+(d.config&&d.config.formOpen&&state.role!=='vehicles'?'<button class="button primary" data-page="form">Mon formulaire de disponibilités</button>':'');
+    c.innerHTML=card('Créneau en cours',body)+card('Messages',msgs.map(function(m){return messageRow(m);}).join('')+'<button class="button secondary" data-page="messages">'+(ref?'Envoyer / gérer les messages':'Tous les messages')+'</button>')+concertPanel(d,false)+(d.config&&d.config.formOpen&&state.role!=='vehicles'?'<button class="button primary" data-page="form">Mon formulaire de disponibilités</button>':'');
+    if(state.role==='benevole')c.insertAdjacentHTML('beforeend','<button class="button secondary wide" data-page="vehicles">Véhicules</button>');
     wireManagement();wireNav();wirePersonalShifts(d);
   }
   /* Suivi unifié : seule REPONSES_FORMULAIRE décide si un bénévole a répondu.
@@ -1371,8 +1396,8 @@
 
   function renderMessages(c,d) {
     var can=state.role==='admin'||state.role==='referent', msgs=activeRows(d,'messages');
-    c.innerHTML=(state.role!=='admin'?'<button class="button secondary" data-page="home">← Accueil</button>':'')+(can?'<article class="card"><h2>Rédiger un message</h2><form id="messageForm" class="form-grid"><input type="hidden" name="id"><label>Titre<input name="title" required></label><label>Priorité<select name="priority"><option>Info</option><option>Urgent</option></select></label><label class="full">Message<textarea name="body" rows="4" required></textarea></label><label class="full">Destinataires<select name="target"><option value="all">Toute l’équipe</option>'+options(activeRows(d,'people'),'',function(p){return [p.firstName,p.lastName].join(' ');})+'</select></label><p class="full muted">Le message sera visible dans l’application des destinataires.</p><button class="button primary">Envoyer / enregistrer</button></form></article>':'')+
-      msgs.slice().reverse().map(function(m){return card(m.title,'<p class="message-body">'+esc(m.body)+'</p>'+(can?'<button class="button secondary" data-message-edit="'+esc(m.id)+'">Modifier</button>':'')+((d.reads||[]).some(function(r){return r.messageId===m.id&&r.personId===(state.user||{}).id;})?'<span class="badge good">Lu</span>':(state.pendingMessageReads&&state.pendingMessageReads[m.id]?'<span class="badge">Lecture enregistrée · envoi en attente</span>':'<button class="button secondary" data-message-read="'+esc(m.id)+'">J’ai lu</button>')));}).join('');
+    c.innerHTML=(state.role!=='admin'?'<button class="button secondary" data-page="home">← Accueil</button>':'')+(can?'<article class="card"><h2>Rédiger un message</h2><form id="messageForm" class="form-grid"><input type="hidden" name="id"><label>Titre<input name="title" required></label><label>Priorité<select name="priority"><option>Info</option><option>Normal</option><option>Important</option><option>Urgent</option></select></label><label class="full">Message<textarea name="body" rows="4" required></textarea></label><label class="full">Destinataires<select name="target"><option value="all">Toute l’équipe</option>'+options(activeRows(d,'people'),'',function(p){return [p.firstName,p.lastName].join(' ');})+'</select></label><p class="full muted">Le message sera visible dans l’application des destinataires.</p><button class="button primary">Envoyer / enregistrer</button></form></article>':'')+
+      msgs.slice().reverse().map(function(m){return card(m.title,'<span class="badge '+priorityClass(m.priority)+'">'+esc(m.priority||'Info')+'</span><p class="message-body">'+esc(m.body)+'</p>'+(can?'<button class="button secondary" data-message-edit="'+esc(m.id)+'">Modifier</button>':'')+((d.reads||[]).some(function(r){return r.messageId===m.id&&r.personId===(state.user||{}).id;})?'<span class="badge good">Lu</span>':(state.pendingMessageReads&&state.pendingMessageReads[m.id]?'<span class="badge">Lecture enregistrée · envoi en attente</span>':'<button class="button secondary" data-message-read="'+esc(m.id)+'">J’ai lu</button>')));}).join('');
     wireManagement();wireNav();
   }
   var localTerrain=[];
@@ -1414,14 +1439,19 @@
       submitTask(btn,function(){return onlineAction('config',{vehicules_prevus:n,quota_min:driver,quota_max:driver,reserve_a:$('#vehicleReserve').checked}).then(function(){notice('Paramètres enregistrés.','success');});});
     };
   }
+  var fleetPending={};
+  function renderFleet(c,d){
+    var ref=state.role==='referent';
+    c.innerHTML=(ref?'':'<button class="button secondary" data-page="home">← Accueil</button>')+'<div class="fleet-list">'+(d.vehicles||[]).filter(function(v){return !v.deleted;}).map(function(v){var pending=fleetPending[v.id]||{},fuel=v.fuelAlert||pending.fuel,panne=v.breakdownAlert||pending.panne,active=pending.active===undefined?v.active!==false:pending.active;return '<article class="card fleet-card"><div class="fleet-heading"><span class="vehicle-letter">'+esc(v.letter||'—')+'</span><div><b>'+esc(v.plate||'Immatriculation non renseignée')+'</b>'+(v.letter==='A'?'<small>Référents</small>':'')+'<small>'+esc(v.gearbox||v.transmission||'Boîte non renseignée')+'</small></div></div><div class="fleet-actions"><button type="button" class="fleet-icon '+(fuel?'fuel-alert':'')+'" data-fleet="fuel" data-id="'+esc(v.id)+'" aria-label="Signaler un besoin d’essence" title="Besoin d’essence">⛽</button><button type="button" class="fleet-icon '+(panne?'fuel-alert':'')+'" data-fleet="breakdown" data-id="'+esc(v.id)+'" aria-label="Signaler une panne ou casse" title="Panne ou casse"><svg viewBox="0 0 32 24" aria-hidden="true"><path d="M2 16V9h12l7-7 2 2-6 7h5l4 4h4v5H2zm20-4v5h6l-4-5z" fill="currentColor"/><circle cx="8" cy="20" r="3"/><circle cx="25" cy="20" r="3"/></svg></button>'+(ref?'<button type="button" class="fleet-icon '+(active?'vehicle-on':'vehicle-off')+'" data-fleet="availability" data-id="'+esc(v.id)+'" aria-label="'+(active?'Désactiver':'Réactiver')+' le véhicule" title="'+(active?'En service':'Hors service')+'">'+(active?'✓':'✕')+'</button>':'')+'</div>'+(fuel?'<small class="fleet-alert-label">Besoin d’essence</small>':'')+(panne?'<small class="fleet-alert-label">Panne ou casse signalée</small>':'')+(Object.keys(pending).length?'<small>Envoi en attente</small>':'')+'</article>';}).join('')+'</div>';
+    if(!(d.vehicles||[]).some(function(v){return !v.deleted;}))c.insertAdjacentHTML('beforeend','<p>Aucun véhicule reçu.</p>');wireNav();
+    c.querySelectorAll('[data-fleet]').forEach(function(b){b.onclick=function(){var v=(d.vehicles||[]).find(function(x){return x.id===b.dataset.id;}),action=b.dataset.fleet,pending=fleetPending[v.id]||{};
+      if(action==='fuel'&&(v.fuelAlert||pending.fuel)){notice('Le besoin d’essence est déjà signalé.','info');return;}
+      var active=pending.active===undefined?v.active!==false:pending.active;
+      adminModal(action==='fuel'?'Besoin d’essence ?':action==='breakdown'?'Panne ou casse':active?'Désactiver le véhicule ?':'Réactiver le véhicule ?', '<p>'+esc(v.plate)+'</p>'+(action==='breakdown'?'<label>Quelle panne ou casse ?<textarea id="fleetDescription" rows="3" required></textarea></label>':action==='fuel'?'<p>Les référents recevront un message dans l’application.</p>':''),'Confirmer',function(close,confirm){var description=action==='breakdown'?$('#fleetDescription').value.trim():'';if(action==='breakdown'&&!description){$('#fleetDescription').reportValidity();return;}submitTask(confirm,function(){return terrainAction(action==='availability'?'vehicleAvailability':'incident',action==='availability'?{vehicleId:v.id,active:!active,baseVersion:v.version||0}:{vehicleId:v.id,type:action==='fuel'?'Plein à faire':'Panne',description:description}).then(function(){fleetPending[v.id]=Object.assign({},pending,action==='availability'?{active:!active}:action==='fuel'?{fuel:true}:{panne:true});close();render();});});});
+    };});
+  }
   function renderVehicles(c,d) {
-    if(state.role==='referent'){
-      c.innerHTML=(d.vehicles||[]).filter(function(v){return !v.deleted;}).map(function(v){return '<details class="card vehicle-options"><summary><b>'+esc([v.letter,v.plate,v.make,v.model].filter(Boolean).join(' · '))+'</b> · '+(v.active===false?'Hors service':'En service')+(v.fuelAlert?' · Plein à faire':'')+(v.letter==='A'?' · Référents':'')+'</summary><form data-vehicle-settings="'+esc(v.id)+'" class="form-grid"><label>État<select name="active"><option value="true"'+(v.active!==false?' selected':'')+'>En service</option><option value="false"'+(v.active===false?' selected':'')+'>Hors service</option></select></label><label>Conducteur concerné<select name="driverId"><option value="">Aucun</option>'+options(activeRows(d,'people'),v.driverId,function(p){return personLabel(p.id);})+'</select></label><label class="check"><input type="checkbox" name="referentVehicle"'+(v.letter==='A'?' checked':'')+'>Véhicule A · référents</label><button class="button primary">Enregistrer</button></form><form data-vehicle-incident="'+esc(v.id)+'" class="form-grid"><label>Signalement<select name="type"><option>Panne</option><option>Plein à faire</option><option>Autre</option></select></label><label>Description<textarea name="description"></textarea></label><button class="button secondary">Signaler</button></form>'+activeRows(d,'incidents').filter(function(i){return i.vehicleId===v.id;}).map(function(i){return listRow(i.type,i.description||'',i.status)+(i.status!=='Clos'?'<button class="button secondary" data-incident-close="'+esc(i.id)+'">'+(i.type==='Plein à faire'?'Plein effectué':'Clore l’incident')+'</button>':'');}).join('')+'</details>';}).join('')||'<p>Aucun véhicule reçu.</p>';
-      wireManagement();
-      c.querySelectorAll('[data-vehicle-settings]').forEach(function(form){form.onsubmit=function(e){e.preventDefault();var v=(d.vehicles||[]).find(function(x){return x.id===form.dataset.vehicleSettings;}),active=field(form,'active')==='true',driverId=field(form,'driverId');if(active!==(v.active!==false)&&!driverId){notice('Désigne le conducteur concerné par le changement.','error');return;}var letter=form.elements.referentVehicle.checked?'A':v.letter==='A'?'':v.letter||'';if(letter==='A'&&(d.vehicles||[]).some(function(x){return x.id!==v.id&&!x.deleted&&x.letter==='A';})){notice('Retire d’abord la réservation A de l’autre véhicule.','error');return;}submitTask(form.querySelector('button'),function(){return terrainSave('vehicles',{id:v.id,active:active,driverId:driverId,letter:letter});});};});
-      c.querySelectorAll('[data-vehicle-incident]').forEach(function(form){form.onsubmit=function(e){e.preventDefault();if(field(form,'type')!=='Plein à faire'&&!field(form,'description')){notice('Précise le signalement.','error');return;}submitTask(form.querySelector('button'),function(){return terrainAction('incident',{vehicleId:form.dataset.vehicleIncident,type:field(form,'type'),description:field(form,'description')});});};});
-      return;
-    }
+    if(['referent','benevole'].includes(state.role)){renderFleet(c,d);return;}
 
     var rows=activeRows(d,'vehicles'), v=(d.vehicles||[]).find(function(x){return x.id===state.vehicleId&&!x.deleted;});
     if(!v) {c.innerHTML=(state.role==='admin'?vehicleSettings(d):'')+(state.role==='vehicles'?'<a class="button primary" href="./reception.html">Réception / retour véhicule</a>':'')+(d.vehicles||[]).filter(function(x){return !x.deleted;}).map(function(x){return '<button class="card person-row" data-vehicle="'+esc(x.id)+'"><span class="person-main"><b>'+esc(x.plate||'Véhicule')+'</b><small>'+esc([x.make,x.model].filter(Boolean).join(' '))+'</small></span><span class="badge">'+(x.active===false?'HS':'En service')+'</span></button>';}).join('');if(!c.innerHTML)c.innerHTML=empty('Aucun véhicule','Les véhicules reçus apparaîtront ici.');wireManagement();wireVehicleSettings();return;}
@@ -1432,7 +1462,7 @@
       card('Réceptions et retours — consultation',(d.receptions||[]).filter(function(r){return r.vehicleId===v.id||String(r.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase()===String(v.plate).replace(/[^A-Z0-9]/gi,'').toUpperCase();}).map(function(r){return '<details><summary>'+esc((r.direction||'Réception')+' · '+(r.status||'')+' · '+(r.createdAt||r.at||''))+'</summary>'+receptionDetails(r)+(r.pdfUrl&&/^https:\/\//.test(r.pdfUrl)?'<a class="button secondary" target="_blank" rel="noopener" href="'+esc(r.pdfUrl)+'">Voir le constat PDF</a>':'')+'</details>';}).join('')||'<p>Aucun constat disponible.</p>');wireManagement();wireVehicleSettings();
   }
   function renderVolunteerForm(c,d) {
-    var p=(d.people||[]).find(function(p){return p.id===(state.user||{}).id;});
+    var p=(d.people||[]).find(function(p){return p.id===selfPersonId();});
     if(!p){c.innerHTML=empty('Formulaire personnel','Ouvre une session bénévole pour répondre.');return;}
     var old=(d.forms||[]).find(function(f){return f.personId===p.id;})||{}, slots=activeRows(d,'shifts').filter(function(s){return !s.brunch&&(s.day!=='mercredi'||p.wednesday);}), dates=Array.from(new Set(slots.map(function(s){return s.date;}))).sort();
     c.innerHTML=(!navigator.onLine?'<p class="notice">Ce formulaire se transmet en ligne avant le festival. Reconnecte-toi pour envoyer ta réponse.</p>':'')+'<form id="volunteerForm" class="form-grid"><h2 class="full">Mes disponibilités</h2>'+dates.map(function(date,i){var choice=(old.choices||[]).find(function(c){return c.date===date;})||{}, rows=slots.filter(function(s){return s.date===date;});return '<fieldset class="full" data-choice-date="'+esc(date)+'"><legend>'+esc(date)+'</legend><label>Premier choix<select name="first'+i+'">'+options(rows,choice.first,function(s){return s.name;})+'</select></label><label>Second choix<select name="second'+i+'"><option value="">Choisir</option>'+options(rows,choice.second,function(s){return s.name;})+'</select></label><label class="check"><input type="checkbox" name="work'+i+'"'+(choice.work?' checked':'')+'>Contrainte professionnelle : je confirme ne pouvoir proposer qu’un seul choix</label></fieldset>';}).join('')+'<fieldset class="full"><legend>Concerts souhaités (3 maximum)</legend>'+activeRows(d,'concerts').map(function(x){return '<label class="check"><input type="checkbox" name="favoriteConcert" value="'+esc(x.id)+'"'+((old.concerts||[]).indexOf(x.id)>=0?' checked':'')+'>'+esc(x.artist+' · '+x.date+' · '+x.start)+'</label>';}).join('')+'</fieldset><label class="full">Note du formulaire<textarea name="note">'+esc(old.note||'')+'</textarea></label><label class="check full"><input type="checkbox" name="confirmOrange"'+(old.confirmOrange?' checked':'')+'>J’accepte les chevauchements de concerts de 30 minutes maximum</label><button class="button primary">Envoyer ma réponse</button></form>';wireManagement();
@@ -1492,7 +1522,7 @@
     var ts=$('#terrainShift');if(ts)ts.onchange=function(){state.terrainShift=ts.value;render();};
     var incident=$('#incidentForm');if(incident)incident.onsubmit=function(e){e.preventDefault();submitTask(incident.querySelector('button'),function(){return terrainAction('incident',{vehicleId:field(incident,'vehicleId'),type:field(incident,'type'),description:field(incident,'description')});});};
     clicks('[data-incident-close]',function(b){submitTask(b,function(){return terrainAction('closeIncident',{id:b.dataset.incidentClose});});});
-    var vf=$('#volunteerForm');if(vf)vf.onsubmit=function(e){e.preventDefault();var old=(state.data.forms||[]).find(function(f){return f.personId===state.user.id;})||{};var choices=Array.prototype.map.call(vf.querySelectorAll('[data-choice-date]'),function(x,i){var work=vf.elements['work'+i].checked;return {date:x.dataset.choiceDate,first:field(vf,'first'+i),second:work?'':field(vf,'second'+i),work:work,confirmWork:work};});var data=Object.assign({},old,{personId:state.user.id,choices:choices,concerts:checkedIds('[name="favoriteConcert"]'),note:field(vf,'note'),confirmOrange:vf.elements.confirmOrange.checked});submitTask(vf.querySelector('button'),function(){return onlineAction('formSubmit',data).then(function(){notice('Réponse enregistrée.','success');});});};
+    var vf=$('#volunteerForm');if(vf)vf.onsubmit=function(e){e.preventDefault();var old=(state.data.forms||[]).find(function(f){return f.personId===selfPersonId();})||{};var choices=Array.prototype.map.call(vf.querySelectorAll('[data-choice-date]'),function(x,i){var work=vf.elements['work'+i].checked;return {date:x.dataset.choiceDate,first:field(vf,'first'+i),second:work?'':field(vf,'second'+i),work:work,confirmWork:work};});var data=Object.assign({},old,{personId:selfPersonId(),choices:choices,concerts:checkedIds('[name="favoriteConcert"]'),note:field(vf,'note'),confirmOrange:vf.elements.confirmOrange.checked});submitTask(vf.querySelector('button'),function(){return onlineAction('formSubmit',data).then(function(){notice('Réponse enregistrée.','success');});});};
   }
 
   function start() {
@@ -1713,11 +1743,11 @@
         .then(function (out) {
           if (!out || !out.user) throw new Error("Réponse de connexion incomplète.");
           state.user = out.user;
-          state.role = out.user.role || "benevole";
+          state.authRole = out.user.role || "benevole";state.role=state.authRole;
           err.textContent = "";
           var cached=readLocal();
-          if(cached&&cached.data&&cached.data.user&&cached.data.user.id===state.user.id){state.data=cached.data;state.version=cached.version;state.lastSyncAt=cached.lastSyncAt||0;bootDone();start();refreshPending().then(function(){if(navigator.onLine)syncNow();}).catch(function(){});return null;}else{state.data=null;state.version=0;}
-          return Transport.sync(state.version,state.role);
+          if(cached&&cached.data&&cached.data.user&&cached.data.user.id===state.user.id){state.data=cached.data;if(state.authRole==='admin'&&['admin','referent','benevole'].includes(cached.role))state.role=cached.role;state.version=cached.uiVersion===2?cached.version:0;state.lastSyncAt=cached.lastSyncAt||0;bootDone();start();refreshPending().then(function(){if(navigator.onLine)syncNow();}).catch(function(){});return null;}else{state.data=null;state.version=0;}
+          return Transport.sync(state.version,state.authRole||state.role);
         })
         .then(function (bundle) {
           if(!bundle)return;
@@ -1777,7 +1807,7 @@
     syncFlight=Promise.resolve().then(function(){return Queue.flush();}).then(function(result){
       if(result&&result.networkError)throw Error('Réseau instable : envois conservés, nouvelle tentative différée.');
       if(!state.user||state.user.id!==userId)throw Error('Session modifiée.');
-      return Transport.sync(state.version,state.role);
+      return Transport.sync(state.version,state.authRole||state.role);
     }).then(function(bundle){return Queue.list().then(function(rows){return {bundle:bundle,rows:rows};});}).then(function(packet){
       var bundle=packet.bundle;
       if(!state.user||state.user.id!==userId)return;
@@ -1839,9 +1869,9 @@
       var local = readLocal();
       if (local) {
         state.data = local.data;
-        state.role = local.role;
-        state.version = local.version;state.lastSyncAt=local.lastSyncAt||0;
-        state.user = { id: (local.data.user || {}).id, name: (local.data.user || {}).name, role: local.role };
+        state.authRole=local.authRole||(local.data.user||{}).role||local.role;state.role=local.role;
+        state.version = local.uiVersion===2?local.version:0;state.lastSyncAt=local.lastSyncAt||0;
+        state.user = { id: (local.data.user || {}).id, name: (local.data.user || {}).name, role: state.authRole };
         bootSkip();
         start();
         refreshPending().then(function(){if(navigator.onLine)syncNow();}).catch(function(){});
