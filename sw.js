@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-20-local-first';
+const SHELL = 'beauregard-v2-shell-21-local-first-final';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -11,7 +11,7 @@ const SHELL_FILES = [
   './style.css',
   './base.css',
   './theme.css',
-  './themes/2027/theme.css?v=20261027-runner3',
+  './themes/2027/theme.css?v=20261027-runner4',
   './config.js',
   './contact-photos.js',
   './js/boot.js',
@@ -19,7 +19,7 @@ const SHELL_FILES = [
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './app.js?v=20261027-runner3',
+  './app.js?v=20261027-runner4',
   './js/admin-ux.js?v=20261014-terrain',
   './assets/beauregard-2027.jpg',
 
@@ -65,6 +65,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== self.location.origin) {
     if(req.destination==='image' && (url.hostname==='www.benevoles-beauregard.com'||url.hostname==='drive.google.com'||url.hostname.endsWith('.googleusercontent.com'))){
       e.respondWith(caches.open('runner-contact-photos-v1').then(async cache=>{
+        const local=await cache.match(req);if(local)return local;
         try {const response=await fetch(req);if(response.ok||response.type==='opaque'){await cache.put(req,response.clone());return response;}return (await cache.match(req))||response;}
         catch(error){const saved=await cache.match(req);if(saved)return saved;throw error;}
       }));
