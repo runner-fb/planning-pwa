@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-19-runner-header-team';
+const SHELL = 'beauregard-v2-shell-20-local-first';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -11,7 +11,7 @@ const SHELL_FILES = [
   './style.css',
   './base.css',
   './theme.css',
-  './themes/2027/theme.css?v=20261026-runner2',
+  './themes/2027/theme.css?v=20261027-runner3',
   './config.js',
   './contact-photos.js',
   './js/boot.js',
@@ -19,12 +19,9 @@ const SHELL_FILES = [
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './app.js?v=20261026-runner2',
+  './app.js?v=20261027-runner3',
   './js/admin-ux.js?v=20261014-terrain',
   './assets/beauregard-2027.jpg',
-  './assets/1c6730949de4ee7a908a375483f7e729.png',
-  './assets/fbb093512160732bdad41ac9fa153e32.png',
-  './assets/a3e2db87b948ddb2c45d62f5814b62ae.JPG',
 
   './manifest.json',
   './icon.svg'
@@ -75,30 +72,18 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  /* Page HTML : réseau d'abord. Hors ligne, on retombe sur la copie connue,
-   * et s'il n'y en a pas, on laisse le navigateur gérer son erreur. */
-  if (req.mode === 'navigate' || req.destination === 'document') {
-    e.respondWith(
-      fetch(req).then((response) => {
-        if (response.ok) { const copy = response.clone(); caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}); }
-        return response;
-      }).catch(() =>
-        caches.match('./index.html').then((hit) => hit || caches.match('./'))
-      )
-    );
-    return;
-  }
-
-  /* Ressources : réseau d'abord, cache en secours, sinon on laisse passer. */
-  e.respondWith(
-    fetch(req)
-      .then((response) => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return response;
-      })
-      .catch(() => caches.match(req).then((hit) => hit || fetch(req)))
-  );
+  // Coquille locale immédiate ; actualisation discrète pour la prochaine ouverture.
+  e.respondWith(caches.open(SHELL).then(async cache => {
+    const hit = await cache.match(req);
+    const update = fetch(req).then(async response => {
+      if(response.ok) await cache.put(req,response.clone());
+      return response;
+    });
+    e.waitUntil(update.catch(()=>{}));
+    if(hit) return hit;
+    try{return await update;}catch(error){
+      if(req.mode==='navigate')return (await cache.match('./index.html')) || Response.error();
+      return Response.error();
+    }
+  }));
 });
