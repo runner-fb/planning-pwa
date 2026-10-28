@@ -326,3 +326,23 @@ progress { width:100%; height:12px; accent-color:var(--success); }
 .admin-space .sim-shift-column{flex-basis:250px!important;min-width:250px!important}.admin-space .sim-day>summary{font-size:15px}.admin-space .sim-destination{width:100%;min-height:44px}
 .admin-space .planning-columns{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));overflow-x:auto;gap:10px}.admin-space .planning-column{min-width:0}
 @media print{.organise-steps,.test-controls{display:none!important}.admin-space .plan-day.mobile-day-hidden{display:block}.admin-space .planning-columns{grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}}
+/* Compact identity, readable branding and focused preparation. */
+.runner-header .topbar{width:100%;min-width:0;min-height:92px;padding:8px 10px;gap:6px}
+.runner-header .volunteer-logo{width:52px;height:60px;flex-basis:52px}
+.runner-header .volunteer-brand{gap:5px;flex:1 1 auto}
+.runner-header .volunteer-brand b{font-size:clamp(14px,3.8vw,21px);letter-spacing:0;white-space:normal;overflow-wrap:normal}
+.runner-header .volunteer-brand small{font-size:clamp(12px,3.3vw,18px);white-space:nowrap}
+.runner-header .topbar-user{padding:3px;border:0;flex:0 0 auto;max-width:45%}
+.view-switch{display:flex;flex-wrap:nowrap;gap:2px;max-width:none}
+.view-switch button{flex:0 0 28px;width:28px;min-width:28px;min-height:32px;padding:3px;font-size:12px;font-weight:800}
+.test-controls{gap:3px}.test-controls label{font-size:10px}.test-controls input{width:16px;height:16px}
+.main-shell,.main-content,#pageContent{min-width:0;max-width:100%}
+.team-tools summary{font-size:15px;font-weight:650;padding:4px 0;cursor:pointer}
+.team-tools .toolbar{margin-top:12px}.team-tools .button{font-size:13px;padding:10px}
+#formSettings details>summary{cursor:pointer;font-weight:650;padding:12px 0}
+#formSettings details label{display:flex;flex-direction:column;margin-bottom:12px}
+#formSettings .check,.form-recipients .check{display:flex;align-items:center;gap:10px}
+.form-recipients{max-height:50vh;overflow:auto}.form-recipients .check{padding:10px 0}
+.form-recipients input[type=checkbox],#formSettings input[type=checkbox]{width:20px;height:20px;flex:0 0 20px}
+.vehicles-app{display:block;border:0;width:100%;height:calc(100dvh - 185px);min-height:420px;border-radius:12px}
+@media(min-width:600px){.runner-header .volunteer-logo{width:64px;height:68px;flex-basis:64px}.view-switch button{width:36px;flex-basis:36px}}
