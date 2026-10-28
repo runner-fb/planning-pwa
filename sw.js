@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-25-admin-workflow';
+const SHELL = 'beauregard-v2-shell-26-admin-forms';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -11,7 +11,7 @@ const SHELL_FILES = [
   './style.css',
   './base.css',
   './theme.css',
-  './themes/2027/theme.css?v=20261027-admin8',
+  './themes/2027/theme.css?v=20261028-admin9',
   './config.js',
   './contact-photos.js',
   './js/boot.js',
@@ -19,7 +19,7 @@ const SHELL_FILES = [
   './js/transport.js',
   './js/screens-team.js',
   './js/screens-shifts.js',
-  './app.js?v=20261027-admin8',
+  './app.js?v=20261028-admin9',
   './js/admin-ux.js?v=20261014-terrain',
   './assets/beauregard-2027.jpg',
 
