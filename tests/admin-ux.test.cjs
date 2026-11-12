@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/<script[\s\S]*?<\/script>/g,'');
 const dom=new JSDOM(html,{url:'https://example.test/',runScripts:'outside-only',pretendToBeVisual:true});
 const w=dom.window;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
-for(const f of ['tests/admin-ux-fixture.js','js/screens-team.js','js/screens-shifts.js','js/admin-ux.js','app.js'])w.eval(fs.readFileSync(path.join(root,f),'utf8'));
+for(const f of ['tests/admin-ux-fixture.js','js/screens-team.js','js/screens-shifts.js','js/admin-ux.js','js/terrain-state.js','js/handover.js','js/screens-handover.js','app.js'])w.eval(fs.readFileSync(path.join(root,f),'utf8'));
 const tick=()=>new Promise(r=>setTimeout(r,30));
 const q=s=>w.document.querySelector(s),qa=s=>[...w.document.querySelectorAll(s)];
 (async()=>{
