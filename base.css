@@ -410,3 +410,8 @@ table.codes td b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .relief-status{font-weight:600;font-size:.85rem}.relief-over{outline:4px solid #0f5a4f;outline-offset:1px;background:#e4eee8}.relief-dragging{opacity:.65}
 .relief-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:.85rem}.relief-dialog{max-height:85dvh;overflow-y:auto}.relief-dialog form{display:grid;gap:12px}.relief-dialog select,.relief-dialog input,.relief-dialog textarea{font-size:16px;max-width:100%}
 @media(max-width:359px){.relief-board{gap:6px}.relief-person{padding:8px 5px}.relief-person strong{font-size:.9rem}}
+
+/* Suivi mobile de la relève par véhicule. */
+.relief-vehicles ul{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.relief-vehicle{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line,#ccc);border-left-width:6px;border-radius:10px;padding:12px;overflow-wrap:anywhere}
+.relief-vehicle b{font-size:.9rem}.relief-vehicle span{font-size:.85rem}

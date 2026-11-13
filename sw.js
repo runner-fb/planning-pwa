@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-28-live-handover';
+const SHELL = 'beauregard-v2-shell-29-relief-vehicles';
 const SHELL_FILES = [
   './',
   './index.html',
