@@ -3,7 +3,7 @@
  * jamais mise en cache. Le HTML est rafraîchi par le réseau et conservé
  * uniquement pour permettre un redémarrage hors ligne.
  */
-const SHELL = 'beauregard-v2-shell-26-admin-forms';
+const SHELL = 'beauregard-v2-shell-28-live-handover';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -15,6 +15,9 @@ const SHELL_FILES = [
   './config.js',
   './contact-photos.js',
   './js/boot.js',
+  './js/terrain-state.js',
+  './js/handover.js',
+  './js/screens-handover.js',
   './js/queue.js?v=20261014-terrain',
   './js/transport.js',
   './js/screens-team.js',

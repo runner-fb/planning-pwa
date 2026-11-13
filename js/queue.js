@@ -151,6 +151,7 @@
                   row.error = String(out.conflict);
                   return update(row);
                 }
+                if(row.action==='runnerRelief'&&out&&out.rows)root.dispatchEvent(new CustomEvent('runner-relief-sent',{detail:{authorId:row.authorId,rows:out.rows}}));
                 sent++;
                 return remove(row.id);
               })

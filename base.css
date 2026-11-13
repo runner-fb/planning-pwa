@@ -395,3 +395,18 @@ table.codes td b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
     height: 36px;
   }
 }
+
+.terrain-notice-row{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;padding:1rem 0;border-bottom:1px solid var(--line)}
+.terrain-notice-row strong,.terrain-notice-row p,.terrain-notice-row small{flex-basis:100%;margin:0}
+.terrain-notice-row button{white-space:normal;word-break:normal;min-height:44px}
+/* Relève mobile : deux colonnes étroites sans défilement horizontal. */
+.relief-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.relief-board section{min-width:0}.relief-board h3{font-size:1rem;position:sticky;top:0;background:var(--bg,#fff);padding:10px 2px;z-index:2}
+.relief-person{display:flex;flex-direction:column;gap:8px;border:2px solid var(--line,#ccc);border-left-width:6px;border-radius:14px;padding:10px 8px;margin-bottom:12px;overflow-wrap:anywhere;background:var(--surface,#fff)}
+.relief-person strong{font-size:1rem}.relief-person button{min-height:48px;max-width:100%;white-space:normal;word-break:normal;font-size:.9rem;padding:10px 6px}
+.relief-handle{touch-action:none;user-select:none;-webkit-user-select:none;background:var(--primary);color:white;border:0;border-radius:10px;cursor:grab}
+.relief-target{background:var(--primary-soft,#e4eee8);color:var(--text,#18443d);border:1px dashed currentColor;border-radius:10px}
+.relief-green{border-left-color:#1f7a5c}.relief-orange{border-left-color:#ad5c00}.relief-red{border-left-color:#b42318}.relief-neutral{border-left-color:#737373}
+.relief-status{font-weight:600;font-size:.85rem}.relief-over{outline:4px solid #0f5a4f;outline-offset:1px;background:#e4eee8}.relief-dragging{opacity:.65}
+.relief-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:.85rem}.relief-dialog{max-height:85dvh;overflow-y:auto}.relief-dialog form{display:grid;gap:12px}.relief-dialog select,.relief-dialog input,.relief-dialog textarea{font-size:16px;max-width:100%}
+@media(max-width:359px){.relief-board{gap:6px}.relief-person{padding:8px 5px}.relief-person strong{font-size:.9rem}}
